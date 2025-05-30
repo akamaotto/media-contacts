@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MediaContact {
+  id                    String   @id @default(uuid())
+  name                  String
+  title                 String
+  bio                   String?
+  email                 String   @unique
+  email_verified_status Boolean  @default(false)
+  socials               String[] // Array of social media links/handles
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relationships (Many-to-Many)
+  outlets   Outlet[]  @relation("MediaContactOutlets")
+  countries Country[] @relation("MediaContactCountries")
+  beats     Beat[]    @relation("MediaContactBeats")
+
+  @@map("media_contacts")
+}
+
+model Outlet {
+  id          String   @id @default(uuid())
+  name        String   @unique // Assuming outlet names should be unique
+  description String?
+  website     String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relationships (Many-to-Many)
+  mediaContacts MediaContact[] @relation("MediaContactOutlets")
+
+  @@map("outlets")
+}
+
+model Region {
+  id           String    @id @default(uuid())
+  name         String    @unique
+  code         String    @unique // e.g., 'AF', 'WAS', 'EU', 'BRICS'
+  category     String    // 'continent', 'subregion', 'economic', 'political', 'other'
+  parent_code  String?   // For subregions
+  description  String?   // Optional description
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  
+  // Relationships
+  countries    Country[] @relation("CountryRegions") // Updated relation name
+  
+  @@index([parent_code])
+  @@map("regions")
+}
+
+model Language {
+  id         String    @id @default(uuid())
+  name       String    @unique // e.g., 'English', 'French', 'Spanish'
+  code       String    @unique // ISO 639-1 code e.g., 'en', 'fr', 'es'
+  countries  Country[] @relation("CountryToLanguage")
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  @@map("languages")
+}
+
+model Country {
+  id           String         @id @default(uuid())
+  name         String         @unique
+  code         String?        @unique // ISO 3166-1 alpha-2 code
+  phone_code   String?        // International dialing code
+  capital      String?
+  // subregion field removed, will be handled by Region model with category 'subregion'
+  latitude     Float?         // For mapping purposes
+  longitude    Float?         // For mapping purposes
+  flag_emoji   String?        // Country flag emoji
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+  
+  // Relationships
+  regions      Region[]       @relation("CountryRegions") // Many-to-many with Region
+  languages    Language[]     @relation("CountryToLanguage")
+  mediaContacts MediaContact[] @relation("MediaContactCountries")
+
+  @@map("countries")
+}
+
+model Beat {
+  id          String   @id @default(uuid())
+  name        String   @unique // Beat names should be unique
+  description String? // As per PRD: "each beat also having a description"
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relationships (Many-to-Many)
+  mediaContacts MediaContact[] @relation("MediaContactBeats")
+
+  @@map("beats")
+}

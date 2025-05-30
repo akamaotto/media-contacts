@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "connectString": "postgres://akamaotto:TheP@55w0rd!@localhost:5432/media_contacts",
+            "name": "Media Contacts"
+        }
+    ]
+}

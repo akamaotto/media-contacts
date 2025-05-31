@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge"; // For displaying outlets, beats,
 // Interface for actions passed to the getColumns function
 export interface ColumnActions {
   onEditContact: (contact: MediaContactTableItem) => void;
-  // onDeleteContact: (contactId: string) => void; // Future: for delete functionality
+  onDeleteContact: (contact: MediaContactTableItem) => void;
 }
 export interface MediaContactTableItem {
   id: string;
@@ -260,12 +260,7 @@ export const getColumns = (actions: ColumnActions): ColumnDef<MediaContactTableI
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-600 hover:!text-red-600 focus:!text-red-600 focus:!bg-red-50"
-                // Placeholder for future "Delete Contact" functionality
-                onClick={() => {
-                  if (confirm(`Are you sure you want to delete ${contact.name}?`)) {
-                    alert(`Delete contact: ${contact.name}`);
-                  }
-                }}
+                onClick={() => actions.onDeleteContact(contact)}
               >
                 Delete Contact
               </DropdownMenuItem>

@@ -8,7 +8,7 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-  SheetClose,
+  // SheetClose, // Removed unused import
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,23 +36,79 @@ import {
 } from "@/components/ui/popover";
 import { upsertMediaContactAction, type UpsertMediaContactActionState } from "@/backend/media-contacts/actions";
 import { type UpsertMediaContactData } from "@/backend/media-contacts/repository";
-import { type MediaContactTableItem } from "@/components/media-contacts/columns"; // Corrected import path
+import { type MediaContactTableItem } from "@/components/media-contacts/columns";
 import { getCountries, type Country } from '@/app/actions/country-actions';
+import { TagInput } from "@/components/ui/tag-input";
+import { toast } from "@/components/ui/sonner";
 
-// Zod schema for form validation - Beats and Outlets are now comma-separated strings
+// Ensure necessary TypeScript configurations are applied
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
+
+/**
+ * Enhanced Zod schema for form validation with explicit type handling
+ * Following Rust-inspired approach for comprehensive validation
+ */
 const mediaContactUpsertSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   title: z.string().min(1, { message: "Title is required." }),
   email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')), 
   email_verified_status: z.boolean().optional(),
   bio: z.string().optional().nullable(),
-  socials: z.string().optional().nullable(), // Comma-separated string for social media links
-  countryIds: z.array(z.string().uuid()).optional(), // Stays as array of UUIDs for multi-select popover
-  beats: z.string().optional().nullable(), // Comma-separated string for beats
-  outlets: z.string().optional().nullable(), // Comma-separated string for outlets
+  socials: z.array(z.string().url({ message: "Invalid URL format." })).max(5, {
+    message: "Maximum 5 social media links allowed."
+  }),
+  countryIds: z.array(z.string().uuid()).optional(), 
+  beats: z.array(z.string().min(2, { message: "Beat must be at least 2 characters." })).max(10, {
+    message: "Maximum 10 beats allowed."
+  }),
+  outlets: z.array(z.string().min(2, { message: "Outlet must be at least 2 characters." })).max(10, {
+    message: "Maximum 10 outlets allowed."
+  }),
 });
 
+/**
+ * Type definition inferred from Zod schema for type safety
+ */
 type MediaContactUpsertFormData = z.infer<typeof mediaContactUpsertSchema>;
+
+/**
+ * Type for social platform detection
+ */
+enum SocialPlatformType {
+  Twitter = "twitter",
+  LinkedIn = "linkedin",
+  Facebook = "facebook",
+  Instagram = "instagram",
+  Other = "other"
+}
+
+/**
+ * Utility function to detect social platform type from URL
+ * @param url The social media URL to analyze
+ * @returns The detected platform type
+ */
+function detectSocialPlatform(url: string): SocialPlatformType {
+  try {
+    const lowercaseUrl = url.toLowerCase();
+    if (lowercaseUrl.includes('twitter.com') || lowercaseUrl.includes('x.com')) {
+      return SocialPlatformType.Twitter;
+    }
+    if (lowercaseUrl.includes('linkedin.com')) {
+      return SocialPlatformType.LinkedIn;
+    }
+    if (lowercaseUrl.includes('facebook.com') || lowercaseUrl.includes('fb.com')) {
+      return SocialPlatformType.Facebook;
+    }
+    if (lowercaseUrl.includes('instagram.com')) {
+      return SocialPlatformType.Instagram;
+    }
+    return SocialPlatformType.Other;
+  } catch (error) {
+    console.error('Error detecting social platform:', error);
+    return SocialPlatformType.Other;
+  }
+}
 
 interface UpdateMediaContactSheetProps {
   isOpen: boolean;
@@ -67,11 +123,17 @@ export function UpdateMediaContactSheet({
   contact,
   onContactUpdate,
 }: UpdateMediaContactSheetProps) {
+  // Form state management
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [allCountries, setAllCountries] = useState<Country[]>([]);
   const [isCountriesPopoverOpen, setIsCountriesPopoverOpen] = useState(false);
   const [searchCountryTerm, setSearchCountryTerm] = useState('');
   const [formActionFeedback, setFormActionFeedback] = useState<UpsertMediaContactActionState | null>(null);
+  
+  // Tag management state with explicit typing (Rust-inspired)
+  const [outletTags, setOutletTags] = useState<string[]>([]);
+  const [beatTags, setBeatTags] = useState<string[]>([]);
+  const [socialTags, setSocialTags] = useState<string[]>([]);
 
   const form = useForm<MediaContactUpsertFormData>({
     resolver: zodResolver(mediaContactUpsertSchema),
@@ -80,11 +142,11 @@ export function UpdateMediaContactSheet({
       title: '',
       email: '',
       bio: '',
-      socials: '',
+      socials: [],
       email_verified_status: false,
       countryIds: [],
-      beats: "",
-      outlets: "",
+      beats: [],
+      outlets: [],
     },
   });
 
@@ -107,16 +169,32 @@ export function UpdateMediaContactSheet({
   useEffect(() => {
     if (isOpen) {
       if (contact) { 
+        // Initialize tag states from contact data with explicit handling for null/undefined
+        // Ensure proper type conversion from potential complex objects to string arrays
+        const contactOutlets = contact.outlets ? 
+          (Array.isArray(contact.outlets) ? contact.outlets.map(o => typeof o === 'string' ? o : o.name || '').filter(Boolean) : []) : [];
+        
+        const contactBeats = contact.beats ? 
+          (Array.isArray(contact.beats) ? contact.beats.map(b => typeof b === 'string' ? b : b.name || '').filter(Boolean) : []) : [];
+        
+        const contactSocials = contact.socials ? 
+          (Array.isArray(contact.socials) ? contact.socials.map(s => typeof s === 'string' ? s : '').filter(Boolean) : []) : [];
+        
+        setOutletTags(contactOutlets);
+        setBeatTags(contactBeats);
+        setSocialTags(contactSocials);
+        
         form.reset({
           name: contact.name || '',
           title: contact.title || "",
           email: contact.email || "",
           bio: contact.bio || "",
-          socials: contact.socials?.join(', ') || "",
+          socials: contactSocials,
           email_verified_status: contact.email_verified_status === null ? false : contact.email_verified_status,
-          countryIds: contact.countries?.map((c: any) => c.id) || [],
-          beats: contact.beats?.map((b: any) => b.name).join(', ') || "", // Changed from beatIds to beats (names)
-          outlets: contact.outlets?.map((o: any) => o.name).join(', ') || "", // Changed from outletIds to outlets (names)
+          // Use explicit typing instead of 'any' for countries
+          countryIds: contact.countries?.map((c: {id: string}) => c.id) || [],
+          beats: contactBeats,
+          outlets: contactOutlets,
         });
       } else { 
         form.reset({
@@ -124,40 +202,78 @@ export function UpdateMediaContactSheet({
           title: '',
           email: '',
           bio: '',
-          socials: '',
+          // Ensure socials is an empty array, not an empty string, for type consistency
+          socials: [], 
           email_verified_status: false,
           countryIds: [],
-          beats: "",
-          outlets: "",
+          beats: [],
+          outlets: [],
         });
       }
     }
   }, [contact, form, isOpen]);
 
+  /**
+   * Handles form submission with comprehensive validation and error handling
+   * @param data The form data to be submitted
+   */
   const onSubmit = async (data: MediaContactUpsertFormData) => {
     setIsSubmitting(true);
-    setFormActionFeedback(null);
+    try {
+      // Process data with explicit type handling for robustness
+      // Destructure to avoid property collision and explicitly handle each field
+      const { email, bio, countryIds, ...restData } = data;
+      
+      const processedData: UpsertMediaContactData = {
+        ...restData,
+        // Ensure email is always a string, never undefined
+        email: email || '',
+        // Ensure bio is a string, never null or undefined
+        bio: bio || '',
+        // Ensure countryIds is always an array
+        countryIds: countryIds || [],
+        id: contact?.id,
+        // Apply explicit null safety for arrays with spread operator to ensure new array instances
+        beats: data.beats ? [...data.beats] : [], 
+        outlets: data.outlets ? [...data.outlets] : [],
+        socials: data.socials ? [...data.socials] : [],
+      };
 
-    const payload: UpsertMediaContactData = {
-      id: contact?.id,
-      name: data.name ?? '', 
-      title: data.title ?? '', 
-      email: data.email ?? '', 
-      email_verified_status: data.email_verified_status,
-      bio: data.bio || null,
-      socials: data.socials ? data.socials.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
-      countryIds: data.countryIds || [],
-      beats: data.beats ? data.beats.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
-      outlets: data.outlets ? data.outlets.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
-    };
+      const result = await upsertMediaContactAction(processedData);
+      setFormActionFeedback(result);
 
-    const result = await upsertMediaContactAction(payload);
-    setFormActionFeedback(result);
-    setIsSubmitting(false);
-
-    if (result.data && !result.errors) { 
-      onContactUpdate();
-      onOpenChange(false); 
+      if (!result.errors) {
+        // Use Sonner toast instead of window.alert
+        toast.success(contact ? "Contact updated successfully" : "Contact created successfully", {
+          description: `${data.name} has been ${contact ? 'updated' : 'added'} to your contacts.`,
+          action: {
+            label: "View All",
+            onClick: () => {
+              // This function would navigate to contacts list if needed
+              // For now, just close the sheet
+            },
+          },
+        });
+        
+        // Close sheet and trigger refresh of the table
+        onOpenChange(false);
+        onContactUpdate();
+      } else {
+        // Show error toast
+        toast.error("Failed to save contact", {
+          description: result.errors._form ? result.errors._form[0] : "Please check the form for errors",
+        });
+      }
+    } catch (error) {
+      console.error("Error submitting contact form:", error);
+      setFormActionFeedback({ errors: { _form: [`An unexpected error occurred: ${error}`] } });
+      
+      // Show error toast
+      toast.error("An unexpected error occurred", {
+        description: error instanceof Error ? error.message : "Please try again later",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -168,6 +284,10 @@ export function UpdateMediaContactSheet({
   const handleClose = () => {
     form.reset();
     setFormActionFeedback(null);
+    // Clear tag states
+    setOutletTags([]);
+    setBeatTags([]);
+    setSocialTags([]);
     onOpenChange(false);
   };
 
@@ -195,31 +315,31 @@ export function UpdateMediaContactSheet({
           <ScrollArea className="flex-grow px-6">
             <div className="space-y-4 py-6">
               {/* Form Fields */}
-              <div>
+              <div className="mb-6">
                 <Label htmlFor="name">Name <span className="text-red-500">*</span></Label>
-                <Input id="name" {...form.register('name')} className="mt-1" />
+                <Input id="name" {...form.register('name')} className="mt-2" />
                 {form.formState.errors.name && (
                   <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
                 )}
               </div>
 
-              <div>
+              <div className="mb-6">
                 <Label htmlFor="title">Title <span className="text-red-500">*</span></Label>
-                <Input id="title" {...form.register('title')} className="mt-1" />
+                <Input id="title" {...form.register('title')} className="mt-2" />
                 {form.formState.errors.title && (
                   <p className="text-sm text-red-500 mt-1">{form.formState.errors.title.message}</p>
                 )}
               </div>
 
-              <div>
+              <div className="mb-6">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" {...form.register('email')} className="mt-1" />
+                <Input id="email" type="email" {...form.register('email')} className="mt-2" />
                 {form.formState.errors.email && (
                   <p className="text-sm text-red-500 mt-1">{form.formState.errors.email.message}</p>
                 )}
               </div>
               
-              <div className="flex items-center space-x-2 pt-1">
+              <div className="flex items-center space-x-2 pt-1 mb-6">
                 <Controller
                   name="email_verified_status"
                   control={form.control}
@@ -229,7 +349,7 @@ export function UpdateMediaContactSheet({
                       id="email_verified_status"
                       checked={field.value ?? false}
                       onChange={(e) => field.onChange(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-2"
                     />
                   )}
                 />
@@ -239,7 +359,7 @@ export function UpdateMediaContactSheet({
               </div>
 
               {/* Countries Multi-Select Popover - Stays as is */}
-              <div>
+              <div className="mb-6">
                 <Label>Countries</Label>
                 <Controller
                   name="countryIds"
@@ -312,37 +432,109 @@ export function UpdateMediaContactSheet({
                 )}
               </div>
 
-              {/* Beats - Changed to Text Input */}
-              <div>
-                <Label htmlFor="beats">Beats (comma-separated)</Label>
-                <Input id="beats" {...form.register('beats')} className="mt-1" />
-                {form.formState.errors.beats && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.beats.message}</p>
-                )}
+              {/* Beats - Enhanced with TagInput */}
+              <div className="mb-6">
+                <Label htmlFor="beats">Beats</Label>
+                <Controller
+                  name="beats"
+                  control={form.control}
+                  render={({ field }) => {
+                    // Ensure field value is always an array for type safety
+                    // Using value directly in the component, no need for separate variable
+                    return (
+                      <TagInput
+                        tags={beatTags}
+                        onTagsChange={(newTags: string[]) => {
+                          setBeatTags(newTags);
+                          field.onChange(newTags);
+                        }}
+                        placeholder="Add beat..."
+                        validation={{
+                          maxTags: 10,
+                          minLength: 2,
+                          pattern: /^[\w\s\-\.]+$/,
+                        }}
+                        error={form.formState.errors.beats?.message as string}
+                      />
+                    );
+                  }}
+                />
               </div>
 
-              {/* Outlets - Changed to Text Input */}
-              <div>
-                <Label htmlFor="outlets">Outlets (comma-separated)</Label>
-                <Input id="outlets" {...form.register('outlets')} className="mt-1" />
-                {form.formState.errors.outlets && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.outlets.message}</p>
-                )}
+              {/* Outlets - Enhanced with TagInput */}
+              <div className="mb-6">
+                <Label htmlFor="outlets">Outlets</Label>
+                <Controller
+                  name="outlets"
+                  control={form.control}
+                  render={({ field }) => {
+                    // Ensure field value is always an array for type safety
+                    // Using value directly in the component, no need for separate variable
+                    return (
+                      <TagInput
+                        tags={outletTags}
+                        onTagsChange={(newTags: string[]) => {
+                          setOutletTags(newTags);
+                          field.onChange(newTags);
+                        }}
+                        placeholder="Add outlet..."
+                        validation={{
+                          maxTags: 10,
+                          minLength: 2,
+                          pattern: /^[\w\s\-\.]+$/,
+                        }}
+                        error={form.formState.errors.outlets?.message as string}
+                      />
+                    );
+                  }}
+                />
               </div>
 
-              <div>
+              <div className="mb-6">
                 <Label htmlFor="bio">Bio</Label>
                 <Textarea id="bio" {...form.register('bio')} className="mt-1" rows={3} />
                 {form.formState.errors.bio && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.bio.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.bio.message as string}</p>
                 )}
               </div>
 
+              {/* Socials - Enhanced with TagInput */}
               <div>
-                <Label htmlFor="socials">Socials (comma-separated)</Label>
-                <Input id="socials" {...form.register('socials')} className="mt-1" />
-                {form.formState.errors.socials && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.socials.message}</p>
+                <Label htmlFor="socials">Social Media Links</Label>
+                <Controller
+                  name="socials"
+                  control={form.control}
+                  render={({ field }) => {
+                    // Ensure field value is always an array for type safety
+                    // Using value directly in the component, no need for separate variable
+                    return (
+                      <TagInput
+                        tags={socialTags}
+                        onTagsChange={(newTags: string[]) => {
+                          setSocialTags(newTags);
+                          field.onChange(newTags);
+                        }}
+                        placeholder="Add social media URL..."
+                        validation={{
+                          maxTags: 5,
+                          pattern: /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+                        }}
+                        error={form.formState.errors.socials?.message as string}
+                      />
+                    );
+                  }}
+                />
+                {socialTags.length > 0 && (
+                  <div className="mt-2">
+                    {socialTags.map((url, index) => {
+                      const platform = detectSocialPlatform(url);
+                      return (
+                        <Badge key={index} variant="outline" className="mr-2 mb-2">
+                          {platform}: {url}
+                        </Badge>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </div>

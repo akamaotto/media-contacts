@@ -53,6 +53,7 @@ import {
 
 import { MediaContactTableItem, getColumns } from "./columns";
 import { UpdateMediaContactSheet } from "./update-media-contact-sheet";
+import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 import { getCountries, Country } from "@/app/actions/country-actions"; // Will be used by MediaContactsFilters, but props come from here
 import { getBeats, Beat } from "@/app/actions/beat-actions"; // Will be used by MediaContactsFilters, but props come from here
 import { MediaContactsFilters, MediaContactsFiltersProps } from "./media-contacts-filters";
@@ -82,6 +83,9 @@ export function MediaContactsTable({ data, onDataRefresh, onEditContact }: Media
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
+  // Delete confirmation modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [contactToDelete, setContactToDelete] = useState<MediaContactTableItem | null>(null);
 
   // Main search term
   const [mainSearchTerm, setMainSearchTerm] = useState('');
@@ -138,7 +142,30 @@ export function MediaContactsTable({ data, onDataRefresh, onEditContact }: Media
     setIsBeatDropdownOpen(false);
   };
   
-  const columns = useMemo(() => getColumns({ onEditContact }), [onEditContact]);
+  /**
+   * Handle initiating contact deletion process
+   * Sets up the contact to delete and opens the confirmation modal
+   */
+  const handleDeleteContact = (contact: MediaContactTableItem) => {
+    setContactToDelete(contact);
+    setIsDeleteModalOpen(true);
+  };
+
+  /**
+   * Handle successful deletion
+   * Triggers data refresh and resets delete state
+   */
+  const handleDeleteComplete = () => {
+    onDataRefresh();
+    setContactToDelete(null);
+  };
+
+  const columns = useMemo(() => {
+    return getColumns({
+      onEditContact,
+      onDeleteContact: handleDeleteContact,
+    });
+  }, [onEditContact]);
 
   const filteredData = useMemo(() => {
     let currentData = data;
@@ -338,6 +365,14 @@ export function MediaContactsTable({ data, onDataRefresh, onEditContact }: Media
         </div>
       </div>
       
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        contactId={contactToDelete?.id || null}
+        contactName={contactToDelete?.name || null}
+        onDeleteComplete={handleDeleteComplete}
+      />
     </div>
   );
 }

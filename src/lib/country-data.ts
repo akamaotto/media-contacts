@@ -123,4 +123,4 @@ export {
 
 // Export language data
 export { languages };
-export type { Language };
+export type { Language, Region, RegionCategory };

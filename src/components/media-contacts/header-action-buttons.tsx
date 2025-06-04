@@ -19,7 +19,7 @@ export function HeaderActionButtons({ onAddContactOpen }: HeaderActionButtonsPro
         <DownloadCloudIcon className="mr-2 h-4 w-4" />
         Export CSV
       </Button>
-      <Button onClick={onAddContactOpen} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
+      <Button onClick={onAddContactOpen} className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white">
         <PlusCircleIcon className="mr-2 h-4 w-4" />
         Add Contact
       </Button>

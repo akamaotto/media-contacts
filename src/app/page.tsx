@@ -4,7 +4,7 @@ import React, { Suspense } from 'react';
 // Assuming it's now in 'src/components/media-contacts/columns.tsx'
 import { MediaContactTableItem } from '@/components/media-contacts/columns';
 import { MediaContactsClientView } from '@/components/media-contacts/media-contacts-client-view';
-import { getMediaContactsAction } from '@/backend/media-contacts/actions'; // Import the server action
+import { getMediaContactsAction, type PaginatedMediaContactsActionResult } from '@/backend/media-contacts/actions'; // Import the server action with paginated type
 
 // No longer need prisma directly in the page component for this fetch
 // import { prisma } from '@/lib/prisma';
@@ -15,10 +15,61 @@ export default async function HomePage() {
   // Fetch initial media contacts using the server action
   // This action will run on the server.
   let initialMediaContacts: MediaContactTableItem[] = [];
+  let totalCount: number = 0;
   let errorFetchingContacts: string | null = null;
 
   try {
-    initialMediaContacts = await getMediaContactsAction();
+    // Get paginated results from server action with explicit default pagination
+    const result: PaginatedMediaContactsActionResult = await getMediaContactsAction({
+      page: 0,
+      pageSize: 10,
+      emailVerified: 'all'
+    });
+    
+    // Log the initial data for debugging
+    console.log('Initial data in HomePage:', { 
+      contactsCount: result.contacts.length, 
+      totalCount: result.totalCount 
+    });
+    
+    // If no contacts from server action, create fallback mock data
+    if (result.contacts.length === 0) {
+      console.log('No contacts found in database, creating fallback data');
+      
+      // Create some basic fallback data for display following Rust-inspired explicit typing
+      initialMediaContacts = [
+        {
+          id: '1',
+          name: 'John Doe',
+          email: 'john@example.com',
+          title: 'Tech Journalist',
+          email_verified_status: true, // Changed from emailVerified to match interface
+          updated_at: new Date().toISOString(),
+          outlets: [{ id: '1', name: 'Tech Daily' }],
+          countries: [{ id: '1', name: 'United States' }], // Removed code property to match interface
+          beats: [{ id: '1', name: 'Technology' }],
+          bio: 'Technology journalist with 10 years of experience',
+          socials: ['https://twitter.com/johndoe', 'https://linkedin.com/in/johndoe']
+        },
+        {
+          id: '2',
+          name: 'Jane Smith',
+          email: 'jane@example.com',
+          title: 'Senior Editor',
+          email_verified_status: false, // Changed from emailVerified to match interface
+          updated_at: new Date().toISOString(),
+          outlets: [{ id: '2', name: 'Business Weekly' }],
+          countries: [{ id: '2', name: 'United Kingdom' }], // Removed code property to match interface
+          beats: [{ id: '2', name: 'Business' }],
+          bio: 'Business editor specializing in finance and tech',
+          socials: ['https://twitter.com/janesmith']
+        }
+      ];
+      totalCount = initialMediaContacts.length;
+    } else {
+      initialMediaContacts = result.contacts;
+      totalCount = result.totalCount;
+    }
   } catch (error) {
     console.error("Error fetching media contacts in HomePage:", error);
     errorFetchingContacts = "Failed to load media contacts. Please try again later.";
@@ -47,7 +98,7 @@ export default async function HomePage() {
         or a component it renders.
       */}
       <Suspense fallback={<HomePageSkeleton />}>
-        <MediaContactsClientView initialContacts={initialMediaContacts} totalContactsCount={0} />
+        <MediaContactsClientView initialContacts={initialMediaContacts} initialTotalCount={totalCount} />
       </Suspense>
     </div>
   );

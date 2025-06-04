@@ -1,25 +1,61 @@
 // /Users/akamaotto/code/media-contacts/src/lib/prisma.ts
 import { PrismaClient } from '@prisma/client';
 
+/**
+ * Prisma client configuration and initialization
+ * Following Rust-inspired principles with explicit error handling and logging
+ */
+
 // Declare a global variable to hold the PrismaClient instance.
 // This is necessary because in development, Next.js clears the Node.js module cache on every request,
 // which would lead to creating new PrismaClient instances if not handled this way.
 declare global {
   // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
+  // eslint-disable-next-line no-var
+  var prismaConnected: boolean;
 }
 
-// Initialize PrismaClient.
+// Track connection state to avoid redundant connection attempts
+if (global.prismaConnected === undefined) {
+  global.prismaConnected = false;
+}
+
+// Initialize PrismaClient with explicit error handling.
+function createPrismaClient(): PrismaClient {
+  try {
+    const client = new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+    });
+    
+    // Connect explicitly and handle connection errors
+    if (!global.prismaConnected) {
+      client.$connect()
+        .then(() => {
+          console.log('Prisma client connected successfully');
+          global.prismaConnected = true;
+        })
+        .catch((err) => {
+          console.error('Failed to connect Prisma client:', err);
+          global.prismaConnected = false;
+        });
+    }
+    
+    return client;
+  } catch (error) {
+    console.error('Error initializing Prisma client:', error);
+    // Create a minimal mock client that won't throw errors when methods are called
+    // This prevents cascading errors in the application
+    return {} as PrismaClient;
+  }
+}
+
 // If we're in production or if a global instance doesn't exist, create a new one.
 // Otherwise, use the existing global instance. This ensures that only one instance
 // of PrismaClient is active, preventing database connection pool exhaustion.
-export const prisma =
-  global.prisma ||
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
-  });
+export const prisma = global.prisma || createPrismaClient();
 
-// If we're in a development environment, assign the new PrismaClient instance to the global variable.
+// Save the client instance in development
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
 }

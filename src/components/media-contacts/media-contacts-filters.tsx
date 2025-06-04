@@ -15,15 +15,23 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CheckIcon, ChevronsUpDownIcon, X as XIcon } from "lucide-react";
+import { CheckIcon, ChevronsUpDownIcon, X as XIcon, Globe, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Country } from "@/app/actions/country-actions"; // Assuming this path is correct
-import { Beat } from "@/app/actions/beat-actions"; // Assuming this path is correct
+import { Country } from "@/app/actions/country-actions";
+import { Beat } from "@/app/actions/beat-actions";
+import { Region } from "@/lib/country-data";
+import { Language } from "@/lib/language-data";
 
+/**
+ * Props interface for MediaContactsFilters component
+ * Following Rust-inspired explicit typing and clear documentation
+ */
 export interface MediaContactsFiltersProps {
+  // Main search
   mainSearchTerm: string;
   setMainSearchTerm: (term: string) => void;
   
+  // Country filters
   allCountries: Country[];
   selectedCountryIds: string[];
   setSelectedCountryIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -32,6 +40,7 @@ export interface MediaContactsFiltersProps {
   searchFilterCountryTerm: string;
   setSearchFilterCountryTerm: (term: string) => void;
 
+  // Beat filters
   allBeats: Beat[];
   selectedBeatIds: string[];
   setSelectedBeatIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -40,16 +49,45 @@ export interface MediaContactsFiltersProps {
   searchFilterBeatTerm: string;
   setSearchFilterBeatTerm: (term: string) => void;
 
+  // Region filters (new)
+  allRegions: Region[];
+  selectedRegionCodes: string[];
+  setSelectedRegionCodes: React.Dispatch<React.SetStateAction<string[]>>;
+  isRegionDropdownOpen: boolean;
+  setIsRegionDropdownOpen: (isOpen: boolean) => void;
+  searchFilterRegionTerm: string;
+  setSearchFilterRegionTerm: (term: string) => void;
+
+  // Language filters (new)
+  allLanguages: Language[];
+  selectedLanguageCodes: string[];
+  setSelectedLanguageCodes: React.Dispatch<React.SetStateAction<string[]>>;
+  isLanguageDropdownOpen: boolean;
+  setIsLanguageDropdownOpen: (isOpen: boolean) => void;
+  searchFilterLanguageTerm: string;
+  setSearchFilterLanguageTerm: (term: string) => void;
+
+  // Email verification filter
   emailVerifiedFilter: 'all' | 'verified' | 'unverified';
   setEmailVerifiedFilter: (value: 'all' | 'verified' | 'unverified') => void;
+  isEmailVerifiedDropdownOpen: boolean;
+  setIsEmailVerifiedDropdownOpen: (isOpen: boolean) => void;
   
+  // Filter management
   activeFiltersCount: number;
   handleClearAllFilters: () => void;
 }
 
+/**
+ * MediaContactsFilters component for filtering media contacts by various criteria
+ * @param props Component properties following Rust-inspired explicit parameter typing
+ * @returns React component for filters UI
+ */
 export function MediaContactsFilters({
+  // Main search
   mainSearchTerm,
   setMainSearchTerm,
+  // Country filters
   allCountries,
   selectedCountryIds,
   setSelectedCountryIds,
@@ -57,6 +95,7 @@ export function MediaContactsFilters({
   setIsCountryDropdownOpen,
   searchFilterCountryTerm,
   setSearchFilterCountryTerm,
+  // Beat filters
   allBeats,
   selectedBeatIds,
   setSelectedBeatIds,
@@ -64,15 +103,35 @@ export function MediaContactsFilters({
   setIsBeatDropdownOpen,
   searchFilterBeatTerm,
   setSearchFilterBeatTerm,
+  // Region filters
+  allRegions,
+  selectedRegionCodes,
+  setSelectedRegionCodes,
+  isRegionDropdownOpen,
+  setIsRegionDropdownOpen,
+  searchFilterRegionTerm,
+  setSearchFilterRegionTerm,
+  // Language filters
+  allLanguages,
+  selectedLanguageCodes,
+  setSelectedLanguageCodes,
+  isLanguageDropdownOpen,
+  setIsLanguageDropdownOpen,
+  searchFilterLanguageTerm,
+  setSearchFilterLanguageTerm,
+  // Email verification filter
   emailVerifiedFilter,
   setEmailVerifiedFilter,
+  isEmailVerifiedDropdownOpen,
+  setIsEmailVerifiedDropdownOpen,
+  // Filter management
   activeFiltersCount,
   handleClearAllFilters,
 }: MediaContactsFiltersProps) {
   return (
-    <Card>
+    <Card className="rounded-sm overflow-hidden">
       <CardContent> {/* Added pt-6 to CardContent as CardHeader was removed by user */}
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-wrap items-end gap-3">
           {/* Main Search Input */}
           <div className="flex-grow min-w-[200px] sm:min-w-[250px] md:min-w-[300px]">
             <Label htmlFor="mainSearch" className="text-sm font-medium">Search</Label>
@@ -83,6 +142,69 @@ export function MediaContactsFilters({
               onChange={(event) => setMainSearchTerm(event.target.value)}
               className="w-full mt-1"
             />
+          </div>
+
+          {/* Region Filter Popover */}
+          <div className="min-w-[180px]">
+            <Label htmlFor="regionFilterButton" className="text-sm font-medium flex items-center">
+              <Globe className="h-4 w-4 mr-1 text-muted-foreground" />
+              Regions
+            </Label>
+            <Popover open={isRegionDropdownOpen} onOpenChange={setIsRegionDropdownOpen}>
+              <PopoverTrigger asChild>
+                <Button id="regionFilterButton" variant="outline" role="combobox" className="w-full justify-between mt-1">
+                  <span className="truncate">
+                    {selectedRegionCodes.length === 0
+                      ? "Select regions..."
+                      : selectedRegionCodes.length === 1 && allRegions.find(r => r.code === selectedRegionCodes[0])
+                      ? allRegions.find(r => r.code === selectedRegionCodes[0])!.name
+                      : `${selectedRegionCodes.length} selected`}
+                  </span>
+                  <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Search region..." value={searchFilterRegionTerm} onValueChange={setSearchFilterRegionTerm}/>
+                  <CommandList>
+                    <CommandEmpty>No region found.</CommandEmpty>
+                    <CommandGroup>
+                      {allRegions
+                        .filter(region => 
+                          region.name.toLowerCase().includes(searchFilterRegionTerm.toLowerCase()) ||
+                          region.code.toLowerCase().includes(searchFilterRegionTerm.toLowerCase())
+                        )
+                        .map((region) => (
+                          <CommandItem
+                            key={region.code}
+                            value={region.name}
+                            onSelect={() => {
+                              setSelectedRegionCodes((prev) =>
+                                prev.includes(region.code)
+                                  ? prev.filter((code) => code !== region.code)
+                                  : [...prev, region.code]
+                              );
+                            }}
+                          >
+                            <CheckIcon
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedRegionCodes.includes(region.code) ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {region.name}
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              {region.category === 'continent' ? '(Continent)' : 
+                               region.category === 'subregion' ? '(Subregion)' : 
+                               `(${region.category.charAt(0).toUpperCase() + region.category.slice(1)})`}
+                            </span>
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Country Filter Popover */}
@@ -185,27 +307,151 @@ export function MediaContactsFilters({
             </Popover>
           </div>
           
-          {/* Email Verification Filter */}
-          <div className="flex flex-col space-y-1.5 pt-1"> {/* Adjusted for alignment */}
+          
+
+          {/* Language Filter Popover */}
+          <div className="min-w-[180px]">
+            <Label htmlFor="languageFilterButton" className="text-sm font-medium flex items-center">
+              <Languages className="h-4 w-4 mr-1 text-muted-foreground" />
+              Languages
+            </Label>
+            <Popover open={isLanguageDropdownOpen} onOpenChange={setIsLanguageDropdownOpen}>
+              <PopoverTrigger asChild>
+                <Button id="languageFilterButton" variant="outline" role="combobox" className="w-full justify-between mt-1">
+                  <span className="truncate">
+                    {selectedLanguageCodes.length === 0
+                      ? "Select languages..."
+                      : selectedLanguageCodes.length === 1 && allLanguages.find(l => l.code === selectedLanguageCodes[0])
+                      ? allLanguages.find(l => l.code === selectedLanguageCodes[0])!.name
+                      : `${selectedLanguageCodes.length} selected`}
+                  </span>
+                  <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Search language..." value={searchFilterLanguageTerm} onValueChange={setSearchFilterLanguageTerm}/>
+                  <CommandList>
+                    <CommandEmpty>No language found.</CommandEmpty>
+                    <CommandGroup>
+                      {allLanguages
+                        .filter(language => 
+                          language.name.toLowerCase().includes(searchFilterLanguageTerm.toLowerCase()) ||
+                          language.code.toLowerCase().includes(searchFilterLanguageTerm.toLowerCase()) ||
+                          (language.native && language.native.toLowerCase().includes(searchFilterLanguageTerm.toLowerCase()))
+                        )
+                        .map((language) => (
+                          <CommandItem
+                            key={language.code}
+                            value={language.name}
+                            onSelect={() => {
+                              setSelectedLanguageCodes((prev) =>
+                                prev.includes(language.code)
+                                  ? prev.filter((code) => code !== language.code)
+                                  : [...prev, language.code]
+                              );
+                            }}
+                          >
+                            <CheckIcon
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedLanguageCodes.includes(language.code) ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {language.name}
+                            {language.native && language.name !== language.native && (
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                ({language.native})
+                              </span>
+                            )}
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          
+          {/* Email Verification Filter - Converted to dropdown */}
+          <div className="flex flex-col space-y-1.5 pt-1">
             <Label className="text-sm font-medium">Email Verification</Label>
-            <RadioGroup
-              value={emailVerifiedFilter}
-              onValueChange={(value) => setEmailVerifiedFilter(value as 'all' | 'verified' | 'unverified')}
-              className="flex items-center space-x-3 pt-1"
+            <Popover
+              open={isEmailVerifiedDropdownOpen}
+              onOpenChange={setIsEmailVerifiedDropdownOpen}
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="email-all" />
-                <Label htmlFor="email-all" className="font-normal">All</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="verified" id="email-verified" />
-                <Label htmlFor="email-verified" className="font-normal">Verified</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="unverified" id="email-unverified" />
-                <Label htmlFor="email-unverified" className="font-normal">Unverified</Label>
-              </div>
-            </RadioGroup>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={isEmailVerifiedDropdownOpen}
+                  className="w-full justify-between"
+                >
+                  <span className="truncate">
+                    {emailVerifiedFilter === 'all' && 'All Contacts'}
+                    {emailVerifiedFilter === 'verified' && 'Verified Emails'}
+                    {emailVerifiedFilter === 'unverified' && 'Unverified Emails'}
+                  </span>
+                  <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandList>
+                    <CommandGroup>
+                      <CommandItem
+                        key="all"
+                        value="All Contacts"
+                        onSelect={() => {
+                          setEmailVerifiedFilter('all');
+                          setIsEmailVerifiedDropdownOpen(false);
+                        }}
+                      >
+                        <CheckIcon
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            emailVerifiedFilter === 'all' ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        All Contacts
+                      </CommandItem>
+                      <CommandItem
+                        key="verified"
+                        value="Verified Emails"
+                        onSelect={() => {
+                          setEmailVerifiedFilter('verified');
+                          setIsEmailVerifiedDropdownOpen(false);
+                        }}
+                      >
+                        <CheckIcon
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            emailVerifiedFilter === 'verified' ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        Verified Emails
+                      </CommandItem>
+                      <CommandItem
+                        key="unverified"
+                        value="Unverified Emails"
+                        onSelect={() => {
+                          setEmailVerifiedFilter('unverified');
+                          setIsEmailVerifiedDropdownOpen(false);
+                        }}
+                      >
+                        <CheckIcon
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            emailVerifiedFilter === 'unverified' ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        Unverified Emails
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Clear All Filters Button */}

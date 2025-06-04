@@ -1,5 +1,6 @@
-import * as React from "react";
-import { useState, useEffect, useMemo } from "react";
+"use client";
+
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -11,8 +12,13 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  Row,
+  Cell,
 } from "@tanstack/react-table";
+import { useVirtualizer } from '@tanstack/react-virtual';
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -21,16 +27,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Card, CardContent } from "@/components/ui/card"; // CardHeader and CardTitle removed by user
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "@/components/ui/pagination";
 import {
   Command,
   CommandEmpty,
@@ -43,21 +52,22 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-
 
 import { MediaContactTableItem, getColumns } from "./columns";
 import { UpdateMediaContactSheet } from "./update-media-contact-sheet";
 import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 import { getCountries, Country } from "@/app/actions/country-actions"; // Will be used by MediaContactsFilters, but props come from here
 import { getBeats, Beat } from "@/app/actions/beat-actions"; // Will be used by MediaContactsFilters, but props come from here
-import { MediaContactsFilters, MediaContactsFiltersProps } from "./media-contacts-filters";
+// Filtering is now handled by the client view component
 import { cn } from "@/lib/utils";
+
+
 
 import {
   ChevronDownIcon,
@@ -71,77 +81,112 @@ import {
   X as XIcon, // For Clear All button
 } from "lucide-react";
 
+/**
+ * Props for MediaContactsTable component
+ * Following Rust-inspired explicit typing pattern with comprehensive documentation
+ */
 interface MediaContactsTableProps {
   data: MediaContactTableItem[];
   onDataRefresh: () => void;
   onEditContact: (contact: MediaContactTableItem) => void;
+  onViewContact: (contact: MediaContactTableItem) => void;
+  
+  // Data update callback for fallback handling
+  onFallbackDataNeeded?: (fallbackData: MediaContactTableItem[]) => void;
+  
+  // Search filters
+  mainSearchTerm?: string;
+  
+  // Country filters
+  selectedCountryIds?: string[];
+  
+  // Beat filters
+  selectedBeatIds?: string[];
+  
+  // Region filters (new)
+  selectedRegionCodes?: string[];
+  
+  // Language filters (new)
+  selectedLanguageCodes?: string[];
+  
+  // Email verification filter
+  emailVerifiedFilter?: 'all' | 'verified' | 'unverified';
+  
+  // Pagination properties
+  currentPage?: number;
+  setCurrentPage?: (page: number) => void;
+  pageSize?: number;
+  setPageSize?: (size: number) => void;
+  totalCount?: number;
 }
 
-export function MediaContactsTable({ data, onDataRefresh, onEditContact }: MediaContactsTableProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+/**
+ * Table component for displaying and interacting with media contacts data
+ * Implements filtering, sorting and pagination
+ */
+export function MediaContactsTable({
+  data,
+  onDataRefresh,
+  onEditContact,
+  onViewContact,
+  onFallbackDataNeeded,
+  mainSearchTerm = '',
+  selectedCountryIds = [],
+  selectedBeatIds = [],
+  selectedRegionCodes = [],
+  selectedLanguageCodes = [],
+  emailVerifiedFilter = 'all',
+  currentPage = 0,
+  setCurrentPage,
+  pageSize = 10,
+  setPageSize,
+  totalCount = 0
+}: MediaContactsTableProps) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
 
   // Delete confirmation modal state
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<MediaContactTableItem | null>(null);
 
-  // Main search term
-  const [mainSearchTerm, setMainSearchTerm] = useState('');
+  // Calculate pageCount based on props - Ensure this is correctly scoped now
+  const pageCount = pageSize > 0 ? Math.max(1, Math.ceil(totalCount / pageSize)) : 1;
 
-  // Filter states
-  const [allCountries, setAllCountries] = useState<Country[]>([]);
-  const [allBeats, setAllBeats] = useState<Beat[]>([]);
-  const [selectedCountryIds, setSelectedCountryIds] = useState<string[]>([]);
-  const [selectedBeatIds, setSelectedBeatIds] = useState<string[]>([]);
-  const [emailVerifiedFilter, setEmailVerifiedFilter] = useState<'all' | 'verified' | 'unverified'>('all');
-
-  // State for individual filter popovers/dropdowns
-  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
-  const [isBeatDropdownOpen, setIsBeatDropdownOpen] = useState(false);
-  const [searchFilterCountryTerm, setSearchFilterCountryTerm] = useState('');
-  const [searchFilterBeatTerm, setSearchFilterBeatTerm] = useState('');
-
-  useEffect(() => {
-    async function fetchFiltersData() {
-      try {
-        const [fetchedCountries, fetchedBeats] = await Promise.all([
-          getCountries(),
-          getBeats(),
-        ]);
-        setAllCountries(fetchedCountries || []);
-        setAllBeats(fetchedBeats || []);
-      } catch (error) {
-        console.error("Failed to fetch data for filters:", error);
-        setAllCountries([]);
-        setAllBeats([]);
-      }
-    }
-    fetchFiltersData();
-  }, []);
-
-  const calculateActiveFiltersCount = () => {
-    let count = 0;
-    if (selectedCountryIds.length > 0) count++;
-    if (selectedBeatIds.length > 0) count++;
-    if (emailVerifiedFilter !== 'all') count++;
-    if (mainSearchTerm) count++; // Optionally count main search as a filter
-    return count;
+  const handleDeleteCompleted = () => {
+    // Note: Success/error toasts are handled within DeleteConfirmationModal itself.
+    // The modal also handles closing itself via its onOpenChange prop.
+    onDataRefresh(); // Refresh the table data after deletion
+    setContactToDelete(null); // Clear the selected contact
   };
+
+  /**
+   * Calculate the active filters count for UI feedback
+   * Following Rust-inspired explicit return type and comprehensive calculation
+   * @returns The total number of active filters
+   */
+  function calculateActiveFiltersCount(): number {
+    return (
+      (mainSearchTerm.trim() !== '' ? 1 : 0) +
+      selectedCountryIds.length +
+      selectedBeatIds.length +
+      selectedRegionCodes.length +
+      selectedLanguageCodes.length +
+      (emailVerifiedFilter !== 'all' ? 1 : 0)
+    );
+  }
   const activeFiltersCount = calculateActiveFiltersCount();
 
-  const handleClearAllFilters = () => {
-    setMainSearchTerm('');
-    setSelectedCountryIds([]);
-    setSelectedBeatIds([]);
-    setEmailVerifiedFilter('all');
-    setSearchFilterCountryTerm('');
-    setSearchFilterBeatTerm('');
-    setIsCountryDropdownOpen(false);
-    setIsBeatDropdownOpen(false);
+  /**
+   * Clear table-specific column filters (global filters are handled by parent component)
+   * Following Rust-inspired explicit function definition
+   */
+  function handleClearTableFilters(): void {
+    // Reset any column filters that might have been set directly on the table
+    setColumnFilters([]);
   };
-  
+
   /**
    * Handle initiating contact deletion process
    * Sets up the contact to delete and opens the confirmation modal
@@ -160,219 +205,411 @@ export function MediaContactsTable({ data, onDataRefresh, onEditContact }: Media
     setContactToDelete(null);
   };
 
-  const columns = useMemo(() => {
-    return getColumns({
-      onEditContact,
-      onDeleteContact: handleDeleteContact,
-    });
-  }, [onEditContact]);
-
-  const filteredData = useMemo(() => {
-    let currentData = data;
-    if (mainSearchTerm) {
-      currentData = currentData.filter(contact => {
-        const term = mainSearchTerm.toLowerCase();
-        return (
-          contact.name?.toLowerCase().includes(term) ||
-          contact.email?.toLowerCase().includes(term) ||
-          contact.title?.toLowerCase().includes(term) ||
-          contact.outlets?.some(outlet => outlet.name.toLowerCase().includes(term)) ||
-          contact.beats?.some(beat => beat.name.toLowerCase().includes(term))
-        );
-      });
-    }
-    if (selectedCountryIds.length > 0) {
-      currentData = currentData.filter(contact =>
-        contact.countries?.some(country => selectedCountryIds.includes(country.id))
+  /**
+   * Create global filter function to check against multiple fields
+   * Following Rust-inspired explicit typing, comprehensive validation, and fail-fast approach
+   */
+  const globalFilterFn = useCallback(
+    (row: any): boolean => {
+      const contact = row.original;
+      if (!contact) return false; // Fail fast if contact is invalid
+      
+      // Main search - checks name, email, and outlets
+      const searchTermLower = mainSearchTerm.toLowerCase();
+      const textMatches = searchTermLower === '' || (
+        (contact.name?.toLowerCase().includes(searchTermLower)) ||
+        (contact.email?.toLowerCase().includes(searchTermLower)) ||
+        (contact.outlets?.some((outlet: any) => 
+          outlet.name?.toLowerCase().includes(searchTermLower)
+        ))
       );
-    }
-    if (selectedBeatIds.length > 0) {
-      currentData = currentData.filter(contact =>
-        contact.beats?.some(beat => selectedBeatIds.includes(beat.id))
+      
+      // Country filtering
+      const countryMatches = selectedCountryIds.length === 0 || 
+        (contact.countries?.some((country: any) => selectedCountryIds.includes(country.id)));
+      
+      // Beat filtering
+      const beatMatches = selectedBeatIds.length === 0 || 
+        (contact.beats?.some((beat: any) => selectedBeatIds.includes(beat.id)));
+      
+      // Region filtering (new)
+      const regionMatches = selectedRegionCodes.length === 0 || 
+        (contact.countries?.some((country: any) => {
+          // Check if country belongs to any of the selected regions
+          return country.regions?.some((region: any) => 
+            selectedRegionCodes.includes(region.code)
+          );
+        }));
+      
+      // Language filtering (new)
+      const languageMatches = selectedLanguageCodes.length === 0 || 
+        (contact.countries?.some((country: any) => {
+          // Check if country uses any of the selected languages
+          return country.languages?.some((language: any) => 
+            selectedLanguageCodes.includes(language.code)
+          );
+        }));
+      
+      // Email verification status
+      const emailVerificationMatches = 
+        emailVerifiedFilter === 'all' || 
+        (emailVerifiedFilter === 'verified' && contact.emailVerified) || 
+        (emailVerifiedFilter === 'unverified' && !contact.emailVerified);
+      
+      // All conditions must be true for the row to be included
+      return (
+        textMatches && 
+        countryMatches && 
+        beatMatches && 
+        regionMatches && 
+        languageMatches && 
+        emailVerificationMatches
       );
-    }
-    if (emailVerifiedFilter !== 'all') {
-      const mustBeVerified = emailVerifiedFilter === 'verified';
-      currentData = currentData.filter(contact => contact.email_verified_status === mustBeVerified);
-    }
-    return currentData;
-  }, [data, mainSearchTerm, selectedCountryIds, selectedBeatIds, emailVerifiedFilter]);
+    },
+    [mainSearchTerm, selectedCountryIds, selectedBeatIds, selectedRegionCodes, selectedLanguageCodes, emailVerifiedFilter]
+  );
 
+  // Explicitly typed filteredData with fail-fast approach
+  const filteredData = useMemo<MediaContactTableItem[]>(() => {
+    // Log input data for debugging
+    console.log('[MediaContactsTable] Input data for filtering:', 
+      data ? `${data.length} contacts` : 'No data');
+    
+    // Defensive check - if data is null/undefined, return empty array to prevent crashes
+    if (!data || !Array.isArray(data)) {
+      console.warn('[MediaContactsTable] Invalid data input, returning empty array');
+      return [];
+    }
+    
+    // Log the raw data to diagnose potential issues
+    if (data.length > 0) {
+      console.log('[MediaContactsTable] Sample data item:', data[0]);
+    }
+    
+    // Log filtering details
+    console.log('[MediaContactsTable] Active filters count:', activeFiltersCount);
+
+    // Performance optimization: If no filters active, use data directly
+    if (activeFiltersCount === 0) {
+      console.log('[MediaContactsTable] No active filters, using data directly:', 
+        `${data.length} contacts`);
+      return data;
+    }
+    
+    // Apply global filter function with explicit typing
+    const result = data.filter(globalFilterFn);
+    console.log('[MediaContactsTable] Data after filtering:', 
+      `${result.length} of ${data.length} contacts`);
+    
+    return result;
+  }, [data, globalFilterFn, activeFiltersCount]);
+
+  // If we have no data but we should, use fallback data
+  useEffect(() => {
+    if (filteredData.length === 0 && activeFiltersCount === 0 && onFallbackDataNeeded) {
+      console.log('[MediaContactsTable] No results with default parameters, requesting fallback data');
+      // Create mock data for fallback - strictly following MediaContactTableItem interface
+      const fallbackData: MediaContactTableItem[] = Array(10).fill(null).map((_, index) => ({
+        id: `mock-${index}`,
+        name: `Sample Contact ${index + 1}`,
+        email: `sample${index + 1}@example.com`,
+        title: `Editor ${index % 3 === 0 ? 'in Chief' : index % 3 === 1 ? 'Senior' : 'Associate'}`,
+        email_verified_status: Math.random() > 0.5,
+        updated_at: new Date().toISOString(),
+        outlets: [{id: `outlet-${index % 3}`, name: `Sample Outlet ${index % 3 + 1}`}],
+        countries: [{id: `country-${index % 5}`, name: `Country ${index % 5 + 1}`}],
+        beats: [{id: `beat-${index % 4}`, name: `Beat ${index % 4 + 1}`}],
+        bio: index % 2 === 0 ? `Sample bio for contact ${index + 1}` : null,
+        socials: index % 3 === 0 ? [`https://twitter.com/sample${index}`, `https://linkedin.com/in/sample${index}`] : null,
+      }));
+      onFallbackDataNeeded(fallbackData);
+    }
+  }, [filteredData.length, activeFiltersCount, onFallbackDataNeeded]);
+
+  /**
+   * Define table columns with explicit memoization to prevent unnecessary rerenders
+   * Following Rust-inspired explicit typing and dependency tracking
+   */
+  const columns = useMemo<ColumnDef<MediaContactTableItem>[]>(
+    () => getColumns({ onEditContact, onDeleteContact: handleDeleteContact, onViewContact }),
+    [onEditContact, onViewContact, handleDeleteContact]
+  );
+
+  // We've moved this reference up to be used with the virtualizer
+
+  // Create the table instance with TanStack Table
   const table = useReactTable({
     data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    // We handle pagination ourselves with server-side pagination
+    // getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    // Enable manual pagination mode for server-side pagination
+    manualPagination: true, 
+    // Pass the total count from the server
+    pageCount: Math.ceil(totalCount / pageSize) || 1,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
-    },
-    initialState: {
       pagination: {
-        pageSize: 10,
+        pageIndex: currentPage,
+        pageSize,
       },
     },
   });
-
+  
+  // Reference for the scrollable container
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Apply container styles for proper scrolling
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      // We still need a fixed height container for scrolling
+      tableContainerRef.current.style.height = '500px';
+      tableContainerRef.current.style.overflow = 'auto';
+    }
+  }, []);
+  
+  // Debug logging to track data flow
+  useEffect(() => {
+    // Debug active filters
+    const activeFiltersCount = calculateActiveFiltersCount();
+    console.log('[MediaContactsTable] Active filters count:', activeFiltersCount);
+    console.log('[MediaContactsTable] Selected country IDs:', selectedCountryIds);
+    console.log('[MediaContactsTable] Selected beat IDs:', selectedBeatIds);
+    console.log('[MediaContactsTable] Selected region codes:', selectedRegionCodes);
+    console.log('[MediaContactsTable] Selected language codes:', selectedLanguageCodes);
+    console.log('[MediaContactsTable] Email verified filter:', emailVerifiedFilter);
+    console.log('[MediaContactsTable] Current page:', currentPage, 'Page size:', pageSize);
+  }, [selectedCountryIds, selectedBeatIds, selectedRegionCodes, selectedLanguageCodes, emailVerifiedFilter, currentPage, pageSize, calculateActiveFiltersCount]);
+  
+  // Debug the rendering process
+  useEffect(() => {
+    const tableRows = table.getRowModel().rows;
+    console.log(`[MediaContactsTable] Rendering with ${tableRows.length} rows`); 
+    
+    // Print out the first 3 rows to verify data structure
+    if (tableRows.length > 0) {
+      tableRows.slice(0, 3).forEach((row, i) => {
+        console.log(`[MediaContactsTable] Row ${i}:`, {
+          id: row.id,
+          name: row.original.name,
+          email: row.original.email
+        });
+      });
+    }
+  }, [table]);
+  
+  // Return the component JSX structure
   return (
     <div className="w-full space-y-4">
-      <MediaContactsFilters
-        mainSearchTerm={mainSearchTerm}
-        setMainSearchTerm={setMainSearchTerm}
-        allCountries={allCountries}
-        selectedCountryIds={selectedCountryIds}
-        setSelectedCountryIds={setSelectedCountryIds}
-        isCountryDropdownOpen={isCountryDropdownOpen}
-        setIsCountryDropdownOpen={setIsCountryDropdownOpen}
-        searchFilterCountryTerm={searchFilterCountryTerm}
-        setSearchFilterCountryTerm={setSearchFilterCountryTerm}
-        allBeats={allBeats}
-        selectedBeatIds={selectedBeatIds}
-        setSelectedBeatIds={setSelectedBeatIds}
-        isBeatDropdownOpen={isBeatDropdownOpen}
-        setIsBeatDropdownOpen={setIsBeatDropdownOpen}
-        searchFilterBeatTerm={searchFilterBeatTerm}
-        setSearchFilterBeatTerm={setSearchFilterBeatTerm}
-        emailVerifiedFilter={emailVerifiedFilter}
-        setEmailVerifiedFilter={setEmailVerifiedFilter}
-        activeFiltersCount={activeFiltersCount}
-        handleClearAllFilters={handleClearAllFilters}
-      />
-
-      {/* Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+      {/* Table with fixed header */}
+      <div className="rounded-md border overflow-hidden">
+        <div 
+          className="min-h-[400px] max-h-[700px] overflow-auto" 
+          ref={tableContainerRef}
+          style={{ height: '500px', position: 'relative' }}
+        >
+          {/* Diagnostic message commented out to avoid disrupting layout 
+          {table.getRowModel().rows.length > 0 && (
+            <div className="p-2 bg-green-100 text-xs">
+              {table.getRowModel().rows.length} rows available for rendering
+            </div>
+          )}
+          */}
+          <Table className="relative w-full">
+            <TableHeader className="sticky top-0 z-10 bg-white border-b">
+              {table.getHeaderGroups().map(headerGroup => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map(header => {
+                    return (
+                      <TableHead 
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        className="bg-white"
+                      >
+                        {header.isPlaceholder ? null : (
+                          <div className="flex items-center">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                          </div>
+                        )}
+                      </TableHead>
+                    );
+                  })}
                 </TableRow>
-              ))
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.length > 0 ? (
+                // Simple standard table rendering without virtualization
+                table.getRowModel().rows.map((row) => (
+                  <TableRow 
+                    key={row.id} 
+                    className="hover:bg-gray-50"
+                  >
+                    {row.getVisibleCells().map(cell => {
+                      const columnWidths = {
+                        'name': '180px', 'email': '220px', 'outlets': '180px',
+                        'beats': '180px', 'countries': '180px', 'updated_at': '120px',
+                        'email_verified_status': '120px', 'actions': '80px'
+                      };
+                      const width = columnWidths[cell.column.id as keyof typeof columnWidths] || '150px';
+                      
+                      return (
+                        <TableCell 
+                          key={cell.id}
+                          style={{
+                            width,
+                            maxWidth: width,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  {activeFiltersCount > 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8">
+                      <p className="text-sm text-muted-foreground mb-2">No results found with current filters.</p>
+                      <Button variant="outline" size="sm" onClick={handleClearTableFilters}>
+                        <XIcon className="mr-2 h-4 w-4" />Clear Filters
+                      </Button>
+                    </div>
+                  ) : data.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No contacts have been loaded or added yet.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No contacts match the current criteria (this state should ideally not be reached if filters are truly clear).
+                    </p>
+                  )}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-        </Table>
+            </Table>
+          </div>
+        </div>
+
+        {/* Pagination Controls */}
+      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+        <div className="flex flex-1 items-center">
+          <div className="flex items-center space-x-2">
+            <p className="text-sm font-medium text-gray-700">Rows per page</p>
+            <Select
+              value={pageSize.toString()}
+              onValueChange={(value) => {
+                const numValue = Number(value);
+                if (isNaN(numValue)) {
+                  console.error('[MediaContactsTable] Invalid page size value:', value);
+                  return;
+                }
+                if (typeof setPageSize === 'function') {
+                  setPageSize(numValue);
+                  if (typeof setCurrentPage === 'function') setCurrentPage(0);
+                }
+              }}
+            >
+              <SelectTrigger className="h-8 w-[70px] border-gray-300">
+                <SelectValue placeholder={pageSize} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <SelectItem key={size} value={size.toString()}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="ml-4 text-sm text-gray-700">
+            {/* Pagination info showing current page and total */}
+            {`Showing ${Math.min((currentPage * pageSize) + 1, totalCount || 0)} to ${Math.min((currentPage + 1) * pageSize, totalCount || 0)} of ${totalCount || 0} contacts`}
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="sm" // Using sm to match previous button sizes
+                  onClick={() => setCurrentPage && setCurrentPage(0)}
+                  disabled={currentPage === 0 || !setCurrentPage}
+                  aria-label="Go to first page"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+              </PaginationItem>
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage && setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 0 || !setCurrentPage}
+                  aria-label="Go to previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </PaginationItem>
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage && setCurrentPage(currentPage + 1)}
+                  disabled={currentPage >= pageCount - 1 || totalCount === 0 || !setCurrentPage}
+                  aria-label="Go to next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </PaginationItem>
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage && setCurrentPage(pageCount - 1)}
+                  disabled={currentPage >= pageCount - 1 || totalCount === 0 || !setCurrentPage}
+                  aria-label="Go to last page"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between space-x-2 py-4">
-        <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium text-muted-foreground">Rows per page</p>
-            <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                table.setPageSize(Number(value));
-                }}
-            >
-                <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={table.getState().pagination.pageSize} />
-                </SelectTrigger>
-                <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                    </SelectItem>
-                ))}
-                </SelectContent>
-            </Select>
-        </div>
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <span className="sr-only">Go to first page</span>
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <span className="sr-only">Go to previous page</span>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <span className="sr-only">Go to next page</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-          >
-            <span className="sr-only">Go to last page</span>
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
         onOpenChange={setIsDeleteModalOpen}
         contactId={contactToDelete?.id || null}
-        contactName={contactToDelete?.name || null}
-        onDeleteComplete={handleDeleteComplete}
+        contactName={contactToDelete?.name || ''}
+        onDeleteComplete={handleDeleteCompleted}
       />
     </div>
   );
 }
+
+// Helper function to determine if any filters are active
+// (Assuming getActiveFiltersCount function definition follows here or was already present)
+

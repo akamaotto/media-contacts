@@ -5,17 +5,67 @@ import { revalidatePath } from 'next/cache';
 import { 
   getMediaContactsFromDb, 
   upsertMediaContactInDb, 
-  type UpsertMediaContactData 
+  type UpsertMediaContactData,
+  type MediaContactFilters,
+  type PaginatedMediaContactsResult 
 } from "./repository";
 import { MediaContactTableItem } from "@/components/media-contacts/columns"; 
 
 /**
- * Server Action to fetch media contacts.
+ * Zod schema for validating media contact filter parameters
+ * Following Rust-inspired explicit typing and validation principles
  */
-export async function getMediaContactsAction(): Promise<MediaContactTableItem[]> {
+const MediaContactFiltersSchema = z.object({
+  searchTerm: z.string().optional(),
+  countryIds: z.array(z.string().uuid()).optional(),
+  beatIds: z.array(z.string().uuid()).optional(),
+  regionCodes: z.array(z.string()).optional(),
+  languageCodes: z.array(z.string()).optional(),
+  emailVerified: z.enum(['all', 'verified', 'unverified']).optional().default('all'),
+  page: z.number().int().min(0).optional().default(0),
+  pageSize: z.number().int().min(1).max(50).optional().default(10),
+});
+
+// Type for getMediaContactsAction parameters
+export type GetMediaContactsParams = z.infer<typeof MediaContactFiltersSchema>;
+
+/**
+ * Interface for paginated media contacts result from server action
+ * Following Rust-inspired explicit typing pattern
+ */
+export interface PaginatedMediaContactsActionResult {
+  contacts: MediaContactTableItem[];
+  totalCount: number;
+}
+
+/**
+ * Server Action to fetch media contacts with optional filtering and pagination.
+ * 
+ * @param filters - Optional filter parameters for media contacts including pagination
+ * @returns Promise resolving to paginated media contacts result
+ */
+export async function getMediaContactsAction(filters?: GetMediaContactsParams): Promise<PaginatedMediaContactsActionResult> {
   try {
-    const contacts = await getMediaContactsFromDb();
-    return contacts;
+    // Validate filters if provided using fail-fast approach
+    let validatedFilters: MediaContactFilters | undefined;
+    
+    if (filters) {
+      const result = MediaContactFiltersSchema.safeParse(filters);
+      
+      if (!result.success) {
+        console.error("Invalid filter parameters:", result.error);
+        throw new Error("Invalid filter parameters provided");
+      }
+      
+      validatedFilters = result.data;
+    }
+    
+    // Fetch contacts with validated filters including pagination
+    const result = await getMediaContactsFromDb(validatedFilters);
+    return {
+      contacts: result.contacts,
+      totalCount: result.totalCount
+    };
   } catch (error) {
     console.error("Error in getMediaContactsAction:", error);
     throw new Error("Failed to fetch media contacts via server action.");

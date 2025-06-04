@@ -1,7 +1,8 @@
 "use client"; // Column definitions often involve interactions or components that need to be client-side
 
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, ArrowUpDown, CheckCircle2, XCircle } from "lucide-react"; // Added CheckCircle2 and XCircle for email status
+import { MoreHorizontal, ArrowUpDown, CheckCircle2, XCircle, Pencil, Trash2, Copy, Eye } from "lucide-react"; // Added icons for all actions
+import { toast } from "sonner"; // Import toast for notifications
 
 // Assuming ShadCN UI components are available.
 // If not, these will need to be added via `npx shadcn-ui@latest add <component_name>`
@@ -23,6 +24,7 @@ import { Badge } from "@/components/ui/badge"; // For displaying outlets, beats,
 export interface ColumnActions {
   onEditContact: (contact: MediaContactTableItem) => void;
   onDeleteContact: (contact: MediaContactTableItem) => void;
+  onViewContact: (contact: MediaContactTableItem) => void;
 }
 export interface MediaContactTableItem {
   id: string;
@@ -107,15 +109,27 @@ export const getColumns = (actions: ColumnActions): ColumnDef<MediaContactTableI
       </Button>
     ),
     cell: ({ row }) => {
-      const email = row.original.email;
-      const isVerified = row.original.email_verified_status;
+      // Following Rust-inspired explicit validation approach
+      const email = row.original.email || '';
+      const isVerified = Boolean(row.original.email_verified_status);
+      
       return (
-        <div className="flex items-center">
-          <span className="lowercase">{email}</span>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm">{email}</span>
           {isVerified ? (
-            <CheckCircle2 className="ml-2 h-4 w-4 text-green-500" />
+            <div className="relative group">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <span className="absolute z-50 hidden group-hover:inline-block bg-black text-white text-xs rounded py-1 px-2 left-1/2 -translate-x-1/2 bottom-full mb-1 whitespace-nowrap">
+                Email verified
+              </span>
+            </div>
           ) : (
-            <XCircle className="ml-2 h-4 w-4 text-red-500" />
+            <div className="relative group">
+              <XCircle className="h-4 w-4 text-amber-500" />
+              <span className="absolute z-50 hidden group-hover:inline-block bg-black text-white text-xs rounded py-1 px-2 left-1/2 -translate-x-1/2 bottom-full mb-1 whitespace-nowrap">
+                Email unverified
+              </span>
+            </div>
           )}
         </div>
       );
@@ -144,7 +158,7 @@ export const getColumns = (actions: ColumnActions): ColumnDef<MediaContactTableI
       return (
         <div className="flex flex-wrap gap-1 max-w-xs">
           {outlets.slice(0, 2).map(outlet => (
-            <Badge key={outlet.id} variant="outline" className="font-normal">
+            <Badge key={outlet.id} variant="outline" className="text-xs bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border-yellow-200">
               {outlet.name}
             </Badge>
           ))}
@@ -167,12 +181,12 @@ export const getColumns = (actions: ColumnActions): ColumnDef<MediaContactTableI
       return (
         <div className="flex flex-wrap gap-1 max-w-xs">
           {beats.slice(0, 2).map(beat => (
-            <Badge key={beat.id} variant="secondary" className="font-normal">
+            <Badge key={beat.id} variant="outline" className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">
               {beat.name}
             </Badge>
           ))}
           {beats.length > 2 && (
-            <Badge variant="secondary" className="font-normal">
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">
               +{beats.length - 2} more
             </Badge>
           )}
@@ -190,12 +204,12 @@ export const getColumns = (actions: ColumnActions): ColumnDef<MediaContactTableI
       return (
         <div className="flex flex-wrap gap-1 max-w-xs">
           {countries.slice(0, 2).map(country => (
-            <Badge key={country.id} variant="outline" className="font-normal bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300">
+            <Badge key={country.id} variant="outline" className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-200">
               {country.name}
             </Badge>
           ))}
           {countries.length > 2 && (
-            <Badge variant="outline" className="font-normal bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300">
+            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-200">
               +{countries.length - 2} more
             </Badge>
           )}
@@ -217,11 +231,23 @@ export const getColumns = (actions: ColumnActions): ColumnDef<MediaContactTableI
     ),
     cell: ({ row }) => {
       const date = row.getValue("updated_at");
-      return (
-        <div className="text-sm text-muted-foreground">
-          {date ? new Date(date as string).toLocaleDateString() : '-'}
-        </div>
-      );
+      // Following Rust-inspired explicit validation for date handling
+      if (!date) return <div className="text-sm text-muted-foreground">-</div>;
+      
+      try {
+        // Format date with more detailed information
+        const formattedDate = new Date(date as string).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+        return (
+          <div className="text-sm text-muted-foreground">{formattedDate}</div>
+        );
+      } catch (error) {
+        console.error('Error formatting date:', error);
+        return <div className="text-sm text-muted-foreground">Invalid date</div>;
+      }
     },
   },
   {
@@ -242,27 +268,35 @@ export const getColumns = (actions: ColumnActions): ColumnDef<MediaContactTableI
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(contact.email)}
+                onClick={() => {
+                  navigator.clipboard.writeText(contact.email);
+                  toast.success(`Email copied to clipboard`, {
+                    description: `${contact.email} for ${contact.name} has been copied`
+                  });
+                }}
               >
-                Copy Email
+                <Copy className="mr-2 h-4 w-4" />
+                <span>Copy Email</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                // Placeholder for future "View Details" functionality
-                onClick={() => alert(`View details for: ${contact.name}`)}
+                onClick={() => actions.onViewContact(row.original)}
               >
-                View Details
+                <Eye className="mr-2 h-4 w-4" />
+                <span>View Details</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => actions.onEditContact(contact)}
               >
-                Edit Contact
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Edit Contact</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-600 hover:!text-red-600 focus:!text-red-600 focus:!bg-red-50"
                 onClick={() => actions.onDeleteContact(contact)}
               >
-                Delete Contact
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Delete Contact</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

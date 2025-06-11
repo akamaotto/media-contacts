@@ -9,16 +9,11 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  Row,
-  Cell,
 } from "@tanstack/react-table";
-import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -27,57 +22,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MediaContactsPagination } from './media-contacts-pagination';
 
 import { MediaContactTableItem, getColumns } from "./columns";
-import { UpdateMediaContactSheet } from "./update-media-contact-sheet";
 import { DeleteConfirmationModal } from "./delete-confirmation-modal";
-import { getCountries, Country } from "@/app/actions/country-actions"; // Will be used by MediaContactsFilters, but props come from here
-import { getBeats, Beat } from "@/app/actions/beat-actions"; // Will be used by MediaContactsFilters, but props come from here
 // Filtering is now handled by the client view component
-import { cn } from "@/lib/utils";
 
 
 
 import {
-  ChevronDownIcon,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  CheckIcon,
-  ChevronsUpDownIcon,
-  PlusCircle,
   X as XIcon, // For Clear All button
 } from "lucide-react";
 
@@ -508,92 +461,13 @@ export function MediaContactsTable({
         </div>
 
         {/* Pagination Controls */}
-      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-        <div className="flex flex-1 items-center">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium text-gray-700">Rows per page</p>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(value) => {
-                const numValue = Number(value);
-                if (isNaN(numValue)) {
-                  console.error('[MediaContactsTable] Invalid page size value:', value);
-                  return;
-                }
-                if (typeof setPageSize === 'function') {
-                  setPageSize(numValue);
-                  if (typeof setCurrentPage === 'function') setCurrentPage(0);
-                }
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px] border-gray-300">
-                <SelectValue placeholder={pageSize} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((size) => (
-                  <SelectItem key={size} value={size.toString()}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="ml-4 text-sm text-gray-700">
-            {/* Pagination info showing current page and total */}
-            {`Showing ${Math.min((currentPage * pageSize) + 1, totalCount || 0)} to ${Math.min((currentPage + 1) * pageSize, totalCount || 0)} of ${totalCount || 0} contacts`}
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <Button
-                  variant="outline"
-                  size="sm" // Using sm to match previous button sizes
-                  onClick={() => setCurrentPage && setCurrentPage(0)}
-                  disabled={currentPage === 0 || !setCurrentPage}
-                  aria-label="Go to first page"
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-              </PaginationItem>
-              <PaginationItem>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage && setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 0 || !setCurrentPage}
-                  aria-label="Go to previous page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              </PaginationItem>
-              <PaginationItem>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage && setCurrentPage(currentPage + 1)}
-                  disabled={currentPage >= pageCount - 1 || totalCount === 0 || !setCurrentPage}
-                  aria-label="Go to next page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </PaginationItem>
-              <PaginationItem>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage && setCurrentPage(pageCount - 1)}
-                  disabled={currentPage >= pageCount - 1 || totalCount === 0 || !setCurrentPage}
-                  aria-label="Go to last page"
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
+        <MediaContactsPagination
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          setCurrentPage={setCurrentPage}
+          setPageSize={setPageSize}
+        />
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

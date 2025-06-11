@@ -1,24 +1,96 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+// Core React and Next.js imports
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from 'next/navigation';
+
+// UI Components
+import { toast } from "sonner";
 import { MediaContactsTable } from '@/components/media-contacts/media-contacts-table';
-import { MediaContactTableItem } from '@/components/media-contacts/columns';
-import { getMediaContactsAction, type GetMediaContactsParams, type PaginatedMediaContactsActionResult } from '@/backend/media-contacts/actions';
+import { MediaContactsFilters } from '@/components/media-contacts/media-contacts-filters';
 import { UpdateMediaContactSheet } from '@/components/media-contacts/update-media-contact-sheet';
 import { ViewMediaContactSheet } from '@/components/media-contacts/view-media-contact-sheet';
-import { MediaContactsFilters } from '@/components/media-contacts/media-contacts-filters';
 import HeaderActionButtons from '@/components/media-contacts/header-action-buttons';
 import AppBrandHeader from '@/components/media-contacts/app-brand-header';
-import { toast } from 'sonner';
-import { getAllRegions } from '@/app/actions/region-actions';
-import { getAllLanguages } from '@/app/actions/language-actions';
+
+// Import types with explicit type imports to avoid conflicts
+import type { MediaContactTableItem, Country, Beat, Outlet } from './columns';
+import type { Region as RegionType, Language as CountryLanguage } from '@/lib/country-data';
+import type { Language as LanguageType } from '@/lib/language-data';
+
+// Import server actions with proper typing
+import { getMediaContactsAction } from '@/backend/media-contacts/actions';
 import { getCountries } from '@/app/actions/country-actions';
 import { getBeats } from '@/app/actions/beat-actions';
-import { Region } from '@/lib/country-data';
-import { Language } from '@/lib/language-data';
-import { Country } from '@/app/actions/country-actions';
-import { Beat } from '@/app/actions/beat-actions';
+import { getAllRegions } from '@/app/actions/region-actions';
+import { getAllLanguages } from '@/app/actions/language-actions';
+
+// Define backend types for data transformation
+interface BackendCountry {
+  id: string;
+  name: string;
+  code?: string | null | undefined; // Make optional to match server action return type
+  regions?: Array<{ code: string; name: string }> | null; // Optional and can be null
+  languages?: Array<{ code: string; name: string }> | null; // Optional and can be null
+}
+
+interface BackendBeat {
+  id: string;
+  name: string;
+  description?: string | null | undefined; // Optional
+}
+
+// Type for filtering media contacts, used by the server action and client-side calls
+interface MediaContactFilters {
+  page: number;
+  pageSize: number;
+  searchTerm: string;
+  countryIds: string[];
+  beatIds: string[];
+  regionCodes: string[];
+  languageCodes: string[];
+  emailVerified: 'all' | 'verified' | 'unverified';
+}
+
+type EmailVerificationStatus = 'all' | 'verified' | 'unverified';
+
+interface MediaContactsState {
+  contacts: MediaContactTableItem[];
+  filteredContacts: MediaContactTableItem[];
+  allCountries: Country[];
+  allBeats: Beat[];
+  allRegions: RegionType[];
+  allLanguages: LanguageType[];
+  isLoading: boolean;
+  isInitialized: boolean;
+  isViewSheetOpen: boolean;
+  viewingContact: MediaContactTableItem | null;
+  isEditSheetOpen: boolean;
+  editingContact: MediaContactTableItem | null; // For Add/Edit sheet
+  isDeleteConfirmationOpen: boolean; // For delete confirmation dialog
+  contactToDelete: MediaContactTableItem | null; // For delete confirmation
+  error: string | null;
+  searchTerm: string;
+  selectedCountryIds: string[];
+  selectedBeatIds: string[];
+  selectedRegionCodes: string[];
+  selectedLanguageCodes: string[];
+  emailVerified: EmailVerificationStatus;
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  selectedContact: MediaContactTableItem | null; // General selected contact, possibly redundant with viewing/editing/deleting
+  // Specific dropdown open states
+  isCountryDropdownOpen: boolean;
+  isBeatDropdownOpen: boolean;
+  isRegionDropdownOpen: boolean;
+  isLanguageDropdownOpen: boolean;
+  isEmailVerifiedDropdownOpen: boolean;
+  searchFilterCountryTerm: string;
+  searchFilterBeatTerm: string;
+  searchFilterRegionTerm: string;
+  searchFilterLanguageTerm: string;
+}
 
 /**
  * Props interface for MediaContactsClientView component
@@ -27,593 +99,669 @@ import { Beat } from '@/app/actions/beat-actions';
 interface MediaContactsClientViewProps {
   initialContacts: MediaContactTableItem[];
   initialTotalCount: number;
+  initialPage?: number;
+  initialPageSize?: number;
 }
 
 /**
  * Client-side component for displaying and managing media contacts
  * Implements Rust-inspired principles with explicit types and fail-fast validation
  */
-export function MediaContactsClientView({ initialContacts, initialTotalCount }: MediaContactsClientViewProps): React.ReactElement {
+export default function MediaContactsClientView({
+  initialContacts = [],
+  initialTotalCount = 0,
+  initialPage = 1,
+  initialPageSize = 10,
+}: MediaContactsClientViewProps): React.ReactElement {
   const router = useRouter();
-  
-  // Edit modal state
-  const [isEditSheetOpen, setIsEditSheetOpen] = useState<boolean>(false);
-  const [editingContact, setEditingContact] = useState<MediaContactTableItem | null>(null);
-  
-  // View details modal state
-  const [isViewSheetOpen, setIsViewSheetOpen] = useState<boolean>(false);
-  const [viewingContact, setViewingContact] = useState<MediaContactTableItem | null>(null);
-  
-  // Track contacts state for local updates without full page refresh
-  const [contacts, setContacts] = useState<MediaContactTableItem[]>(initialContacts);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [totalContactsCount, setTotalContactsCount] = useState<number>(initialTotalCount);
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState<number>(0); // 0-indexed for backend
-  const [pageSize, setPageSize] = useState<number>(10); // Default 10 items per page
-  
-  // Search and filter state
-  const [mainSearchTerm, setMainSearchTerm] = useState<string>('');
-  
-  // Country filter state
-  const [allCountries, setAllCountries] = useState<Country[]>([]);
-  const [selectedCountryIds, setSelectedCountryIds] = useState<string[]>([]);
-  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState<boolean>(false);
-  const [searchFilterCountryTerm, setSearchFilterCountryTerm] = useState<string>('');
-  
-  // Beat filter state
-  const [allBeats, setAllBeats] = useState<Beat[]>([]);
-  const [selectedBeatIds, setSelectedBeatIds] = useState<string[]>([]);
-  const [isBeatDropdownOpen, setIsBeatDropdownOpen] = useState<boolean>(false);
-  const [searchFilterBeatTerm, setSearchFilterBeatTerm] = useState<string>('');
-  
-  // Region filter state
-  const [allRegions, setAllRegions] = useState<Region[]>([]);
-  const [selectedRegionCodes, setSelectedRegionCodes] = useState<string[]>([]);
-  const [isRegionDropdownOpen, setIsRegionDropdownOpen] = useState<boolean>(false);
-  const [searchFilterRegionTerm, setSearchFilterRegionTerm] = useState<string>('');
-  
-  // Language filter state
-  const [allLanguages, setAllLanguages] = useState<Language[]>([]);
-  const [selectedLanguageCodes, setSelectedLanguageCodes] = useState<string[]>([]);
-  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState<boolean>(false);
-  const [searchFilterLanguageTerm, setSearchFilterLanguageTerm] = useState<string>('');
-  
-  // Email verification filter state
-  const [emailVerifiedFilter, setEmailVerifiedFilter] = useState<'all' | 'verified' | 'unverified'>('all');
-  const [isEmailVerifiedDropdownOpen, setIsEmailVerifiedDropdownOpen] = useState<boolean>(false);
-  
-  /**
-   * Calculate the active filters count for UI display
-   * Rust-inspired explicit return type and clear calculation
-   */
-  const activeFiltersCount = (): number => {
-    return (
-      (mainSearchTerm.trim() !== '' ? 1 : 0) +
-      selectedCountryIds.length +
-      selectedBeatIds.length +
-      selectedRegionCodes.length +
-      selectedLanguageCodes.length +
-      (emailVerifiedFilter !== 'all' ? 1 : 0)
-    );
-  };
-  
-  /**
-   * Client-side fallback data to ensure UI functionality when server actions fail
-   * Following Rust-inspired principles with explicit typing and comprehensive coverage
-   */
-  const clientSideFallbacks = {
-    regions: [
-      { code: 'na', name: 'North America', category: 'continent' },
-      { code: 'eu', name: 'Europe', category: 'continent' },
-      { code: 'as', name: 'Asia', category: 'continent' },
-      { code: 'af', name: 'Africa', category: 'continent' },
-      { code: 'oc', name: 'Oceania', category: 'continent' },
-      { code: 'sa', name: 'South America', category: 'continent' },
-    ] as Region[],
-    
-    languages: [
-      { code: 'en', name: 'English', native: 'English' },
-      { code: 'es', name: 'Spanish', native: 'Español' },
-      { code: 'fr', name: 'French', native: 'Français' },
-      { code: 'de', name: 'German', native: 'Deutsch' },
-      { code: 'zh', name: 'Chinese', native: '中文' },
-    ] as Language[],
-    
-    countries: [
-      { id: 'us', name: 'United States', code: 'US' },
-      { id: 'ca', name: 'Canada', code: 'CA' },
-      { id: 'uk', name: 'United Kingdom', code: 'GB' },
-      { id: 'de', name: 'Germany', code: 'DE' },
-      { id: 'fr', name: 'France', code: 'FR' },
-    ] as Country[],
-    
-    beats: [
-      { id: 'tech', name: 'Technology', description: 'Technology news and trends' },
-      { id: 'business', name: 'Business', description: 'Business and finance news' },
-      { id: 'health', name: 'Health', description: 'Health and wellness topics' },
-      { id: 'science', name: 'Science', description: 'Scientific discoveries and research' },
-      { id: 'politics', name: 'Politics', description: 'Political news and analysis' },
-    ] as Beat[],
-  };
+  const firstRenderRef = useRef(true);
+  const prevSearchTermRef = useRef('');
+
+  // State management with proper typing
+  const [state, setState] = useState<MediaContactsState>(() => ({
+    contacts: initialContacts,
+    filteredContacts: [],
+    allCountries: [],
+    allBeats: [],
+    allRegions: [],
+    allLanguages: [],
+    isLoading: false,
+    isInitialized: false,
+    isViewSheetOpen: false,
+    viewingContact: null,
+    isEditSheetOpen: false,
+    editingContact: null,
+    isDeleteConfirmationOpen: false,
+    contactToDelete: null,
+    error: null,
+    searchTerm: '',
+    selectedCountryIds: [],
+    selectedBeatIds: [],
+    selectedRegionCodes: [],
+    selectedLanguageCodes: [],
+    emailVerified: 'all',
+    currentPage: initialPage,
+    pageSize: initialPageSize || 10,
+    totalCount: initialTotalCount,
+    selectedContact: null,
+    isCountryDropdownOpen: false,
+    isBeatDropdownOpen: false,
+    isRegionDropdownOpen: false,
+    isLanguageDropdownOpen: false,
+    isEmailVerifiedDropdownOpen: false,
+    searchFilterCountryTerm: '',
+    searchFilterBeatTerm: '',
+    searchFilterRegionTerm: '',
+    searchFilterLanguageTerm: '',
+  }));
+
+  // Single, well-typed state update function with proper type safety
+  const updateState = useCallback((
+    updates: Partial<MediaContactsState> | ((prevState: MediaContactsState) => Partial<MediaContactsState>)
+  ) => {
+    setState((prevState: MediaContactsState) => {
+      // Handle both direct updates and functional updates
+      const updatesObject = typeof updates === 'function' 
+        ? updates(prevState) 
+        : updates;
+      
+      // Create the new state by merging previous state with the updatesObject
+      // This handles immutability for top-level properties.
+      // If MediaContactsState contains nested objects/arrays that are partially updated,
+      // ensure updatesObject provides new references for those nested structures.
+      const newState = { ...prevState, ...updatesObject };
+      
+      return newState;
+    });
+  }, []);
+
+  // Memoize derived values
+  const activeFiltersCount = useMemo(() => {
+    return [
+      state.selectedCountryIds.length > 0,
+      state.selectedBeatIds.length > 0,
+      state.selectedRegionCodes.length > 0,
+      state.selectedLanguageCodes.length > 0,
+      state.emailVerified !== 'all'
+    ].filter(Boolean).length;
+  }, [state.selectedCountryIds, state.selectedBeatIds, state.selectedRegionCodes, state.selectedLanguageCodes, state.emailVerified]);
+
 
   /**
-   * Fetch all filter options on component mount
-   * Using explicit error handling and fail-fast validation with client-side fallbacks
+   * Fetch filtered contacts from the backend
    */
-  useEffect(() => {
-    const fetchFilterData = async (): Promise<void> => {
-      try {
-        // Track which data sources successfully load
-        let regionsSuccess = false;
-        let languagesSuccess = false;
-        let countriesSuccess = false;
-        let beatsSuccess = false;
-        
-        // Initialize with empty arrays to prevent undefined errors
-        let regionsData: Region[] = [];
-        let languagesData: Language[] = [];
-        let countriesData: Country[] = [];
-        let beatsData: Beat[] = [];
-        
-        // Set a timeout to ensure we don't wait too long for server actions
-        const fetchTimeout = 3000; // 3 seconds
-        
-        // Fetch regions with timeout and fallback
-        try {
-          console.log('Attempting to fetch regions data from server...');
-          const regionsPromise = getAllRegions();
-          const timeoutPromise = new Promise<Region[]>((_, reject) => 
-            setTimeout(() => reject(new Error('Regions fetch timeout')), fetchTimeout)
-          );
-          
-          regionsData = await Promise.race([regionsPromise, timeoutPromise]);
-          
-          if (!regionsData || !Array.isArray(regionsData) || regionsData.length === 0) {
-            console.warn('Regions data invalid or empty, using client-side fallback');
-            regionsData = clientSideFallbacks.regions;
-          } else {
-            regionsSuccess = true;
-            console.log(`Successfully loaded ${regionsData.length} regions from server`);
-          }
-        } catch (regionError) {
-          console.error('Failed to fetch regions data:', regionError);
-          regionsData = clientSideFallbacks.regions;
-          console.log(`Using ${regionsData.length} fallback regions`);
-        }
-        
-        // Fetch languages with timeout and fallback
-        try {
-          console.log('Attempting to fetch languages data from server...');
-          const languagesPromise = getAllLanguages();
-          const timeoutPromise = new Promise<Language[]>((_, reject) => 
-            setTimeout(() => reject(new Error('Languages fetch timeout')), fetchTimeout)
-          );
-          
-          languagesData = await Promise.race([languagesPromise, timeoutPromise]);
-          
-          if (!languagesData || !Array.isArray(languagesData) || languagesData.length === 0) {
-            console.warn('Languages data invalid or empty, using client-side fallback');
-            languagesData = clientSideFallbacks.languages;
-          } else {
-            languagesSuccess = true;
-            console.log(`Successfully loaded ${languagesData.length} languages from server`);
-          }
-        } catch (languageError) {
-          console.error('Failed to fetch languages data:', languageError);
-          languagesData = clientSideFallbacks.languages;
-          console.log(`Using ${languagesData.length} fallback languages`);
-        }
-        
-        // Fetch countries with timeout and fallback
-        try {
-          console.log('Attempting to fetch countries data from server...');
-          const countriesPromise = getCountries();
-          const timeoutPromise = new Promise<Country[]>((_, reject) => 
-            setTimeout(() => reject(new Error('Countries fetch timeout')), fetchTimeout)
-          );
-          
-          countriesData = await Promise.race([countriesPromise, timeoutPromise]);
-          
-          if (!countriesData || !Array.isArray(countriesData) || countriesData.length === 0) {
-            console.warn('Countries data invalid or empty, using client-side fallback');
-            countriesData = clientSideFallbacks.countries;
-          } else {
-            countriesSuccess = true;
-            console.log(`Successfully loaded ${countriesData.length} countries from server`);
-          }
-        } catch (countryError) {
-          console.error('Failed to fetch countries data:', countryError);
-          countriesData = clientSideFallbacks.countries;
-          console.log(`Using ${countriesData.length} fallback countries`);
-        }
-        
-        // Fetch beats with timeout and fallback
-        try {
-          console.log('Attempting to fetch beats data from server...');
-          const beatsPromise = getBeats();
-          const timeoutPromise = new Promise<Beat[]>((_, reject) => 
-            setTimeout(() => reject(new Error('Beats fetch timeout')), fetchTimeout)
-          );
-          
-          beatsData = await Promise.race([beatsPromise, timeoutPromise]);
-          
-          if (!beatsData || !Array.isArray(beatsData) || beatsData.length === 0) {
-            console.warn('Beats data invalid or empty, using client-side fallback');
-            beatsData = clientSideFallbacks.beats;
-          } else {
-            beatsSuccess = true;
-            console.log(`Successfully loaded ${beatsData.length} beats from server`);
-          }
-        } catch (beatError) {
-          console.error('Failed to fetch beats data:', beatError);
-          beatsData = clientSideFallbacks.beats;
-          console.log(`Using ${beatsData.length} fallback beats`);
-        }
-        
-        // Update state with the data we were able to fetch or fallbacks
-        setAllRegions(regionsData);
-        setAllLanguages(languagesData);
-        setAllCountries(countriesData);
-        setAllBeats(beatsData);
-        
-        // Show toast with appropriate message based on success
-        if (!regionsSuccess && !languagesSuccess && !countriesSuccess && !beatsSuccess) {
-          toast.warning('Using offline filter data. Some features may be limited.');
-        } else if (!(regionsSuccess && languagesSuccess && countriesSuccess && beatsSuccess)) {
-          toast.info('Some filter data could not be loaded. Using fallbacks where needed.');
-        }
-        
-      } catch (error) {
-        console.error('Unexpected error in fetchFilterData:', error);
-        toast.error('Failed to load filter options. Using offline mode.');
-        
-        // Use all fallback data in case of catastrophic failure
-        setAllRegions(clientSideFallbacks.regions);
-        setAllLanguages(clientSideFallbacks.languages);
-        setAllCountries(clientSideFallbacks.countries);
-        setAllBeats(clientSideFallbacks.beats);
-      }
-    };
-    
-    fetchFilterData();
-  }, []); // Runs once on mount to fetch dropdown options
-
-  /**
-   * Fetch media contacts whenever filters or pagination change.
-   * This also runs on initial mount with default filter values.
-   * The fetchFilteredContacts function has its own fallback for default 0 results.
-   */
-  useEffect(() => {
-    console.log('Filter or pagination state changed, fetching contacts.');
-    // Only fetch if we don't already have data or if filter/pagination params changed after initial load
-    if (contacts.length === 0 || activeFiltersCount() > 0 || currentPage > 0) {
-      fetchFilteredContacts();
-    }
-  }, [
-    currentPage,
-    pageSize,
-    mainSearchTerm,
-    selectedCountryIds,
-    selectedBeatIds,
-    selectedRegionCodes,
-    selectedLanguageCodes,
-    emailVerifiedFilter
-  ]);
-
-  /**
-   * Fetch media contacts with current filter parameters and pagination
-   * Following Rust-inspired explicit typing and error handling
-   */
-  const fetchFilteredContacts = async (): Promise<void> => {
-    // If we already have contacts and no filters are applied, no need to fetch again
-    if (contacts.length > 0 && activeFiltersCount() === 0 && currentPage === 0) {
-      console.log('Using existing contacts, no need to fetch');
-      return;
-    }
+  const fetchFilteredContacts = useCallback(async (filters: Partial<MediaContactFilters> = {}) => {
     try {
-      setIsLoading(true);
+      updateState({ isLoading: true });
       
-      // Log current state for debugging
-      console.log('Fetching contacts with parameters:', {
-        currentPage,
-        pageSize,
-        mainSearchTerm,
-        selectedCountryIds,
-        selectedBeatIds,
-        selectedRegionCodes,
-        selectedLanguageCodes,
-        emailVerifiedFilter
-      });
-      
-      // Build filter parameters following our schema
-      const filterParams: GetMediaContactsParams = {
-        // Filter parameters
-        searchTerm: mainSearchTerm,
-        countryIds: selectedCountryIds.length > 0 ? selectedCountryIds : undefined,
-        beatIds: selectedBeatIds.length > 0 ? selectedBeatIds : undefined,
-        regionCodes: selectedRegionCodes.length > 0 ? selectedRegionCodes : undefined,
-        languageCodes: selectedLanguageCodes.length > 0 ? selectedLanguageCodes : undefined,
-        emailVerified: emailVerifiedFilter,
-        
-        // Always explicitly set pagination parameters - ensure they're not undefined
-        page: currentPage,
-        pageSize: pageSize
+      // Merge default filters from state with provided ones
+      const mergedFilters: MediaContactFilters = {
+        page: filters.page ?? state.currentPage,
+        pageSize: filters.pageSize ?? state.pageSize,
+        searchTerm: filters.searchTerm ?? state.searchTerm,
+        countryIds: filters.countryIds ?? state.selectedCountryIds,
+        beatIds: filters.beatIds ?? state.selectedBeatIds,
+        regionCodes: filters.regionCodes ?? state.selectedRegionCodes,
+        languageCodes: filters.languageCodes ?? state.selectedLanguageCodes,
+        emailVerified: filters.emailVerified ?? state.emailVerified,
       };
       
-      // Call the server action with filters and pagination
-      const result: PaginatedMediaContactsActionResult = await getMediaContactsAction(filterParams);
-      
-      console.log('Server returned contacts:', result.contacts.length, 'Total count:', result.totalCount);
-      
-      // If no results returned, provide fallback data for development/testing
-      if (result.contacts.length === 0 && (!mainSearchTerm && !selectedCountryIds.length && !selectedBeatIds.length && !selectedRegionCodes.length && !selectedLanguageCodes.length && emailVerifiedFilter === 'all')) {
-        console.log('No results found with default parameters, creating fallback data');
-        
-        // Create fallback data that matches our interface exactly
-        const fallbackContacts: MediaContactTableItem[] = [
-          {
-            id: '1',
-            name: 'John Doe',
-            email: 'john@example.com',
-            title: 'Tech Journalist',
-            email_verified_status: true,
-            updated_at: new Date().toISOString(),
-            outlets: [{ id: '1', name: 'Tech Daily' }],
-            countries: [{ id: '1', name: 'United States' }],
-            beats: [{ id: '1', name: 'Technology' }],
-            bio: 'Technology journalist with 10 years of experience',
-            socials: ['https://twitter.com/johndoe', 'https://linkedin.com/in/johndoe']
-          },
-          {
-            id: '2',
-            name: 'Jane Smith',
-            email: 'jane@example.com',
-            title: 'Senior Editor',
-            email_verified_status: false,
-            updated_at: new Date().toISOString(),
-            outlets: [{ id: '2', name: 'Business Weekly' }],
-            countries: [{ id: '2', name: 'United Kingdom' }],
-            beats: [{ id: '2', name: 'Business' }],
-            bio: 'Business editor specializing in finance and tech',
-            socials: ['https://twitter.com/janesmith']
-          }
-        ];
-        
-        setContacts(fallbackContacts);
-        setTotalContactsCount(fallbackContacts.length);
-      } else {
-        // Update state with the filtered contacts and total count
-        setContacts(result.contacts);
-        setTotalContactsCount(result.totalCount);
-      }
+      const result = await getMediaContactsAction(mergedFilters);
+      // Directly use the result as PaginatedMediaContactsActionResult
+      updateState({
+        contacts: result.contacts,
+        // filteredContacts: result.contacts, // Decide if client-side filtering is still needed on top
+        totalCount: result.totalCount,
+        currentPage: mergedFilters.page,
+        pageSize: mergedFilters.pageSize,
+        isLoading: false,
+        error: null
+      });
     } catch (error) {
-      console.error('Error fetching filtered contacts:', error);
-      toast.error('Failed to fetch contacts. Please try again.');
+      // Catch-all for network errors or unexpected issues in the try block
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while fetching contacts.';
+      console.error('Critical error fetching contacts:', error);
+      updateState({
+        isLoading: false,
+        error: errorMessage
+      });
+      toast.error(errorMessage);
     } finally {
-      setIsLoading(false);
+      // Ensure isLoading is always reset, even if an error occurs before updateState is called in try/catch
+      // This uses a functional update to ensure it's based on the latest state if multiple updates are queued.
+      setState(prev => ({ ...prev, isLoading: false }));
     }
-  };
-  
-  /**
-   * Refresh data using router refresh for hard reloads
-   * or filtered data fetch for filter changes
-   * Following Rust-inspired explicit function definitions
-   */
-  const handleDataRefresh = (): void => {
-    // Use fetchFilteredContacts for filter-based updates
-    fetchFilteredContacts();
-  };
+  }, [state.currentPage, state.pageSize, state.searchTerm, state.selectedCountryIds, state.selectedBeatIds, state.selectedRegionCodes, state.selectedLanguageCodes, state.emailVerified, updateState]);
 
   /**
-   * Open the add contact sheet
+   * Count the number of active filters
    * Following Rust-inspired explicit function definition
    */
-  const handleAddContactOpen = (): void => {
-    setEditingContact(null);
-    setIsEditSheetOpen(true);
+  const countActiveFilters = (): number => {
+    let count = 0;
+    if (state.selectedCountryIds.length > 0) count++;
+    if (state.selectedBeatIds.length > 0) count++;
+    if (state.selectedRegionCodes.length > 0) count++;
+    if (state.selectedLanguageCodes.length > 0) count++;
+    if (state.emailVerified !== 'all') count++;
+    if (state.searchTerm.trim() !== '') count++;
+    return count;
   };
 
-  /**
-   * Open the edit contact sheet
-   * @param contact The contact to edit
-   * Following Rust-inspired explicit typing and validation
-   */
-  const handleEditContactOpen = (contact: MediaContactTableItem): void => {
-    // Validate required parameters with fail-fast approach
-    if (!contact || !contact.id) {
-      console.error("Failed to open edit sheet: Invalid contact or missing ID");
-      toast.error("Cannot edit contact: Missing or invalid data");
+  // Function to convert raw filter data to option objects for dropdown components
+  // This follows Rust-inspired principles with explicit transformation
+  const transformBackendCountries = useCallback((backendCountriesRaw: unknown): Country[] => {
+    if (!Array.isArray(backendCountriesRaw)) return [];
+    // Filter raw input to ensure items are objects with id and name, resembling BackendCountry
+    const backendCountries = backendCountriesRaw.filter(
+      (item: unknown): item is BackendCountry => 
+        item !== null && typeof item === 'object' && 'id' in item && 'name' in item
+    ) as BackendCountry[];
+
+    return backendCountries
+      .map((backendCountry: BackendCountry): Country | null => {
+        try {
+          if (!backendCountry || typeof backendCountry !== 'object') return null;
+          const { id, name, code, regions: backendRegions, languages: backendLanguages } = backendCountry;
+
+          if (typeof id !== 'string' || typeof name !== 'string') {
+            console.warn(`Invalid country data: id or name is not a string. ID: ${id}, Name: ${name}`);
+            return null;
+          }
+
+          const transformedCountry: Country = {
+            id,
+            name,
+            code: (typeof code === 'string' && code) ? code : '',
+            regions: (Array.isArray(backendRegions) && backendRegions.length > 0)
+              ? backendRegions
+                  .filter((r): r is { code: string; name: string } => 
+                    r !== null && typeof r === 'object' && 
+                    typeof r.code === 'string' && typeof r.name === 'string'
+                  )
+                  .map(r => ({ code: r.code, name: r.name })) // Ensure only code and name are passed
+              : undefined, // Use undefined if not a valid, non-empty array
+            languages: (Array.isArray(backendLanguages) && backendLanguages.length > 0)
+              ? backendLanguages
+                  .filter((l): l is { code: string; name: string } =>
+                    l !== null && typeof l === 'object' &&
+                    typeof l.code === 'string' && typeof l.name === 'string'
+                  )
+                  .map(l => ({ code: l.code, name: l.name })) // Ensure only code and name are passed
+              : undefined, // Use undefined if not a valid, non-empty array
+          };
+          return transformedCountry;
+        } catch (error) {
+          console.error('Error transforming country:', backendCountry, error);
+          return null;
+        }
+      })
+      .filter((country): country is Country => country !== null);
+  }, []);
+
+  const transformBackendBeats = useCallback((beats: unknown): Beat[] => {
+    if (!Array.isArray(beats)) return [];
+
+    return (beats as any[])
+      .map(beat => {
+        try {
+          if (!beat || typeof beat !== 'object') return null;
+          const { id, name, description } = beat as any;
+
+          if (typeof id !== 'string' || typeof name !== 'string') return null;
+
+          return {
+            id,
+            name,
+            ...(typeof description === 'string' && { description })
+          };
+        } catch (error) {
+          console.error('Error transforming beat:', beat, error);
+          return null;
+        }
+      })
+      .filter((beat): beat is Beat => beat !== null);
+  }, []);
+
+  // Fetch initial data
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchInitialData = async () => {
+      try {
+        updateState({ isLoading: true });
+
+        // Fetch all data in parallel with error handling for each request
+        const [countries, beats, regions, languages] = await Promise.all([
+          getCountries().catch(() => []),
+          getBeats().catch(() => []),
+          getAllRegions().catch(() => []),
+          getAllLanguages().catch(() => []),
+        ]);
+
+        if (!isMounted) return;
+
+        // Transform backend data to frontend types
+        const transformedCountries = transformBackendCountries(countries);
+        const transformedBeats = transformBackendBeats(beats);
+
+        updateState({
+          allCountries: transformedCountries,
+          allBeats: transformedBeats,
+          allRegions: regions as RegionType[],
+          allLanguages: languages as LanguageType[],
+          isInitialized: true,
+          isLoading: false
+        });
+
+        // Fetch initial contacts with default filters
+        await fetchFilteredContacts({
+          page: initialPage,
+          pageSize: initialPageSize || 10,
+          searchTerm: '',
+          countryIds: [],
+          beatIds: [],
+          regionCodes: [],
+          languageCodes: [],
+          emailVerified: 'all' as const
+        });
+      } catch (err) {
+        if (!isMounted) return;
+
+        console.error('Error fetching initial data:', err);
+        updateState({
+          error: 'Failed to load initial data',
+          isLoading: false
+        });
+      }
+    };
+
+    if (!state.isInitialized) {
+      fetchInitialData();
+    }
+
+    return () => {
+      isMounted = false; // Correct cleanup for fetchInitialData
+    };
+  }, [state.isInitialized, fetchFilteredContacts, transformBackendCountries, transformBackendBeats, initialPage, initialPageSize, updateState]);
+
+  // useEffect for Debounced Search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      // This effect triggers when state.searchTerm changes.
+      // Fetch only if search term actually changed from the previous render's searchTerm.
+      if (prevSearchTermRef.current !== state.searchTerm) {
+        fetchFilteredContacts({
+          page: 1, // Ensure page is reset for a new search term activity
+          pageSize: state.pageSize,
+          searchTerm: state.searchTerm,
+          countryIds: state.selectedCountryIds,
+          beatIds: state.selectedBeatIds,
+          regionCodes: state.selectedRegionCodes,
+          languageCodes: state.selectedLanguageCodes,
+          emailVerified: state.emailVerified
+        });
+      }
+      prevSearchTermRef.current = state.searchTerm; // Update ref for the next comparison
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(handler);
+  }, [
+    state.searchTerm, 
+    // fetchFilteredContacts is included as a dependency because it's used in the effect.
+    // Other state dependencies like pageSize, selectedCountryIds, etc., are also included 
+    // because they are passed to fetchFilteredContacts, ensuring the fetch call uses their latest values.
+    fetchFilteredContacts, 
+    state.pageSize, 
+    state.selectedCountryIds, 
+    state.selectedBeatIds, 
+    state.selectedRegionCodes, 
+    state.selectedLanguageCodes, 
+    state.emailVerified
+  ]);
+
+  // useEffect for Main Filter/Pagination Changes (excluding searchTerm debouncing)
+  useEffect(() => {
+    if (!state.isInitialized) {
+      // Wait for initial data and filters to be loaded by fetchInitialData
       return;
     }
-    
-    setEditingContact(contact);
-    setIsEditSheetOpen(true);
-    
-    // If viewing the contact currently, close the view sheet
-    if (isViewSheetOpen) {
-      setIsViewSheetOpen(false);
-    }
-  };
-  
-  /**
-   * Handle successful contact update or creation
-   * Following Rust-inspired explicit function definition
-   */
-  const handleContactUpserted = (): void => {
-    handleDataRefresh();
-    setIsEditSheetOpen(false);
-  };
-  
-  /**
-   * Clear all active filters
-   * Following Rust-inspired explicit function definition with comprehensive reset
-   */
-  const handleClearAllFilters = (): void => {
-    // Reset all filter states
-    setMainSearchTerm('');
-    setSelectedCountryIds([]);
-    setSelectedBeatIds([]);
-    setSelectedRegionCodes([]);
-    setSelectedLanguageCodes([]);
-    setEmailVerifiedFilter('all');
-    
-    // Reset search terms for dropdowns
-    setSearchFilterCountryTerm('');
-    setSearchFilterBeatTerm('');
-    setSearchFilterRegionTerm('');
-    setSearchFilterLanguageTerm('');
-    
-    // Reset pagination to first page
-    setCurrentPage(0);
-    
-    // Refresh data after clearing filters
-    fetchFilteredContacts();
-    toast.success('All filters cleared');
-  };
-  
-  /**
-   * Open the view contact details sheet
-   * @param contact The contact to view
-   * Following Rust-inspired explicit typing and validation
-   */
-  const handleViewContact = (contact: MediaContactTableItem): void => {
-    // Validate required parameters with fail-fast approach
-    if (!contact || !contact.id) {
-      console.error("Failed to open view sheet: Invalid contact or missing ID");
-      toast.error("Cannot view contact: Missing or invalid data");
+    if (firstRenderRef.current) {
+      // On the very first render after initialization, fetchInitialData has already fetched.
+      // We set firstRenderRef to false after this first pass to enable subsequent runs.
+      firstRenderRef.current = false;
       return;
     }
-    
-    setViewingContact(contact);
-    setIsViewSheetOpen(true);
-  };
-  
-  /**
-   * Handle contact deletion
-   * Following Rust-inspired explicit function definition
-   */
-  const handleContactDeleted = (): void => {
-    handleDataRefresh();
-    setIsViewSheetOpen(false);
-  };
 
+    // This effect handles changes to filters (dropdowns, emailVerified) and pagination (currentPage, pageSize).
+    fetchFilteredContacts({
+      page: state.currentPage,
+      pageSize: state.pageSize,
+      searchTerm: state.searchTerm, // Include searchTerm for consistency when other filters change
+      countryIds: state.selectedCountryIds,
+      beatIds: state.selectedBeatIds,
+      regionCodes: state.selectedRegionCodes,
+      languageCodes: state.selectedLanguageCodes,
+      emailVerified: state.emailVerified
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    // state.searchTerm is now EXCLUDED from this dependency array because debounced search handles it.
+    // Including it here would cause redundant fetches when searchTerm changes.
+    state.currentPage, 
+    state.pageSize, 
+    state.selectedCountryIds, 
+    state.selectedBeatIds, 
+    state.selectedRegionCodes, 
+    state.selectedLanguageCodes, 
+    state.emailVerified, 
+    fetchFilteredContacts, 
+    state.isInitialized
+  ]);
+
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
+    updateState({ pageSize: newPageSize, currentPage: 1 }); // Reset to page 1 on page size change
+  }, [updateState]);
+
+  const handleEmailVerifiedFilterChange = useCallback((value: EmailVerificationStatus) => {
+    updateState({ emailVerified: value, currentPage: 1 });
+  }, [updateState]);
+
+  const handleSetSearchFilterCountryTerm = useCallback((term: string) => {
+    updateState({ searchFilterCountryTerm: term });
+  }, [updateState]);
+
+  const handleSetSearchFilterBeatTerm = useCallback((term: string) => {
+    updateState({ searchFilterBeatTerm: term });
+  }, [updateState]);
+
+  const handleSetSearchFilterRegionTerm = useCallback((term: string) => {
+    updateState({ searchFilterRegionTerm: term });
+  }, [updateState]);
+
+  const handleSetSearchFilterLanguageTerm = useCallback((term: string) => {
+    updateState({ searchFilterLanguageTerm: term });
+  }, [updateState]);
+
+  const handleDataRefresh = useCallback(() => {
+    fetchFilteredContacts({
+      page: state.currentPage,
+      pageSize: state.pageSize,
+      searchTerm: state.searchTerm,
+      countryIds: state.selectedCountryIds,
+      beatIds: state.selectedBeatIds,
+      regionCodes: state.selectedRegionCodes,
+      languageCodes: state.selectedLanguageCodes,
+      emailVerified: state.emailVerified,
+    });
+  }, [fetchFilteredContacts, state.currentPage, state.pageSize, state.searchTerm, state.selectedCountryIds, state.selectedBeatIds, state.selectedRegionCodes, state.selectedLanguageCodes, state.emailVerified]);
+
+  // Event Handlers using useCallback and centralized state management
+  const handleSearchTermChange = useCallback((term: string) => {
+    updateState({ searchTerm: term });
+  }, [updateState]);
+
+  const handleClearAllFilters = useCallback(() => {
+    updateState({
+      selectedCountryIds: [],
+      selectedBeatIds: [],
+      selectedRegionCodes: [],
+      selectedLanguageCodes: [],
+      emailVerified: 'all',
+      searchTerm: '', // Also clear the main search term
+      currentPage: 1, // Reset to first page
+    });
+  }, [updateState]);
+
+  const handleAddContactOpen = useCallback(() => {
+    updateState({ 
+      isEditSheetOpen: true, 
+      editingContact: null, 
+      isViewSheetOpen: false 
+    });
+  }, [updateState]);
+
+  const handleEditContactOpen = useCallback((contact: MediaContactTableItem) => {
+    updateState({ 
+      editingContact: contact, 
+      isEditSheetOpen: true, 
+      isViewSheetOpen: false 
+    });
+  }, [updateState]);
+
+  const handleViewContact = useCallback((contact: MediaContactTableItem) => {
+    updateState({ 
+      viewingContact: contact, 
+      isViewSheetOpen: true, 
+      isEditSheetOpen: false 
+    });
+  }, [updateState]);
+
+  const handleDeleteContactInitiation = useCallback((contact: MediaContactTableItem) => {
+    updateState({ 
+      contactToDelete: contact, 
+      isDeleteConfirmationOpen: true 
+    });
+  }, [updateState]);
+
+  const handleConfirmDeleteContact = useCallback(async () => {
+    if (!state.contactToDelete) return;
+    try {
+      // await deleteMediaContactAction(state.contactToDelete.id); // Assuming an action exists
+      toast.success(`Contact ${state.contactToDelete.name} deleted successfully`);
+      updateState({ 
+        contacts: state.contacts.filter(c => c.id !== state.contactToDelete!.id),
+        totalCount: state.totalCount -1,
+        contactToDelete: null, 
+        isDeleteConfirmationOpen: false 
+      });
+      // Optionally, re-fetch contacts if deletion affects pagination or overall list integrity significantly
+      // fetchFilteredContacts({ page: state.currentPage, pageSize: state.pageSize, ...collectCurrentFilters() });
+    } catch (error) {
+      toast.error(`Failed to delete contact: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      updateState({ contactToDelete: null, isDeleteConfirmationOpen: false });
+    }
+  }, [state.contacts, state.contactToDelete, state.totalCount, updateState]); // Removed fetchFilteredContacts from deps to avoid re-fetching unless explicitly needed
+
+  const handleDeleteContactFromSheet = useCallback((contactId: string) => {
+    if (state.viewingContact && state.viewingContact.id === contactId) {
+      handleDeleteContactInitiation(state.viewingContact);
+    } else {
+      // Fallback or error handling if the viewingContact doesn't match, though unlikely in this flow
+      console.warn('Mismatch between contactId for deletion and currently viewed contact.');
+      // Optionally, find the contact in state.contacts if necessary, but this path implies deletion from the view sheet.
+      const contactToDel = state.contacts.find(c => c.id === contactId);
+      if (contactToDel) {
+        handleDeleteContactInitiation(contactToDel);
+      }
+    }
+  }, [state.viewingContact, state.contacts, handleDeleteContactInitiation]);
+
+  const handleContactUpserted = useCallback((upsertedContact: MediaContactTableItem) => {
+    // This function is called when a contact is successfully added or updated.
+    // Re-fetch the current page to reflect changes.
+    fetchFilteredContacts({
+      page: state.currentPage,
+      pageSize: state.pageSize,
+      searchTerm: state.searchTerm,
+      countryIds: state.selectedCountryIds,
+      beatIds: state.selectedBeatIds,
+      regionCodes: state.selectedRegionCodes,
+      languageCodes: state.selectedLanguageCodes,
+      emailVerified: state.emailVerified,
+    });
+    updateState({ isEditSheetOpen: false, editingContact: null });
+  }, [
+    fetchFilteredContacts, 
+    state.currentPage, 
+    state.pageSize, 
+    state.searchTerm, 
+    state.selectedCountryIds, 
+    state.selectedBeatIds, 
+    state.selectedRegionCodes, 
+    state.selectedLanguageCodes, 
+    state.emailVerified, 
+    updateState
+  ]);
+
+const handleSetSelectedCountryIds = useCallback((value: React.SetStateAction<string[]>) => {
+  updateState(prevState => {
+    const newIds = typeof value === 'function' ? value(prevState.selectedCountryIds) : value;
+    return { ...prevState, selectedCountryIds: newIds, currentPage: 1 };
+  });
+}, [updateState]);
+
+const handleSetSelectedBeatIds = useCallback((value: React.SetStateAction<string[]>) => {
+  updateState(prevState => {
+    const newIds = typeof value === 'function' ? value(prevState.selectedBeatIds) : value;
+    return { ...prevState, selectedBeatIds: newIds, currentPage: 1 };
+  });
+}, [updateState]);
+
+const handleSetSelectedRegionCodes = useCallback((value: React.SetStateAction<string[]>) => {
+  updateState(prevState => {
+    const newCodes = typeof value === 'function' ? value(prevState.selectedRegionCodes) : value;
+    return { ...prevState, selectedRegionCodes: newCodes, currentPage: 1 };
+  });
+}, [updateState]);
+
+const handleSetSelectedLanguageCodes = useCallback((value: React.SetStateAction<string[]>) => {
+  updateState(prevState => {
+    const newCodes = typeof value === 'function' ? value(prevState.selectedLanguageCodes) : value;
+    return { ...prevState, selectedLanguageCodes: newCodes, currentPage: 1 };
+  });
+}, [updateState]);
+
+// ...
+const countryOptions = useMemo(() => state.allCountries.map(c => ({ value: c.id, label: c.name })), [state.allCountries]);
+const beatOptions = useMemo(() => state.allBeats.map(b => ({ value: b.id, label: b.name })), [state.allBeats]);
+const regionOptions = useMemo(() => state.allRegions.map(r => ({ value: r.code, label: r.name })), [state.allRegions]);
+const languageOptions = useMemo(() => state.allLanguages.map(l => ({ value: l.code, label: l.name })), [state.allLanguages]);
+
+if (!state.isInitialized) {
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      {/* Header with app branding and action buttons */}
-      <header className="flex flex-row justify-between items-center gap-4 mb-8">
-        <AppBrandHeader />
-        <HeaderActionButtons onAddContactOpen={handleAddContactOpen} />
-      </header>
-      
-      {/* Filters section */}
-      <section className="mb-8">
-        <MediaContactsFilters
-          // Main search
-          mainSearchTerm={mainSearchTerm}
-          setMainSearchTerm={setMainSearchTerm}
-          
-          // Country filters
-          allCountries={allCountries}
-          selectedCountryIds={selectedCountryIds}
-          setSelectedCountryIds={setSelectedCountryIds}
-          isCountryDropdownOpen={isCountryDropdownOpen}
-          setIsCountryDropdownOpen={setIsCountryDropdownOpen}
-          searchFilterCountryTerm={searchFilterCountryTerm}
-          setSearchFilterCountryTerm={setSearchFilterCountryTerm}
-          
-          // Beat filters
-          allBeats={allBeats}
-          selectedBeatIds={selectedBeatIds}
-          setSelectedBeatIds={setSelectedBeatIds}
-          isBeatDropdownOpen={isBeatDropdownOpen}
-          setIsBeatDropdownOpen={setIsBeatDropdownOpen}
-          searchFilterBeatTerm={searchFilterBeatTerm}
-          setSearchFilterBeatTerm={setSearchFilterBeatTerm}
-          
-          // Region filters (new)
-          allRegions={allRegions}
-          selectedRegionCodes={selectedRegionCodes}
-          setSelectedRegionCodes={setSelectedRegionCodes}
-          isRegionDropdownOpen={isRegionDropdownOpen}
-          setIsRegionDropdownOpen={setIsRegionDropdownOpen}
-          searchFilterRegionTerm={searchFilterRegionTerm}
-          setSearchFilterRegionTerm={setSearchFilterRegionTerm}
-          
-          // Language filters (new)
-          allLanguages={allLanguages}
-          selectedLanguageCodes={selectedLanguageCodes}
-          setSelectedLanguageCodes={setSelectedLanguageCodes}
-          isLanguageDropdownOpen={isLanguageDropdownOpen}
-          setIsLanguageDropdownOpen={setIsLanguageDropdownOpen}
-          searchFilterLanguageTerm={searchFilterLanguageTerm}
-          setSearchFilterLanguageTerm={setSearchFilterLanguageTerm}
-          
-          // Email verification filter - now as a dropdown
-          emailVerifiedFilter={emailVerifiedFilter}
-          setEmailVerifiedFilter={setEmailVerifiedFilter}
-          isEmailVerifiedDropdownOpen={isEmailVerifiedDropdownOpen}
-          setIsEmailVerifiedDropdownOpen={setIsEmailVerifiedDropdownOpen}
-          
-          // Filter management
-          activeFiltersCount={activeFiltersCount()}
-          handleClearAllFilters={handleClearAllFilters}
-        />
-      </section>
-      
-      {/* Main content with data table */}
-      <main>
-        {isLoading ? (
-          <div className="py-10">
-            <div className="flex items-center justify-center">
-              <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"></div>
-              <span className="ml-2">Loading contacts...</span>
-            </div>
-          </div>
-        ) : (
-          <MediaContactsTable 
-            data={contacts} 
-            onDataRefresh={handleDataRefresh}
-            onEditContact={handleEditContactOpen}
-            onViewContact={handleViewContact}
-            onFallbackDataNeeded={(fallbackData) => {
-              console.log('Fallback data needed, using mock data', fallbackData);
-              setContacts(fallbackData);
-              setTotalContactsCount(fallbackData.length);
-            }}
-            mainSearchTerm={mainSearchTerm}
-            selectedCountryIds={selectedCountryIds}
-            selectedBeatIds={selectedBeatIds}
-            selectedRegionCodes={selectedRegionCodes}
-            selectedLanguageCodes={selectedLanguageCodes}
-            emailVerifiedFilter={emailVerifiedFilter}
-            // Pagination props
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            pageSize={pageSize}
-            setPageSize={setPageSize}
-            totalCount={totalContactsCount}
-          />
-        )}
-      </main>
-      
-      {/* Edit Contact Sheet */}
-      <UpdateMediaContactSheet
-        isOpen={isEditSheetOpen}
-        onOpenChange={setIsEditSheetOpen} 
-        contact={editingContact} 
-        onContactUpdate={handleContactUpserted} 
-      />
-      
-      {/* View Contact Details Sheet */}
-      <ViewMediaContactSheet
-        isOpen={isViewSheetOpen}
-        onOpenChange={setIsViewSheetOpen}
-        contact={viewingContact}
-        onContactDelete={handleContactDeleted}
-        onContactEdit={handleEditContactOpen}
-      />
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-2xl">Loading Media Contacts...</div> {/* Replace with a proper spinner/skeleton */} 
     </div>
   );
+}
+
+// Main component render
+return (
+<div className="flex flex-col min-h-screen bg-muted/40 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+  {/* Brand header and action buttons */}
+  <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <AppBrandHeader />
+    <HeaderActionButtons onAddContactOpen={handleAddContactOpen} />
+  </header>
+
+<MediaContactsFilters
+mainSearchTerm={state.searchTerm}
+setMainSearchTerm={handleSearchTermChange} // Direct change handler for input
+// Debouncing is handled by useEffect watching state.searchTerm
+isLoading={state.isLoading}
+// Country Filter
+allCountries={state.allCountries}
+selectedCountryIds={state.selectedCountryIds}
+setSelectedCountryIds={handleSetSelectedCountryIds}
+isCountryDropdownOpen={state.isCountryDropdownOpen}
+setIsCountryDropdownOpen={(isOpen: boolean) => updateState({ isCountryDropdownOpen: isOpen })}
+  searchFilterCountryTerm={state.searchFilterCountryTerm}
+  setSearchFilterCountryTerm={handleSetSearchFilterCountryTerm}
+  countryOptions={state.allCountries}
+// Beat Filter
+allBeats={state.allBeats}
+selectedBeatIds={state.selectedBeatIds}
+setSelectedBeatIds={handleSetSelectedBeatIds}
+isBeatDropdownOpen={state.isBeatDropdownOpen}
+setIsBeatDropdownOpen={(isOpen: boolean) => updateState({ isBeatDropdownOpen: isOpen })}
+  searchFilterBeatTerm={state.searchFilterBeatTerm}
+  setSearchFilterBeatTerm={handleSetSearchFilterBeatTerm}
+  beatOptions={state.allBeats}
+// Region Filter
+allRegions={state.allRegions}
+selectedRegionCodes={state.selectedRegionCodes}
+setSelectedRegionCodes={handleSetSelectedRegionCodes}
+isRegionDropdownOpen={state.isRegionDropdownOpen}
+setIsRegionDropdownOpen={(isOpen: boolean) => updateState({ isRegionDropdownOpen: isOpen })}
+  searchFilterRegionTerm={state.searchFilterRegionTerm}
+  setSearchFilterRegionTerm={handleSetSearchFilterRegionTerm}
+  regionOptions={state.allRegions}
+// Language Filter
+allLanguages={state.allLanguages}
+selectedLanguageCodes={state.selectedLanguageCodes}
+setSelectedLanguageCodes={handleSetSelectedLanguageCodes}
+isLanguageDropdownOpen={state.isLanguageDropdownOpen}
+setIsLanguageDropdownOpen={(isOpen: boolean) => updateState({ isLanguageDropdownOpen: isOpen })}
+  searchFilterLanguageTerm={state.searchFilterLanguageTerm}
+  setSearchFilterLanguageTerm={handleSetSearchFilterLanguageTerm}
+  languageOptions={state.allLanguages}
+// Email Verified Filter
+emailVerifiedFilter={state.emailVerified}
+setEmailVerifiedFilter={handleEmailVerifiedFilterChange}
+isEmailVerifiedDropdownOpen={state.isEmailVerifiedDropdownOpen}
+setIsEmailVerifiedDropdownOpen={(isOpen: boolean) => updateState({ isEmailVerifiedDropdownOpen: isOpen })}
+// Actions
+activeFiltersCount={() => activeFiltersCount} // Pass a function that returns the memoized value
+clearAllFilters={handleClearAllFilters}
+/>
+
+<div className="flex-grow overflow-auto">
+<MediaContactsTable
+data={state.contacts} // Use state.contacts which is updated by fetchFilteredContacts
+totalCount={state.totalCount}
+currentPage={state.currentPage}
+pageSize={state.pageSize}
+onEditContact={handleEditContactOpen} // For initiating delete from table row
+onViewContact={handleViewContact}
+onDataRefresh={handleDataRefresh}
+/>
+</div>
+
+{state.isEditSheetOpen && (
+<UpdateMediaContactSheet
+isOpen={state.isEditSheetOpen}
+onOpenChange={(isOpen) => updateState({ isEditSheetOpen: isOpen, editingContact: isOpen ? state.editingContact : null })}
+contact={state.editingContact}
+onContactUpdate={handleContactUpserted}         // Pass full Beat objects
+/>
+)}
+
+{state.isViewSheetOpen && state.viewingContact && (
+<ViewMediaContactSheet
+isOpen={state.isViewSheetOpen}
+onOpenChange={(isOpen) => updateState({ isViewSheetOpen: isOpen, viewingContact: isOpen ? state.viewingContact : null })}
+contact={state.viewingContact} // Allow editing from view sheet // Allow deleting from view sheet
+onContactDelete={handleDeleteContactFromSheet}
+onContactEdit={handleEditContactOpen} // Callback after deletion from sheet
+/>
+)}
+
+{/* Basic Delete Confirmation Dialog (Can be replaced with ShadCN Alert Dialog) */}
+{state.isDeleteConfirmationOpen && state.contactToDelete && (
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+<div className="bg-background p-6 rounded-lg shadow-xl">
+<h3 className="text-lg font-medium">Confirm Deletion</h3>
+<p className="text-sm text-muted-foreground mt-2">
+Are you sure you want to delete {state.contactToDelete.name}?
+</p>
+<div className="mt-4 flex justify-end space-x-2">
+<button 
+onClick={() => updateState({ isDeleteConfirmationOpen: false, contactToDelete: null })}
+className="px-4 py-2 border rounded-md text-sm"
+>
+Cancel
+</button>
+<button 
+onClick={handleConfirmDeleteContact}
+className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm hover:bg-destructive/90"
+>
+Delete
+</button>
+</div>
+</div>
+</div>
+)}
+</div>
+);
 }

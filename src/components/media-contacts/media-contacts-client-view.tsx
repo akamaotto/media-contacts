@@ -708,13 +708,15 @@ clearAllFilters={handleClearAllFilters}
 
 <div className="flex-grow overflow-auto">
 <MediaContactsTable
-data={state.contacts} // Use state.contacts which is updated by fetchFilteredContacts
-totalCount={state.totalCount}
-currentPage={state.currentPage}
-pageSize={state.pageSize}
-onEditContact={handleEditContactOpen} // For initiating delete from table row
-onViewContact={handleViewContact}
-onDataRefresh={handleDataRefresh}
+  data={state.contacts} // Use state.contacts which is updated by fetchFilteredContacts
+  totalCount={state.totalCount}
+  currentPage={state.currentPage}
+  setCurrentPage={(page) => updateState({ currentPage: page })}
+  pageSize={state.pageSize}
+  setPageSize={(size) => updateState({ pageSize: size })}
+  onEditContact={handleEditContactOpen} // For initiating delete from table row
+  onViewContact={handleViewContact}
+  onDataRefresh={handleDataRefresh}
 />
 </div>
 

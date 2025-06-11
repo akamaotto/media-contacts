@@ -110,11 +110,15 @@ function detectSocialPlatform(url: string): SocialPlatformType {
   }
 }
 
+/**
+ * Props interface for UpdateMediaContactSheet component
+ * Following Rust-inspired explicit typing pattern with comprehensive documentation
+ */
 interface UpdateMediaContactSheetProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   contact?: MediaContactTableItem | null;
-  onContactUpdate: () => void;
+  onContactUpdate: (contact: MediaContactTableItem) => void;
 }
 
 export function UpdateMediaContactSheet({
@@ -255,9 +259,29 @@ export function UpdateMediaContactSheet({
           },
         });
         
-        // Close sheet and trigger refresh of the table
+        // Close sheet and trigger refresh of the table with updated contact data
         onOpenChange(false);
-        onContactUpdate();
+        
+        // Create a properly typed contact object to pass to the parent callback
+        // Following Rust-inspired fail-fast approach with explicit type validation
+        const updatedContact: MediaContactTableItem = {
+          id: result.data?.id || contact?.id || '',
+          name: data.name,
+          email: data.email || '',
+          title: data.title || '',
+          email_verified_status: data.email_verified_status || false,
+          updated_at: new Date().toISOString(),
+          outlets: data.outlets?.map(name => ({ id: '', name })) || [],
+          countries: countryIds?.map(id => allCountries.find(country => country.id === id)).
+            filter(country => country !== undefined)
+            .map(country => ({ id: country!.id, name: country!.name })) || [],
+          beats: data.beats?.map(name => ({ id: '', name })) || [],
+          bio: data.bio || null,
+          socials: data.socials || null
+        };
+        
+        // Call the parent callback with the updated contact
+        onContactUpdate(updatedContact);
       } else {
         // Show error toast
         toast.error("Failed to save contact", {

@@ -26,18 +26,51 @@ export interface ColumnActions {
   onDeleteContact: (contact: MediaContactTableItem) => void;
   onViewContact: (contact: MediaContactTableItem) => void;
 }
+// Import types from country-data to ensure consistency
+import type { Region as CountryDataRegion, CountryData } from '@/lib/country-data';
+import type { Language } from '@/lib/language-data';
+
+// Types for related entities
+export interface Country {
+  id: string;
+  name: string;
+  code: string;
+  regions?: Array<{ code: string; name: string }>;
+  languages?: Array<{ code: string; name: string }>;
+  [key: string]: any; // Allow additional properties
+}
+
+export interface Beat {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface Outlet {
+  id: string;
+  name: string;
+}
+
+// Re-export Region from country-data to ensure consistency
+export type { CountryData as CountryData };
+export type { Region } from '@/lib/country-data';
+
 export interface MediaContactTableItem {
   id: string;
   name: string;
   email: string;
   title: string;
-  email_verified_status: boolean;
-  updated_at: Date | string; // Prisma returns Date, can be string if serialized
-  outlets: { id: string; name: string }[];
-  countries: { id: string; name: string }[];
-  beats: { id: string; name: string }[];
-  bio?: string | null; // Optional and can be null
-  socials?: string[] | null; // Optional and can be null
+  emailVerified: boolean; // Changed from email_verified_status to match usage
+  email_verified_status?: boolean; // Keeping for backward compatibility
+  updated_at: Date | string;
+  outlets: Outlet[];
+  countries: Country[];
+  beats: Beat[];
+  languages?: Language[];
+  bio?: string | null;
+  socials?: string[] | null;
+  // Add any other fields that might be used in the application
+  [key: string]: any; // For any additional dynamic properties
 }
 
 // Educational Comment:

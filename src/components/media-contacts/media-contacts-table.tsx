@@ -91,9 +91,6 @@ interface MediaContactsTableProps {
   onEditContact: (contact: MediaContactTableItem) => void;
   onViewContact: (contact: MediaContactTableItem) => void;
   
-  // Data update callback for fallback handling
-  onFallbackDataNeeded?: (fallbackData: MediaContactTableItem[]) => void;
-  
   // Search filters
   mainSearchTerm?: string;
   
@@ -129,7 +126,6 @@ export function MediaContactsTable({
   onDataRefresh,
   onEditContact,
   onViewContact,
-  onFallbackDataNeeded,
   mainSearchTerm = '',
   selectedCountryIds = [],
   selectedBeatIds = [],
@@ -214,47 +210,70 @@ export function MediaContactsTable({
       const contact = row.original;
       if (!contact) return false; // Fail fast if contact is invalid
       
-      // Main search - checks name, email, and outlets
-      const searchTermLower = mainSearchTerm.toLowerCase();
-      const textMatches = searchTermLower === '' || (
-        (contact.name?.toLowerCase().includes(searchTermLower)) ||
-        (contact.email?.toLowerCase().includes(searchTermLower)) ||
-        (contact.outlets?.some((outlet: any) => 
-          outlet.name?.toLowerCase().includes(searchTermLower)
-        ))
-      );
+      // Debug logging for diagnostic purposes
+      console.debug('[globalFilterFn] Processing contact:', {
+        id: contact?.id,
+        name: contact?.name,
+        email: contact?.email,
+        emailVerified: contact?.emailVerified,
+        outlets: contact?.outlets?.map((o: { id?: string; name?: string }) => ({ id: o?.id, name: o?.name })) ?? []
+      });
       
-      // Country filtering
-      const countryMatches = selectedCountryIds.length === 0 || 
-        (contact.countries?.some((country: any) => selectedCountryIds.includes(country.id)));
+      // Main search with robust null checking - ensure no undefined.toLowerCase() calls
+      const searchTermLower = mainSearchTerm?.toLowerCase?.() ?? '';
       
-      // Beat filtering
-      const beatMatches = selectedBeatIds.length === 0 || 
-        (contact.beats?.some((beat: any) => selectedBeatIds.includes(beat.id)));
+      // Implement Safe Method Chaining with nullish coalescing
+      const nameMatch = contact?.name?.toLowerCase?.()?.includes?.(searchTermLower) ?? false;
+      const emailMatch = contact?.email?.toLowerCase?.()?.includes?.(searchTermLower) ?? false;
       
-      // Region filtering (new)
-      const regionMatches = selectedRegionCodes.length === 0 || 
-        (contact.countries?.some((country: any) => {
+      // Safe array operations with explicit fallback
+      const outletMatches = contact?.outlets?.some?.((outlet: any) => 
+        outlet?.name?.toLowerCase?.()?.includes?.(searchTermLower) ?? false
+      ) ?? false;
+      
+      const textMatches = searchTermLower === '' || nameMatch || emailMatch || outletMatches;
+      
+      // Country filtering with robust null checking
+      const countryMatches = selectedCountryIds?.length === 0 || 
+        (contact?.countries?.some?.((country: any) => 
+          selectedCountryIds?.includes?.(country?.id) ?? false
+        ) ?? false);
+      
+      // Beat filtering with robust null checking
+      const beatMatches = selectedBeatIds?.length === 0 || 
+        (contact?.beats?.some?.((beat: any) => 
+          selectedBeatIds?.includes?.(beat?.id) ?? false
+        ) ?? false);
+      
+      // Region filtering with robust null checking
+      const regionMatches = selectedRegionCodes?.length === 0 || 
+        (contact?.countries?.some?.((country: any) => {
+          // Fail-fast validation for nested properties
+          if (!country || !country.regions) return false;
+          
           // Check if country belongs to any of the selected regions
-          return country.regions?.some((region: any) => 
-            selectedRegionCodes.includes(region.code)
-          );
-        }));
+          return country.regions?.some?.((region: any) => 
+            selectedRegionCodes?.includes?.(region?.code) ?? false
+          ) ?? false;
+        }) ?? false);
       
-      // Language filtering (new)
-      const languageMatches = selectedLanguageCodes.length === 0 || 
-        (contact.countries?.some((country: any) => {
+      // Language filtering with robust null checking
+      const languageMatches = selectedLanguageCodes?.length === 0 || 
+        (contact?.countries?.some?.((country: any) => {
+          // Fail-fast validation for nested properties
+          if (!country || !country.languages) return false;
+          
           // Check if country uses any of the selected languages
-          return country.languages?.some((language: any) => 
-            selectedLanguageCodes.includes(language.code)
-          );
-        }));
+          return country.languages?.some?.((language: any) => 
+            selectedLanguageCodes?.includes?.(language?.code) ?? false
+          ) ?? false;
+        }) ?? false);
       
-      // Email verification status
+      // Email verification status with explicit null checking
       const emailVerificationMatches = 
         emailVerifiedFilter === 'all' || 
-        (emailVerifiedFilter === 'verified' && contact.emailVerified) || 
-        (emailVerifiedFilter === 'unverified' && !contact.emailVerified);
+        (emailVerifiedFilter === 'verified' && contact?.emailVerified === true) || 
+        (emailVerifiedFilter === 'unverified' && contact?.emailVerified !== true);
       
       // All conditions must be true for the row to be included
       return (
@@ -303,28 +322,6 @@ export function MediaContactsTable({
     
     return result;
   }, [data, globalFilterFn, activeFiltersCount]);
-
-  // If we have no data but we should, use fallback data
-  useEffect(() => {
-    if (filteredData.length === 0 && activeFiltersCount === 0 && onFallbackDataNeeded) {
-      console.log('[MediaContactsTable] No results with default parameters, requesting fallback data');
-      // Create mock data for fallback - strictly following MediaContactTableItem interface
-      const fallbackData: MediaContactTableItem[] = Array(10).fill(null).map((_, index) => ({
-        id: `mock-${index}`,
-        name: `Sample Contact ${index + 1}`,
-        email: `sample${index + 1}@example.com`,
-        title: `Editor ${index % 3 === 0 ? 'in Chief' : index % 3 === 1 ? 'Senior' : 'Associate'}`,
-        email_verified_status: Math.random() > 0.5,
-        updated_at: new Date().toISOString(),
-        outlets: [{id: `outlet-${index % 3}`, name: `Sample Outlet ${index % 3 + 1}`}],
-        countries: [{id: `country-${index % 5}`, name: `Country ${index % 5 + 1}`}],
-        beats: [{id: `beat-${index % 4}`, name: `Beat ${index % 4 + 1}`}],
-        bio: index % 2 === 0 ? `Sample bio for contact ${index + 1}` : null,
-        socials: index % 3 === 0 ? [`https://twitter.com/sample${index}`, `https://linkedin.com/in/sample${index}`] : null,
-      }));
-      onFallbackDataNeeded(fallbackData);
-    }
-  }, [filteredData.length, activeFiltersCount, onFallbackDataNeeded]);
 
   /**
    * Define table columns with explicit memoization to prevent unnecessary rerenders
@@ -416,7 +413,7 @@ export function MediaContactsTable({
         <div 
           className="min-h-[400px] max-h-[700px] overflow-auto" 
           ref={tableContainerRef}
-          style={{ height: '500px', position: 'relative' }}
+          style={{ height: '670px', position: 'relative' }}
         >
           {/* Diagnostic message commented out to avoid disrupting layout 
           {table.getRowModel().rows.length > 0 && (
@@ -609,7 +606,3 @@ export function MediaContactsTable({
     </div>
   );
 }
-
-// Helper function to determine if any filters are active
-// (Assuming getActiveFiltersCount function definition follows here or was already present)
-

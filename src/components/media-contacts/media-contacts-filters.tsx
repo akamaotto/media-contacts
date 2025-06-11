@@ -15,7 +15,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CheckIcon, ChevronsUpDownIcon, X as XIcon, Globe, Languages } from "lucide-react";
+import { CheckIcon, ChevronsUpDownIcon, X as XIcon, Globe, Languages, Search as SearchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Country } from "@/app/actions/country-actions";
 import { Beat } from "@/app/actions/beat-actions";
@@ -30,6 +30,9 @@ export interface MediaContactsFiltersProps {
   // Main search
   mainSearchTerm: string;
   setMainSearchTerm: (term: string) => void;
+  onSearchSubmit?: () => void;
+  isLoading?: boolean;
+  setIsLoading?: (isLoading: boolean) => void; // Optional prop for setting loading state
   
   // Country filters
   allCountries: Country[];
@@ -39,7 +42,8 @@ export interface MediaContactsFiltersProps {
   setIsCountryDropdownOpen: (isOpen: boolean) => void;
   searchFilterCountryTerm: string;
   setSearchFilterCountryTerm: (term: string) => void;
-
+  countryOptions: Country[];
+  
   // Beat filters
   allBeats: Beat[];
   selectedBeatIds: string[];
@@ -48,8 +52,9 @@ export interface MediaContactsFiltersProps {
   setIsBeatDropdownOpen: (isOpen: boolean) => void;
   searchFilterBeatTerm: string;
   setSearchFilterBeatTerm: (term: string) => void;
-
-  // Region filters (new)
+  beatOptions: Beat[];
+  
+  // Region filters
   allRegions: Region[];
   selectedRegionCodes: string[];
   setSelectedRegionCodes: React.Dispatch<React.SetStateAction<string[]>>;
@@ -57,8 +62,9 @@ export interface MediaContactsFiltersProps {
   setIsRegionDropdownOpen: (isOpen: boolean) => void;
   searchFilterRegionTerm: string;
   setSearchFilterRegionTerm: (term: string) => void;
-
-  // Language filters (new)
+  regionOptions: Region[];
+  
+  // Language filters
   allLanguages: Language[];
   selectedLanguageCodes: string[];
   setSelectedLanguageCodes: React.Dispatch<React.SetStateAction<string[]>>;
@@ -66,16 +72,17 @@ export interface MediaContactsFiltersProps {
   setIsLanguageDropdownOpen: (isOpen: boolean) => void;
   searchFilterLanguageTerm: string;
   setSearchFilterLanguageTerm: (term: string) => void;
-
+  languageOptions: Language[];
+  
   // Email verification filter
   emailVerifiedFilter: 'all' | 'verified' | 'unverified';
-  setEmailVerifiedFilter: (value: 'all' | 'verified' | 'unverified') => void;
+  setEmailVerifiedFilter: (filter: 'all' | 'verified' | 'unverified') => void;
   isEmailVerifiedDropdownOpen: boolean;
   setIsEmailVerifiedDropdownOpen: (isOpen: boolean) => void;
   
-  // Filter management
-  activeFiltersCount: number;
-  handleClearAllFilters: () => void;
+  // Filter utilities
+  activeFiltersCount: () => number;
+  clearAllFilters: () => void;
 }
 
 /**
@@ -87,6 +94,9 @@ export function MediaContactsFilters({
   // Main search
   mainSearchTerm,
   setMainSearchTerm,
+  onSearchSubmit,
+  isLoading,
+  setIsLoading,
   // Country filters
   allCountries,
   selectedCountryIds,
@@ -95,6 +105,7 @@ export function MediaContactsFilters({
   setIsCountryDropdownOpen,
   searchFilterCountryTerm,
   setSearchFilterCountryTerm,
+  countryOptions,
   // Beat filters
   allBeats,
   selectedBeatIds,
@@ -103,6 +114,7 @@ export function MediaContactsFilters({
   setIsBeatDropdownOpen,
   searchFilterBeatTerm,
   setSearchFilterBeatTerm,
+  beatOptions,
   // Region filters
   allRegions,
   selectedRegionCodes,
@@ -111,6 +123,7 @@ export function MediaContactsFilters({
   setIsRegionDropdownOpen,
   searchFilterRegionTerm,
   setSearchFilterRegionTerm,
+  regionOptions,
   // Language filters
   allLanguages,
   selectedLanguageCodes,
@@ -119,14 +132,15 @@ export function MediaContactsFilters({
   setIsLanguageDropdownOpen,
   searchFilterLanguageTerm,
   setSearchFilterLanguageTerm,
+  languageOptions,
   // Email verification filter
   emailVerifiedFilter,
   setEmailVerifiedFilter,
   isEmailVerifiedDropdownOpen,
   setIsEmailVerifiedDropdownOpen,
   // Filter management
+  clearAllFilters,
   activeFiltersCount,
-  handleClearAllFilters,
 }: MediaContactsFiltersProps) {
   return (
     <Card className="rounded-sm overflow-hidden">
@@ -134,14 +148,29 @@ export function MediaContactsFilters({
         <div className="flex flex-wrap items-end gap-3">
           {/* Main Search Input */}
           <div className="flex-grow min-w-[200px] sm:min-w-[250px] md:min-w-[300px]">
-            <Label htmlFor="mainSearch" className="text-sm font-medium">Search</Label>
-            <Input
-              id="mainSearch"
-              placeholder="Contacts, emails, outlets..."
-              value={mainSearchTerm}
-              onChange={(event) => setMainSearchTerm(event.target.value)}
-              className="w-full mt-1"
-            />
+            <div className="space-y-1">
+              <Label htmlFor="mainSearch">Search</Label>
+              <div className="relative">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="mainSearch"
+                  placeholder="Search media contacts..."
+                  value={mainSearchTerm}
+                  onChange={(e) => {
+                    console.debug("[MediaContactFilters] Setting search term:", e.target.value);
+                    setMainSearchTerm(e.target.value);
+                  }}
+                  className="pl-9" // add left padding for icon
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && onSearchSubmit) {
+                      console.debug("[MediaContactFilters] Enter key pressed, triggering search");
+                      if (setIsLoading) setIsLoading(true);
+                      onSearchSubmit();
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Region Filter Popover */}
@@ -165,16 +194,22 @@ export function MediaContactsFilters({
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput placeholder="Search region..." value={searchFilterRegionTerm} onValueChange={setSearchFilterRegionTerm}/>
+                  <CommandInput
+                    placeholder="Search regions..."
+                    value={searchFilterRegionTerm}
+                    onValueChange={setSearchFilterRegionTerm}
+                    className="h-9"
+                  />
                   <CommandList>
-                    <CommandEmpty>No region found.</CommandEmpty>
+                    <CommandEmpty>No regions found.</CommandEmpty>
                     <CommandGroup>
-                      {allRegions
-                        .filter(region => 
-                          region.name.toLowerCase().includes(searchFilterRegionTerm.toLowerCase()) ||
-                          region.code.toLowerCase().includes(searchFilterRegionTerm.toLowerCase())
-                        )
-                        .map((region) => (
+                      {regionOptions
+                        .filter((region: { name?: string }) => {
+                          const label = region?.name || '';
+                          const searchTerm = searchFilterRegionTerm || '';
+                          return searchTerm === '' || label.toLowerCase().includes(searchTerm.toLowerCase());
+                        })
+                        .map((region: {code: string; name: string}) => (
                           <CommandItem
                             key={region.code}
                             value={region.name}
@@ -193,11 +228,6 @@ export function MediaContactsFilters({
                               )}
                             />
                             {region.name}
-                            <span className="ml-1 text-xs text-muted-foreground">
-                              {region.category === 'continent' ? '(Continent)' : 
-                               region.category === 'subregion' ? '(Subregion)' : 
-                               `(${region.category.charAt(0).toUpperCase() + region.category.slice(1)})`}
-                            </span>
                           </CommandItem>
                         ))}
                     </CommandGroup>
@@ -225,31 +255,47 @@ export function MediaContactsFilters({
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput placeholder="Search country..." value={searchFilterCountryTerm} onValueChange={setSearchFilterCountryTerm} />
+                  <CommandInput
+                    placeholder="Search countries..."
+                    value={searchFilterCountryTerm}
+                    onValueChange={setSearchFilterCountryTerm}
+                    className="h-9"
+                  />
                   <CommandList>
-                    <CommandEmpty>No country found.</CommandEmpty>
+                    <CommandEmpty>No countries found.</CommandEmpty>
                     <CommandGroup>
-                      {allCountries.map((country) => (
-                        <CommandItem
-                          key={country.id}
-                          value={country.name}
-                          onSelect={() => {
-                            setSelectedCountryIds((prev) =>
-                              prev.includes(country.id)
-                                ? prev.filter((id) => id !== country.id)
-                                : [...prev, country.id]
-                            );
-                          }}
-                        >
-                          <CheckIcon
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedCountryIds.includes(country.id) ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {country.name}
-                        </CommandItem>
-                      ))}
+                      {countryOptions
+                        .filter((country: any) => {
+                          const label = country?.name || country?.label || '';
+                          const searchTerm = searchFilterCountryTerm || '';
+                          return searchTerm === '' || label.toLowerCase().includes(searchTerm.toLowerCase());
+                        })
+                        .map((country: any) => {
+                          // Get id and display name safely
+                          const id = country?.id || country?.value || '';
+                          const name = country?.name || country?.label || '';
+                          return (
+                            <CommandItem
+                              key={id}
+                              value={name}
+                              onSelect={() => {
+                                setSelectedCountryIds((prev) =>
+                                  prev.includes(id)
+                                    ? prev.filter((prevId) => prevId !== id)
+                                    : [...prev, id]
+                                );
+                              }}
+                            >
+                              <CheckIcon
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedCountryIds.includes(id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {name}
+                            </CommandItem>
+                          );
+                        })}
                     </CommandGroup>
                   </CommandList>
                 </Command>
@@ -275,39 +321,54 @@ export function MediaContactsFilters({
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput placeholder="Search beat..." value={searchFilterBeatTerm} onValueChange={setSearchFilterBeatTerm}/>
+                  <CommandInput
+                    placeholder="Search beats..."
+                    value={searchFilterBeatTerm}
+                    onValueChange={setSearchFilterBeatTerm}
+                    className="h-9"
+                  />
                   <CommandList>
-                    <CommandEmpty>No beat found.</CommandEmpty>
+                    <CommandEmpty>No beats found.</CommandEmpty>
                     <CommandGroup>
-                      {allBeats.map((beat) => (
-                        <CommandItem
-                          key={beat.id}
-                          value={beat.name}
-                          onSelect={() => {
-                            setSelectedBeatIds((prev) =>
-                              prev.includes(beat.id)
-                                ? prev.filter((id) => id !== beat.id)
-                                : [...prev, beat.id]
-                            );
-                          }}
-                        >
-                          <CheckIcon
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedBeatIds.includes(beat.id) ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {beat.name}
-                        </CommandItem>
-                      ))}
+                      {beatOptions
+                        .filter((beat: any) => {
+                          const label = beat?.name || beat?.label || '';
+                          const searchTerm = searchFilterBeatTerm || '';
+                          return searchTerm === '' || label.toLowerCase().includes(searchTerm.toLowerCase());
+                        })
+                        .map((beat: any) => {
+                          // Get id and display name safely
+                          const id = beat?.id || beat?.value || '';
+                          const name = beat?.name || beat?.label || '';
+                          return (
+                            <CommandItem
+                              key={id}
+                              value={name}
+                              onSelect={() => {
+                                setSelectedBeatIds((prev) =>
+                                  prev.includes(id)
+                                    ? prev.filter((prevId) => prevId !== id)
+                                    : [...prev, id]
+                                );
+                              }}
+                            >
+                              <CheckIcon
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedBeatIds.includes(id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {name}
+                            </CommandItem>
+                          );
+                        })}
                     </CommandGroup>
                   </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>
           </div>
-          
-          
+                  
 
           {/* Language Filter Popover */}
           <div className="min-w-[180px]">
@@ -330,42 +391,48 @@ export function MediaContactsFilters({
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput placeholder="Search language..." value={searchFilterLanguageTerm} onValueChange={setSearchFilterLanguageTerm}/>
+                  <CommandInput
+                    placeholder="Search languages..."
+                    value={searchFilterLanguageTerm}
+                    onValueChange={setSearchFilterLanguageTerm}
+                    className="h-9"
+                  />
                   <CommandList>
-                    <CommandEmpty>No language found.</CommandEmpty>
+                    <CommandEmpty>No languages found.</CommandEmpty>
                     <CommandGroup>
-                      {allLanguages
-                        .filter(language => 
-                          language.name.toLowerCase().includes(searchFilterLanguageTerm.toLowerCase()) ||
-                          language.code.toLowerCase().includes(searchFilterLanguageTerm.toLowerCase()) ||
-                          (language.native && language.native.toLowerCase().includes(searchFilterLanguageTerm.toLowerCase()))
-                        )
-                        .map((language) => (
-                          <CommandItem
-                            key={language.code}
-                            value={language.name}
-                            onSelect={() => {
-                              setSelectedLanguageCodes((prev) =>
-                                prev.includes(language.code)
-                                  ? prev.filter((code) => code !== language.code)
-                                  : [...prev, language.code]
-                              );
-                            }}
-                          >
-                            <CheckIcon
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedLanguageCodes.includes(language.code) ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {language.name}
-                            {language.native && language.name !== language.native && (
-                              <span className="ml-1 text-xs text-muted-foreground">
-                                ({language.native})
-                              </span>
-                            )}
-                          </CommandItem>
-                        ))}
+                      {languageOptions
+                        .filter((language: any) => {
+                          const label = language?.name || language?.label || '';
+                          const searchTerm = searchFilterLanguageTerm || '';
+                          return searchTerm === '' || label.toLowerCase().includes(searchTerm.toLowerCase());
+                        })
+                        .map((language: any) => {
+                          // Get code and display name safely
+                          const code = language?.code || language?.value || '';
+                          const name = language?.name || language?.label || '';
+                          return (
+                            <CommandItem
+                              key={code}
+                              value={name}
+                              onSelect={() => {
+                                setSelectedLanguageCodes((prev) =>
+                                  prev.includes(code)
+                                    ? prev.filter((prevCode) => prevCode !== code)
+                                    : [...prev, code]
+                                );
+                              }}
+                            >
+                              <CheckIcon
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedLanguageCodes.includes(code) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {name}
+                            </CommandItem>
+                          );
+                        })}
+
                     </CommandGroup>
                   </CommandList>
                 </Command>
@@ -455,8 +522,8 @@ export function MediaContactsFilters({
           </div>
 
           {/* Clear All Filters Button */}
-          {activeFiltersCount > 0 && (
-              <Button variant="ghost" onClick={handleClearAllFilters} className="self-end">
+          {activeFiltersCount() > 0 && (
+              <Button variant="ghost" onClick={clearAllFilters} className="self-end">
                   <XIcon className="mr-2 h-4 w-4" /> Clear All
               </Button>
           )}

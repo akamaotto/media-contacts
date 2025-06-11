@@ -3,7 +3,7 @@ import React, { Suspense } from 'react';
 // This was previously in 'src/components/media-contacts-feature/columns.tsx' which was deleted.
 // Assuming it's now in 'src/components/media-contacts/columns.tsx'
 import { MediaContactTableItem } from '@/components/media-contacts/columns';
-import { MediaContactsClientView } from '@/components/media-contacts/media-contacts-client-view';
+import MediaContactsClientView from '@/components/media-contacts/media-contacts-client-view';
 import { getMediaContactsAction, type PaginatedMediaContactsActionResult } from '@/backend/media-contacts/actions'; // Import the server action with paginated type
 
 // No longer need prisma directly in the page component for this fetch

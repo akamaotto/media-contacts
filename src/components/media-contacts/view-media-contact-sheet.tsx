@@ -19,11 +19,15 @@ import { Pencil, Trash2, Mail, Link, Briefcase, Globe, User } from "lucide-react
 import { MediaContactTableItem } from "@/components/media-contacts/columns";
 import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 
+/**
+ * Props interface for ViewMediaContactSheet component
+ * Following Rust-inspired explicit typing pattern with comprehensive documentation
+ */
 interface ViewMediaContactSheetProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   contact: MediaContactTableItem | null;
-  onContactDelete: () => void;
+  onContactDelete: (contactId: string) => void;  // Updated to accept contactId parameter
   onContactEdit: (contact: MediaContactTableItem) => void;
 }
 
@@ -54,6 +58,21 @@ export function ViewMediaContactSheet({
   };
 
   /**
+   * Handle confirmed deletion
+   * Closes the sheet and calls the parent callback with contactId parameter
+   * Following Rust-inspired explicit typing and fail-fast principles
+   */
+  const handleDeleteConfirmed = (): void => {
+    if (!contact?.id) {
+      console.error('Cannot delete contact: No contact ID available');
+      toast.error('Error deleting contact: Contact ID not found');
+      return;
+    }
+    onOpenChange(false);
+    onContactDelete(contact.id);
+  };
+
+  /**
    * Handle edit button click
    * Following Rust-inspired explicit typing and validation
    */
@@ -72,9 +91,18 @@ export function ViewMediaContactSheet({
    * Following Rust-inspired explicit typing and consistent state handling
    */
   const handleDeleteComplete = (): void => {
+    // Safety check for contact ID with explicit error handling
+    if (!contact?.id) {
+      console.error('Cannot delete contact: No contact ID available');
+      toast.error('Error deleting contact: Contact ID not found');
+      setIsDeleteModalOpen(false);
+      onOpenChange(false);
+      return;
+    }
+    
     // Update modal state and perform callbacks in predictable order
     setIsDeleteModalOpen(false);
-    onContactDelete();
+    onContactDelete(contact.id);
     onOpenChange(false);
   };
 

@@ -102,7 +102,7 @@ function generateFallbackContacts(count: number): MediaContactTableItem[] {
 export async function getMediaContactsFromDb(filters?: MediaContactFilters): Promise<PaginatedMediaContactsResult> {
   try {
     // Initialize filters with default values if not provided
-    filters = filters || { page: 0, pageSize: 10 };
+    filters = filters || { page: 1, pageSize: 10 };
     console.log('Repository received filters:', JSON.stringify(filters));
     
     // Build filter conditions using Prisma's WHERE clause - starting with empty where
@@ -115,11 +115,17 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
       // Search term filter (name, email, outlet name)
       if (filters.searchTerm && filters.searchTerm.trim() !== '') {
         const searchTerm = filters.searchTerm.trim();
+        console.log(`Applying search term filter: "${searchTerm}"`); 
+        // Search across multiple fields with expanded search coverage
         conditions.push({
           OR: [
             { name: { contains: searchTerm, mode: 'insensitive' } },
             { email: { contains: searchTerm, mode: 'insensitive' } },
-            { outlets: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } }
+            { title: { contains: searchTerm, mode: 'insensitive' } }, // Added title search
+            { bio: { contains: searchTerm, mode: 'insensitive' } }, // Added bio search
+            { outlets: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } },
+            { beats: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } }, // Added beats search
+            { countries: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } } // Added countries search
           ]
         });
       }
@@ -185,8 +191,9 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
       }
     }
     
-    // Set default pagination values if not provided
-    const page = filters?.page ?? 0; // 0-indexed page number
+    // Use 1-based page indexing coming from client/UI for better user alignment
+    const pageRaw = filters?.page ?? 1;
+    const page = pageRaw < 1 ? 1 : pageRaw; // Ensure minimum page = 1
     const pageSize = filters?.pageSize ?? 10; // Default to 10 items per page
     
     // Log pagination parameters for debugging
@@ -196,7 +203,7 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
     console.log('Executing Prisma query with params:', {
       page,
       pageSize,
-      skip: page * pageSize,
+      skip: (page - 1) * pageSize,
       take: pageSize,
       whereClauseKeys: Object.keys(whereClause)
     });
@@ -222,7 +229,7 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
         where: whereClause,
         select: mediaContactFullSelect,
         orderBy: { updated_at: 'desc' },
-        skip: page * pageSize,
+        skip: (page - 1) * pageSize,
         take: pageSize,
       });
       

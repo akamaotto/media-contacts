@@ -3,8 +3,9 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { UploadCloudIcon, DownloadCloudIcon, PlusCircleIcon } from "lucide-react";
+import { UserAvatarMenu } from "@/components/user-avatar-menu";
 
-interface HeaderActionButtonsProps {
+export interface HeaderActionButtonsProps {
   onAddContactOpen: () => void;
 }
 
@@ -23,6 +24,9 @@ export function HeaderActionButtons({ onAddContactOpen }: HeaderActionButtonsPro
         <PlusCircleIcon className="mr-2 h-4 w-4" />
         Add Contact
       </Button>
+      <div className="ml-2">
+        <UserAvatarMenu />
+      </div>
     </div>
   );
 }

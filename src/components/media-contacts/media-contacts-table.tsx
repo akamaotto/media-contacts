@@ -364,7 +364,7 @@ export function MediaContactsTable({
       {/* Table with fixed header */}
       <div className="rounded-md border overflow-hidden">
         <div 
-          className="min-h-[400px] max-h-[700px] overflow-auto" 
+          className="min-h-[400px] max-h-vh overflow-auto" 
           ref={tableContainerRef}
           style={{ height: '670px', position: 'relative' }}
         >
@@ -404,9 +404,10 @@ export function MediaContactsTable({
               {table.getRowModel().rows.length > 0 ? (
                 // Simple standard table rendering without virtualization
                 table.getRowModel().rows.map((row) => (
-                  <TableRow 
-                    key={row.id} 
-                    className="hover:bg-gray-50"
+                  <TableRow
+                    key={row.id}
+                    className="hover:bg-gray-100 cursor-pointer"
+                    onClick={() => onViewContact(row.original)}
                   >
                     {row.getVisibleCells().map(cell => {
                       const columnWidths = {
@@ -417,7 +418,7 @@ export function MediaContactsTable({
                       const width = columnWidths[cell.column.id as keyof typeof columnWidths] || '150px';
                       
                       return (
-                        <TableCell 
+                        <TableCell
                           key={cell.id}
                           style={{
                             width,
@@ -425,6 +426,11 @@ export function MediaContactsTable({
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
+                          }}
+                          onClick={(e) => {
+                            if (cell.column.id === 'actions') {
+                              e.stopPropagation();
+                            }
                           }}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}

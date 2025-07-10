@@ -36,10 +36,13 @@ import {
 } from "@/components/ui/popover";
 import { upsertMediaContactAction, type UpsertMediaContactActionState } from "@/backend/media-contacts/actions";
 import { type UpsertMediaContactData } from "@/backend/media-contacts/repository";
-import { type MediaContactTableItem } from "@/components/media-contacts/columns";
-import { getCountries, type Country } from '@/app/actions/country-actions';
+import { MediaContactTableItem, Country as TableCountry } from "@/components/media-contacts/columns";
+import { getCountries, type Country as ApiCountry } from '@/app/actions/country-actions';
 import { TagInput } from "@/components/ui/tag-input";
 import { toast } from "@/components/ui/sonner";
+import { OutletAutocomplete } from "@/components/media-contacts/outlet-autocomplete";
+import { CountryAutocomplete } from "@/components/media-contacts/country-autocomplete";
+import { BeatAutocomplete } from "@/components/media-contacts/beat-autocomplete";
 
 // Ensure necessary TypeScript configurations are applied
 /** @jsxRuntime automatic */
@@ -129,14 +132,11 @@ export function UpdateMediaContactSheet({
 }: UpdateMediaContactSheetProps) {
   // Form state management
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [allCountries, setAllCountries] = useState<Country[]>([]);
-  const [isCountriesPopoverOpen, setIsCountriesPopoverOpen] = useState(false);
-  const [searchCountryTerm, setSearchCountryTerm] = useState('');
+  const [allCountries, setAllCountries] = useState<ApiCountry[]>([]);
+  // Country selection is now handled by the CountryAutocomplete component
   const [formActionFeedback, setFormActionFeedback] = useState<UpsertMediaContactActionState | null>(null);
-  
-  // Tag management state with explicit typing (Rust-inspired)
-  const [outletTags, setOutletTags] = useState<string[]>([]);
   const [beatTags, setBeatTags] = useState<string[]>([]);
+  const [outletTags, setOutletTags] = useState<string[]>([]);
   const [socialTags, setSocialTags] = useState<string[]>([]);
 
   const form = useForm<MediaContactUpsertFormData>({
@@ -182,37 +182,25 @@ export function UpdateMediaContactSheet({
           (Array.isArray(contact.beats) ? contact.beats.map(b => typeof b === 'string' ? b : b.name || '').filter(Boolean) : []) : [];
         
         const contactSocials = contact.socials ? 
-          (Array.isArray(contact.socials) ? contact.socials.map(s => typeof s === 'string' ? s : '').filter(Boolean) : []) : [];
-        
-        setOutletTags(contactOutlets);
-        setBeatTags(contactBeats);
-        setSocialTags(contactSocials);
-        
+          (Array.isArray(contact.socials) ? contact.socials.filter(Boolean) : []) : [];
+          
+        // Set the form values from contact data
         form.reset({
           name: contact.name || '',
-          title: contact.title || "",
-          email: contact.email || "",
-          bio: contact.bio || "",
+          title: contact.title || '',
+          email: contact.email || '',
+          bio: contact.bio || '',
           socials: contactSocials,
-          email_verified_status: contact.email_verified_status === null ? false : contact.email_verified_status,
-          // Use explicit typing instead of 'any' for countries
-          countryIds: contact.countries?.map((c: {id: string}) => c.id) || [],
+          email_verified_status: contact.email_verified_status || false,
+          countryIds: contact.countries?.map(c => c.id) || [],
           beats: contactBeats,
           outlets: contactOutlets,
         });
-      } else { 
-        form.reset({
-          name: '',
-          title: '',
-          email: '',
-          bio: '',
-          // Ensure socials is an empty array, not an empty string, for type consistency
-          socials: [], 
-          email_verified_status: false,
-          countryIds: [],
-          beats: [],
-          outlets: [],
-        });
+        
+        // Update the tag states
+        setOutletTags(contactOutlets);
+        setBeatTags(contactBeats);
+        setSocialTags(contactSocials);
       }
     }
   }, [contact, form, isOpen]);
@@ -270,11 +258,20 @@ export function UpdateMediaContactSheet({
           email: data.email || '',
           title: data.title || '',
           email_verified_status: data.email_verified_status || false,
+          emailVerified: data.email_verified_status || false, // Add the emailVerified property
           updated_at: new Date().toISOString(),
           outlets: data.outlets?.map(name => ({ id: '', name })) || [],
-          countries: countryIds?.map(id => allCountries.find(country => country.id === id)).
-            filter(country => country !== undefined)
-            .map(country => ({ id: country!.id, name: country!.name })) || [],
+          countries: (data.countryIds?.map(id => {
+            const country = allCountries.find((c: ApiCountry) => c.id === id);
+            if (!country) return null;
+            // Create a properly typed TableCountry object
+            return {
+              id: country.id,
+              name: country.name,
+              // TableCountry expects code to be a string
+              code: country.code || ''
+            } as TableCountry;
+          }).filter(Boolean) as TableCountry[]) || [],
           beats: data.beats?.map(name => ({ id: '', name })) || [],
           bio: data.bio || null,
           socials: data.socials || null
@@ -306,12 +303,13 @@ export function UpdateMediaContactSheet({
   const submitButtonText = contact ? "Save Changes" : "Add Contact";
 
   const handleClose = () => {
+    // Reset form state when closing
     form.reset();
     setFormActionFeedback(null);
-    // Clear tag states
     setOutletTags([]);
     setBeatTags([]);
     setSocialTags([]);
+    // Call onOpenChange prop to close the sheet
     onOpenChange(false);
   };
 
@@ -382,81 +380,39 @@ export function UpdateMediaContactSheet({
                 </Label>
               </div>
 
-              {/* Countries Multi-Select Popover - Stays as is */}
+              {/* Countries - Enhanced with CountryAutocomplete */}
               <div className="mb-6">
-                <Label>Countries</Label>
+                <Label htmlFor="countryIds">Countries</Label>
                 <Controller
                   name="countryIds"
                   control={form.control}
-                  render={({ field }) => (
-                    <Popover open={isCountriesPopoverOpen} onOpenChange={setIsCountriesPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={isCountriesPopoverOpen}
-                          className="w-full justify-between mt-1 font-normal"
-                        >
-                          <span className="truncate">
-                            {field.value && field.value.length > 0
-                              ? field.value
-                                  .map(id => allCountries.find(c => c.id === id)?.name)
-                                  .filter(Boolean)
-                                  .map(name => <Badge key={name} variant="secondary" className="mr-1 mb-1">{name}</Badge>)
-                              : "Select countries..."}
-                          </span>
-                          <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
-                        <Command>
-                          <CommandInput 
-                            placeholder="Search country..." 
-                            value={searchCountryTerm}
-                            onValueChange={setSearchCountryTerm}
-                          />
-                          <CommandList>
-                            <CommandEmpty>No country found.</CommandEmpty>
-                            <CommandGroup>
-                              {allCountries
-                                .filter(country => 
-                                  country.name.toLowerCase().includes(searchCountryTerm.toLowerCase())
-                                )
-                                .map((country) => (
-                                  <CommandItem
-                                    key={country.id}
-                                    value={country.name} 
-                                    onSelect={() => {
-                                      const currentValues = field.value || [];
-                                      const newValue = currentValues.includes(country.id)
-                                        ? currentValues.filter((id) => id !== country.id)
-                                        : [...currentValues, country.id];
-                                      field.onChange(newValue);
-                                      setSearchCountryTerm('');
-                                    }}
-                                  >
-                                    <CheckIcon
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        field.value?.includes(country.id) ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {country.name}
-                                  </CommandItem>
-                                ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
+                  render={({ field }) => {
+                    // Convert IDs to Country objects for the component
+                    const selectedCountries = field.value?.map((id: string) => {
+                      const country = allCountries.find((c: ApiCountry) => c.id === id);
+                      return country || { id: '', name: '', code: '' };
+                    }).filter((c: ApiCountry) => c.id !== '') || [];
+                    
+                    return (
+                      <CountryAutocomplete
+                        countries={allCountries}
+                        selectedCountries={selectedCountries}
+                        onCountriesChange={(newSelectedCountries) => {
+                          // Extract IDs from the selected countries
+                          const newCountryIds = newSelectedCountries.map((c: ApiCountry) => c.id);
+                          // Update the form field value directly
+                          field.onChange(newCountryIds);
+                        }}
+                        allCountries={allCountries}
+                        placeholder="Select countries..."
+                        error={form.formState.errors.countryIds?.message as string}
+                      />
+                    );
+                  }}
                 />
-                {form.formState.errors.countryIds && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.countryIds.message}</p>
-                )}
               </div>
 
-              {/* Beats - Enhanced with TagInput */}
+              {/* Beats - Enhanced with BeatAutocomplete */}
               <div className="mb-6">
                 <Label htmlFor="beats">Beats</Label>
                 <Controller
@@ -464,20 +420,14 @@ export function UpdateMediaContactSheet({
                   control={form.control}
                   render={({ field }) => {
                     // Ensure field value is always an array for type safety
-                    // Using value directly in the component, no need for separate variable
                     return (
-                      <TagInput
-                        tags={beatTags}
-                        onTagsChange={(newTags: string[]) => {
+                      <BeatAutocomplete
+                        beats={beatTags}
+                        onBeatsChange={(newTags: string[]) => {
                           setBeatTags(newTags);
                           field.onChange(newTags);
                         }}
-                        placeholder="Add beat..."
-                        validation={{
-                          maxTags: 10,
-                          minLength: 2,
-                          pattern: /^[\w\s\-\.]+$/,
-                        }}
+                        placeholder="Search beats or add new..."
                         error={form.formState.errors.beats?.message as string}
                       />
                     );
@@ -485,7 +435,7 @@ export function UpdateMediaContactSheet({
                 />
               </div>
 
-              {/* Outlets - Enhanced with TagInput */}
+              {/* Outlets - Enhanced with OutletAutocomplete */}
               <div className="mb-6">
                 <Label htmlFor="outlets">Outlets</Label>
                 <Controller
@@ -493,20 +443,14 @@ export function UpdateMediaContactSheet({
                   control={form.control}
                   render={({ field }) => {
                     // Ensure field value is always an array for type safety
-                    // Using value directly in the component, no need for separate variable
                     return (
-                      <TagInput
-                        tags={outletTags}
-                        onTagsChange={(newTags: string[]) => {
+                      <OutletAutocomplete
+                        outlets={outletTags}
+                        onOutletsChange={(newTags: string[]) => {
                           setOutletTags(newTags);
                           field.onChange(newTags);
                         }}
-                        placeholder="Add outlet..."
-                        validation={{
-                          maxTags: 10,
-                          minLength: 2,
-                          pattern: /^[\w\s\-\.]+$/,
-                        }}
+                        placeholder="Search outlets or add new..."
                         error={form.formState.errors.outlets?.message as string}
                       />
                     );

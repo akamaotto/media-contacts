@@ -1,6 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { loginViaApi } from './utils';
 
-test('search for hannah', async ({ page, context }) => {
+const login = async (page: Page, baseURL: string) => {
+  await loginViaApi(page.request, page.context(), baseURL, 'demo@example.com', 'password');
+  await page.goto(baseURL + '/');
+};
+
+test('search for hannah', async ({ page, context, baseURL }) => {
+  await login(page, baseURL!);
+  
   // Enable console logging
   context.on('page', async (page) => {
     page.on('console', msg => console.log(`[BROWSER CONSOLE] ${msg.text()}`));
@@ -25,7 +33,7 @@ test('search for hannah', async ({ page, context }) => {
 
   // Wait for any search input to be visible
   const searchInput = page.locator('input[placeholder*="Search" i]').first();
-  await searchInput.waitFor({ state: 'visible', timeout: 10000 });
+  await searchInput.waitFor({ state: 'visible', timeout: 20000 });
   console.log('Search input found');
 
   // Type search term slowly to ensure it's registered

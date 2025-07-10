@@ -59,9 +59,13 @@ yarn install
 
 3. **Set up environment variables**
 
-Create the following environment files in the root directory:
+Copy the example environment file to create your local environment file:
 
-**For local development (`.env` or `.env.development`):**
+```bash
+cp .env.example .env
+```
+
+Then edit the `.env` file with your specific configuration:
 
 ```env
 # Database (Local PostgreSQL)
@@ -69,19 +73,11 @@ DATABASE_URL="postgresql://username:password@localhost:5432/media_contacts"
 
 # NextAuth.js
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET="your-nextauth-secret-key-here"
+# Generate a secure secret with: openssl rand -base64 32
+NEXTAUTH_SECRET="generate-a-secure-random-secret-here"
 ```
 
-**For production (`.env.production`):**
-
-```env
-# Database (Neon PostgreSQL)
-DATABASE_URL="postgresql://neondb_owner:password@your-neon-endpoint.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-
-# NextAuth.js
-NEXTAUTH_URL=https://your-production-domain.com
-NEXTAUTH_SECRET="your-production-nextauth-secret-key-here"
-```
+> **IMPORTANT SECURITY NOTE:** Never commit `.env` files to version control. They contain sensitive information like database credentials and API keys. The `.gitignore` file is configured to exclude these files.
 
 4. **Set up the database**
 
@@ -239,19 +235,42 @@ This application is designed to be deployed to any modern hosting platform that 
 
 ### Vercel (Recommended)
 
+#### Initial Setup
+
 1. Connect your GitHub repository to Vercel
 2. Set up the following environment variables in the Vercel dashboard:
    - `DATABASE_URL` (Neon PostgreSQL connection string)
    - `NEXTAUTH_URL` (Your production domain)
-   - `NEXTAUTH_SECRET` (A secure random string)
-3. Deploy the application
+   - `NEXTAUTH_SECRET` (Generate with `openssl rand -base64 32`)
+
+#### Environment Variables Security Best Practices
+
+1. **Use Vercel's Environment Variables UI**
+   - Store all secrets in Vercel's Environment Variables section
+   - Mark sensitive variables as encrypted
+   - Never hardcode secrets in your codebase
+
+2. **Environment Separation**
+   - Set different values for Production, Preview, and Development environments
+   - Use development-specific values for preview deployments
+   - Never use production credentials in preview environments
+
+3. **Secret Rotation**
+   - Regularly rotate sensitive secrets like `NEXTAUTH_SECRET`
+   - Update database credentials periodically
+   - Revoke and regenerate any compromised secrets immediately
+
+4. **Access Control**
+   - Limit access to environment variables in the Vercel dashboard
+   - Use Vercel teams with appropriate permissions
+   - Audit access to production secrets regularly
 
 ### Other Hosting Platforms
 
 For other hosting platforms like Netlify, Railway, or a custom server:
 
 1. Build the application: `npm run build`
-2. Set the required environment variables
+2. Set the required environment variables using the platform's secure storage
 3. Start the production server: `npm run start`
 
 ### Database Considerations
@@ -261,6 +280,8 @@ Before deploying to production:
 1. Ensure your Neon database is set up and configured
 2. Run migrations on the production database: `npm run db:migrate:prod`
 3. Create an admin user: `npm run db:admin:prod`
+4. Secure your database connection with proper SSL settings
+5. Implement database access controls and least privilege principles
 
 ## Contributing
 

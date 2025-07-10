@@ -282,6 +282,45 @@ Before deploying to production:
 4. Secure your database connection with proper SSL settings
 5. Implement database access controls and least privilege principles
 
+### Database Synchronization and Backup
+
+To ensure data consistency between local development and production environments:
+
+#### Regular Backups
+
+```bash
+# Backup local database to a SQL file
+npm run db:backup:local
+
+# Backup production database to a SQL file
+npm run db:backup:prod
+```
+
+#### Sync Data Between Environments
+
+```bash
+# Export specific tables or join tables from local to production
+npm run db:sync:local-to-prod
+
+# Export specific tables or join tables from production to local
+npm run db:sync:prod-to-local
+```
+
+#### Troubleshooting Missing Associations
+
+If media contacts are showing but their associated outlets, countries, or beats are missing:
+
+1. **Verify Join Tables**: Check if join tables (_MediaContactBeats, _MediaContactCountries, _MediaContactOutlets) have data
+2. **Export Join Tables**: If local has data but production doesn't, export join tables:
+   ```bash
+   pg_dump -U username -d local_db -t "_MediaContactBeats" -t "_MediaContactCountries" -t "_MediaContactOutlets" --data-only > join_tables_dump.sql
+   ```
+3. **Import to Production**: Import the join tables to production:
+   ```bash
+   cat join_tables_dump.sql | psql -h production_host -U username -d production_db
+   ```
+4. **Verify Data**: Confirm row counts match between environments
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

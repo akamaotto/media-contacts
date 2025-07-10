@@ -17,7 +17,12 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:prod": "dotenv-cli -e .env.production -- prisma migrate deploy",
     "db:seed:prod": "dotenv-cli -e .env.production -- tsx prisma/seed.ts",
-    "db:admin:prod": "dotenv-cli -e .env.production -- node prisma/seed-admin.js"
+    "db:admin:prod": "dotenv-cli -e .env.production -- node prisma/seed-admin.js",
+    "db:backup:local": "pg_dump -U akamaotto -d media_contacts -f ./backups/local_$(date +%Y%m%d%H%M%S).sql",
+    "db:backup:prod": "dotenv-cli -e .env.production -- pg_dump -h ep-tight-pine-a2baeagw-pooler.eu-central-1.aws.neon.tech -U neondb_owner -d neondb -f ./backups/prod_$(date +%Y%m%d%H%M%S).sql",
+    "db:sync:local-to-prod": "node scripts/db-sync.js local-to-prod",
+    "db:sync:prod-to-local": "node scripts/db-sync.js prod-to-local",
+    "db:verify-sync": "node scripts/verify-db-sync.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

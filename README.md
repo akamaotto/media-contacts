@@ -323,8 +323,22 @@ If media contacts are showing but their associated outlets, countries, or beats 
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## Open Source
+
+This project is open source and welcomes community contributions. To ensure the project remains accessible and collaborative:
+
+1. **License**: This project is licensed under the [MIT License](LICENSE), allowing for free use, modification, and distribution.
+
+2. **Community Guidelines**: We follow the [Contributor Covenant](CODE_OF_CONDUCT.md) code of conduct to ensure a welcoming and inclusive environment.
+
+3. **Security**: Sensitive information is kept out of the repository. Use the `.env.example` file as a template for your own environment configuration.
+
+4. **Issue Tracking**: Use GitHub Issues to report bugs, request features, or discuss improvements.
+
+5. **Pull Requests**: Follow the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md) when submitting code changes.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -236,7 +236,6 @@ This application is designed to be deployed to any modern hosting platform that 
 ### Vercel (Recommended)
 
 #### Initial Setup
-
 1. Connect your GitHub repository to Vercel
 2. Set up the following environment variables in the Vercel dashboard:
    - `DATABASE_URL` (Neon PostgreSQL connection string)

@@ -89,7 +89,7 @@ export default async function HomePage() {
   // instead of or in addition to the client view.
   if (errorFetchingContacts) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="p-4">
         <div className="text-red-600 bg-red-100 border border-red-400 p-4 rounded-md">
           <p><strong>Error:</strong> {errorFetchingContacts}</p>
           <p>Please check the server logs for more details or try refreshing the page.</p>
@@ -99,12 +99,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      {/* 
-        The header structure (AppBrandHeader and HeaderActionButtons) 
-        is now expected to be handled within MediaContactsClientView 
-        or a component it renders.
-      */}
+    <div className="p-4">
       <Suspense fallback={<HomePageSkeleton />}>
         <MediaContactsClientView initialContacts={initialMediaContacts} initialTotalCount={totalCount} />
       </Suspense>

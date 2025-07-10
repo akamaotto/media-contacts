@@ -648,12 +648,8 @@ if (!state.isInitialized) {
 
 // Main component render
 return (
-<div className="flex flex-col min-h-screen bg-muted/40 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-  {/* Brand header and action buttons */}
-  <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-    <AppBrandHeader />
-    <HeaderActionButtons onAddContactOpen={handleAddContactOpen} />
-  </header>
+<div className="flex flex-col min-h-screen bg-muted/40 w-full">
+  <div className="container mx-auto py-6 space-y-4 md:space-y-6">
 
 <MediaContactsFilters
 mainSearchTerm={state.searchTerm}
@@ -764,6 +760,7 @@ Delete
 </div>
 </div>
 )}
+  </div>
 </div>
 );
 }

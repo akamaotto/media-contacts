@@ -2,9 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { notFound } from "next/navigation";
-import { Toaster } from "@/components/ui/sonner";
 import UserTable from "./user-table";
-import { PageHeader } from "@/components/page-header";
 import { PrismaClient } from "@prisma/client";
 
 export default async function AdminUsersPage() {
@@ -28,13 +26,10 @@ export default async function AdminUsersPage() {
   });
 
   return (
-    <div className="flex flex-col items-center justify-center w-full">
-      <Toaster />
-      <div className="w-full max-w-7xl px-4 py-10 mx-auto">
-        <PageHeader title="User Management" />
-        <div className="w-full bg-white dark:bg-zinc-900 rounded-md border shadow-sm p-6">
-          <UserTable users={users} />
-        </div>
+    <div className="container mx-auto py-6">
+      <h1 className="text-2xl font-bold mb-6">User Management</h1>
+      <div className="w-full bg-white dark:bg-zinc-900 rounded-md border shadow-sm p-6">
+        <UserTable users={users} />
       </div>
     </div>
   );

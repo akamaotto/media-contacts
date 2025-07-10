@@ -1,8 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import { Toaster } from "@/components/ui/sonner";
-import { PageHeader } from "@/components/page-header";
 import ProfileFormClient from "./profile-form-client";
 
 export default async function ProfilePage() {
@@ -14,8 +12,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Toaster />
-      <PageHeader title="Profile" />
+      <h1 className="text-2xl font-bold mb-6">Profile</h1>
       <div className="mt-6">
         <ProfileFormClient />
       </div>

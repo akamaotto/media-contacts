@@ -1,3 +1,20 @@
+import { Suspense } from "react";
+
+// Client component wrapped in Suspense
+function LoginForm() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <LoginClient />
+    </Suspense>
+  );
+}
+
+// Default export for the page
+export default function LoginPage() {
+  return <LoginForm />;
+}
+
+// Client component with hooks
 "use client";
 
 import { useState } from "react";
@@ -8,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Toaster, toast } from "@/components/ui/sonner";
 
-export default function LoginPage() {
+function LoginClient() {
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") || "/";

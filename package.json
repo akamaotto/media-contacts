@@ -10,7 +10,13 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "seed:admin": "node prisma/seed-admin.js",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "db:push": "prisma db push",
+    "db:push:prod": "dotenv-cli -e .env.production -- prisma db push",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:prod": "dotenv-cli -e .env.production -- prisma migrate deploy",
+    "db:seed:prod": "dotenv-cli -e .env.production -- tsx prisma/seed.ts",
+    "db:admin:prod": "dotenv-cli -e .env.production -- node prisma/seed-admin.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -61,6 +67,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "prisma": "^6.8.2",

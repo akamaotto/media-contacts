@@ -37,7 +37,7 @@ A modern web application for managing media contacts, built with Next.js 15, Pri
 ### Prerequisites
 
 - Node.js 18+ (LTS recommended)
-- PostgreSQL 14+
+- PostgreSQL 14+ (for local development)
 - npm or yarn
 
 ### Setup Instructions
@@ -59,33 +59,58 @@ yarn install
 
 3. **Set up environment variables**
 
-Create a `.env` file in the root directory with the following variables:
+Create the following environment files in the root directory:
+
+**For local development (`.env` or `.env.development`):**
 
 ```env
-# Database
+# Database (Local PostgreSQL)
 DATABASE_URL="postgresql://username:password@localhost:5432/media_contacts"
 
 # NextAuth.js
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET="your-nextauth-secret"
+NEXTAUTH_SECRET="your-nextauth-secret-key-here"
+```
+
+**For production (`.env.production`):**
+
+```env
+# Database (Neon PostgreSQL)
+DATABASE_URL="postgresql://neondb_owner:password@your-neon-endpoint.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+# NextAuth.js
+NEXTAUTH_URL=https://your-production-domain.com
+NEXTAUTH_SECRET="your-production-nextauth-secret-key-here"
 ```
 
 4. **Set up the database**
 
 ```bash
+# For local development
 npx prisma migrate dev
+
+# For production
+npm run db:migrate:prod
 ```
 
 5. **Seed the database with initial data**
 
 ```bash
+# For local development
 npm run prisma:seed
+
+# For production
+npm run db:seed:prod
 ```
 
 6. **Create an admin user**
 
 ```bash
+# For local development
 npm run seed:admin
+
+# For production
+npm run db:admin:prod
 ```
 
 7. **Start the development server**
@@ -102,33 +127,89 @@ The application will be available at [http://localhost:3000](http://localhost:30
 
 ```
 media-contacts/
+├── .env                    # Local environment variables
+├── .env.development       # Development environment variables
+├── .env.production        # Production environment variables
 ├── prisma/                 # Prisma schema and migrations
+│   ├── schema.prisma      # Database schema definition
+│   ├── seed.ts            # Database seeding script
+│   └── seed-admin.js      # Admin user creation script
 ├── public/                 # Static assets
 ├── src/
 │   ├── app/                # Next.js App Router pages
 │   │   ├── actions/        # Server actions
 │   │   ├── admin/          # Admin dashboard pages
+│   │   │   └── users/      # User management pages
 │   │   ├── api/            # API routes
+│   │   │   ├── auth/       # NextAuth.js API routes
+│   │   │   └── media/      # Media contacts API routes
 │   │   ├── login/          # Authentication pages
 │   │   ├── profile/        # User profile pages
-│   │   └── register/       # Registration pages
+│   │   └── register/       # Registration pages (admin only)
 │   ├── components/         # React components
+│   │   ├── auth/           # Authentication components
 │   │   ├── media-contacts/ # Media contacts components
+│   │   │   ├── filters/    # Filter components
+│   │   │   └── forms/      # Form components
 │   │   └── ui/             # ShadCN UI components
 │   └── lib/                # Utility functions and helpers
+│       ├── auth/           # Authentication utilities
+│       ├── db/             # Database utilities
+│       └── utils/          # General utilities
 └── tests/                  # E2E tests with Playwright
 ```
 
 ### Available Scripts
 
+#### Development Scripts
 - `npm run dev`: Start the development server with Turbopack
 - `npm run build`: Build the application for production
 - `npm run start`: Start the production server
 - `npm run lint`: Run ESLint
-- `npm run prisma:seed`: Seed the database with test data
-- `npm run seed:admin`: Create an admin user
+
+#### Database Scripts
+- `npm run prisma:seed`: Seed the local database with test data
+- `npm run seed:admin`: Create an admin user in local database
+- `npm run db:push`: Push schema changes to local database
+- `npm run db:push:prod`: Push schema changes to Neon production database
+- `npm run db:migrate:dev`: Run migrations on local database
+- `npm run db:migrate:prod`: Run migrations on Neon production database
+- `npm run db:seed:prod`: Seed the Neon production database
+- `npm run db:admin:prod`: Create an admin user in Neon production database
+
+#### Testing Scripts
 - `npm run test:e2e`: Run Playwright E2E tests
 - `npm run test:e2e:headed`: Run Playwright tests in headed mode
+
+## Database Configuration
+
+This application supports both local PostgreSQL for development and Neon PostgreSQL for production.
+
+### Local Development Database
+
+For local development, the application uses a PostgreSQL database running on your local machine. This provides fast development experience without incurring cloud costs.
+
+### Neon PostgreSQL for Production
+
+For production, the application uses [Neon](https://neon.tech) - a serverless PostgreSQL service with the following benefits:
+
+- **Serverless**: Auto-scaling compute that scales to zero when not in use
+- **Branching**: Development and production branches with isolated environments
+- **High Performance**: Low-latency database access with connection pooling
+- **Cost-Effective**: Pay only for what you use with compute that scales to zero
+
+### Database Structure
+
+The database schema is managed through Prisma and includes the following main tables:
+
+- **users**: User accounts with role-based access control
+- **media_contacts**: Core table for journalist and media contact information
+- **outlets**: Media outlets (publications, websites, TV stations, etc.)
+- **beats**: Subject areas or topics that journalists cover
+- **countries**: Countries where media contacts are based
+- **languages**: Languages that media contacts speak
+
+Junction tables handle many-to-many relationships between these entities.
 
 ## Performance Optimizations
 
@@ -148,6 +229,38 @@ The application uses NextAuth.js with the following features:
 - **Prisma Adapter**: Store sessions and user data in PostgreSQL
 - **Role-Based Access**: Admin and regular user roles
 - **Protected Routes**: Middleware for route protection
+- **User Avatar Dropdown**: Access to profile, admin features, and logout
+- **Private Registration**: Only admins can create new users
+- **Profile Management**: Users can update their own information
+
+## Deployment
+
+This application is designed to be deployed to any modern hosting platform that supports Next.js applications. Here are the recommended deployment options:
+
+### Vercel (Recommended)
+
+1. Connect your GitHub repository to Vercel
+2. Set up the following environment variables in the Vercel dashboard:
+   - `DATABASE_URL` (Neon PostgreSQL connection string)
+   - `NEXTAUTH_URL` (Your production domain)
+   - `NEXTAUTH_SECRET` (A secure random string)
+3. Deploy the application
+
+### Other Hosting Platforms
+
+For other hosting platforms like Netlify, Railway, or a custom server:
+
+1. Build the application: `npm run build`
+2. Set the required environment variables
+3. Start the production server: `npm run start`
+
+### Database Considerations
+
+Before deploying to production:
+
+1. Ensure your Neon database is set up and configured
+2. Run migrations on the production database: `npm run db:migrate:prod`
+3. Create an admin user: `npm run db:admin:prod`
 
 ## Contributing
 

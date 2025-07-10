@@ -11,7 +11,15 @@ import { getMediaContactsAction, type PaginatedMediaContactsActionResult } from 
 
 // The local getMediaContacts function is removed, as we're using the server action.
 
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
 export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    redirect("/login");
+  }
   // Fetch initial media contacts using the server action
   // This action will run on the server.
   let initialMediaContacts: MediaContactTableItem[] = [];

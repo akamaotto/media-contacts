@@ -67,3 +67,68 @@ function generateFallbackBeats(): Beat[] {
     { id: 'sports', name: 'Sports', description: 'Sports news and coverage' },
   ];
 }
+
+/**
+ * Search for beats by name
+ * @param query The search query string
+ * @returns Array of matching beats
+ */
+export async function searchBeats(query: string): Promise<Beat[]> {
+  if (!query || query.trim().length < 2) {
+    return [];
+  }
+
+  try {
+    const beats = await prisma.beat.findMany({
+      where: {
+        name: {
+          contains: query.trim(),
+          mode: 'insensitive', // Case-insensitive search
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+      take: 10, // Limit results to 10 for performance
+    });
+
+    return beats;
+  } catch (error) {
+    console.error('Error searching beats:', error);
+    return [];
+  }
+}
+
+/**
+ * Get beat by exact name
+ * @param name The exact beat name
+ * @returns The beat if found, null otherwise
+ */
+export async function getBeatByName(name: string): Promise<Beat | null> {
+  if (!name || name.trim().length === 0) {
+    return null;
+  }
+
+  try {
+    const beat = await prisma.beat.findUnique({
+      where: {
+        name: name.trim(),
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+    });
+
+    return beat;
+  } catch (error) {
+    console.error('Error getting beat by name:', error);
+    return null;
+  }
+}

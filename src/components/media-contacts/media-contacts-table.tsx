@@ -68,6 +68,10 @@ interface MediaContactsTableProps {
   pageSize?: number;
   setPageSize?: (size: number) => void;
   totalCount?: number;
+  
+  // Error states
+  error?: string | null;
+  errorType?: string | null;
 }
 
 /**
@@ -89,7 +93,9 @@ export function MediaContactsTable({
   setCurrentPage,
   pageSize = 10,
   setPageSize,
-  totalCount = 0
+  totalCount = 0,
+  error = null,
+  errorType = null
 }: MediaContactsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -401,7 +407,41 @@ export function MediaContactsTable({
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows.length > 0 ? (
+              {/* Handle specific error states first */}
+              {error ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <div className="flex flex-col items-center justify-center py-8">
+                      {errorType === 'DB_NOT_CONNECTED' ? (
+                        <>
+                          <div className="text-destructive text-lg mb-2">⚠️ Database Connection Error</div>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Unable to connect to the database. Please check your database configuration and try again.
+                          </p>
+                          <Button variant="outline" size="sm" onClick={onDataRefresh}>
+                            Retry Connection
+                          </Button>
+                        </>
+                      ) : errorType === 'NO_CONTACTS_FOUND' ? (
+                        <>
+                          <div className="text-amber-500 text-lg mb-2">No Media Contacts Found</div>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            The database is connected but no media contacts were found. Add some contacts to get started.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-destructive text-lg mb-2">Error</div>
+                          <p className="text-sm text-muted-foreground mb-4">{error}</p>
+                          <Button variant="outline" size="sm" onClick={onDataRefresh}>
+                            Retry
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows.length > 0 ? (
                 // Simple standard table rendering without virtualization
                 table.getRowModel().rows.map((row) => (
                   <TableRow

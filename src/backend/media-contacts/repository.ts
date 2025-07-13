@@ -75,44 +75,50 @@ export interface PaginatedMediaContactsResult {
 }
 
 /**
+ * Error types for media contact repository
+ */
+export enum MediaContactErrorType {
+  DB_NOT_CONNECTED = 'DB_NOT_CONNECTED',
+  NO_CONTACTS_FOUND = 'NO_CONTACTS_FOUND',
+}
+
+/**
+ * Custom error class for media contact repository errors
+ */
+export class MediaContactError extends Error {
+  type: MediaContactErrorType;
+  
+  constructor(message: string, type: MediaContactErrorType) {
+    super(message);
+    this.type = type;
+    this.name = 'MediaContactError';
+  }
+}
+
+/**
  * Get media contacts from the database with optional filtering and pagination
  * 
  * @param filters - Optional filter parameters including pagination
  * @returns Promise resolving to paginated media contacts result
+ * @throws MediaContactError when database is not connected or no contacts are found
  */
-/**
- * Generate fallback contact data for development and empty database scenarios
- * This ensures we always have data to display even in new/empty environments
- */
-function generateFallbackContacts(count: number): MediaContactTableItem[] {
-  return Array(count).fill(null).map((_, index) => ({
-    id: `fallback-${index}`,
-    name: `Test Contact ${index + 1}`,
-    email: `contact${index + 1}@example.com`,
-    title: index % 3 === 0 ? 'Editor' : index % 3 === 1 ? 'Reporter' : 'Columnist',
-    email_verified_status: index % 2 === 0,
-    emailVerified: index % 2 === 0, // Add the emailVerified property
-    updated_at: new Date().toISOString(),
-    outlets: [{ id: `outlet-${index % 3}`, name: `Test Outlet ${index % 3 + 1}` }],
-    countries: [{ 
-      id: `country-${index % 5}`, 
-      name: `Country ${index % 5 + 1}`,
-      code: `C${index % 5}` // Add the required code property
-    }],
-    beats: [{ id: `beat-${index % 4}`, name: `Beat ${index % 4 + 1}` }],
-    bio: index % 2 === 0 ? `This is a fallback contact bio for testing #${index + 1}` : null,
-    socials: index % 3 === 0 ? [`https://twitter.com/test${index}`, `https://linkedin.com/in/test${index}`] : null,
-  }));
-}
-
 export async function getMediaContactsFromDb(filters?: MediaContactFilters): Promise<PaginatedMediaContactsResult> {
   try {
+    // Test database connection first
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (connectionError) {
+      console.error('Database connection error:', connectionError);
+      throw new MediaContactError('Database connection failed. Please check your database configuration.', MediaContactErrorType.DB_NOT_CONNECTED);
+    }
+    
     // Initialize filters with default values if not provided
-    filters = filters || { page: 1, pageSize: 10 };
+    const pageNumber = filters?.page || 1;
+    const itemsPerPage = filters?.pageSize || 10;
     console.log('Repository received filters:', JSON.stringify(filters));
     
     // Build filter conditions using Prisma's WHERE clause - starting with empty where
-    let whereClause: Prisma.MediaContactWhereInput = {};
+    const whereClause: Prisma.MediaContactWhereInput = {};
     
     // Apply filters if provided, following fail-fast validation approach
     if (filters) {
@@ -121,17 +127,17 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
       // Search term filter (name, email, outlet name)
       if (filters.searchTerm && filters.searchTerm.trim() !== '') {
         const searchTerm = filters.searchTerm.trim();
-        console.log(`Applying search term filter: "${searchTerm}"`); 
+        console.log(`Applying search term filter: "${searchTerm}"`);
         // Search across multiple fields with expanded search coverage
         conditions.push({
           OR: [
             { name: { contains: searchTerm, mode: 'insensitive' } },
             { email: { contains: searchTerm, mode: 'insensitive' } },
-            { title: { contains: searchTerm, mode: 'insensitive' } }, // Added title search
-            { bio: { contains: searchTerm, mode: 'insensitive' } }, // Added bio search
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { bio: { contains: searchTerm, mode: 'insensitive' } },
             { outlets: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } },
-            { beats: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } }, // Added beats search
-            { countries: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } } // Added countries search
+            { beats: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } },
+            { countries: { some: { name: { contains: searchTerm, mode: 'insensitive' } } } }
           ]
         });
       }
@@ -150,16 +156,14 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
         });
       }
       
-      // Region filter (new)
+      // Region filter
       if (filters.regionCodes && filters.regionCodes.length > 0) {
         conditions.push({
           countries: {
             some: {
               regions: {
                 some: {
-                  code: {
-                    in: filters.regionCodes
-                  }
+                  code: { in: filters.regionCodes }
                 }
               }
             }
@@ -167,16 +171,14 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
         });
       }
       
-      // Language filter (new)
+      // Language filter
       if (filters.languageCodes && filters.languageCodes.length > 0) {
         conditions.push({
           countries: {
             some: {
               languages: {
                 some: {
-                  code: {
-                    in: filters.languageCodes
-                  }
+                  code: { in: filters.languageCodes }
                 }
               }
             }
@@ -197,178 +199,222 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
       }
     }
     
-    // Use 1-based page indexing coming from client/UI for better user alignment
-    const pageRaw = filters?.page ?? 1;
-    const page = pageRaw < 1 ? 1 : pageRaw; // Ensure minimum page = 1
-    const pageSize = filters?.pageSize ?? 10; // Default to 10 items per page
-    
-    // Log pagination parameters for debugging
-    console.log(`Fetching media contacts - Page: ${page}, PageSize: ${pageSize}, Filters:`, filters ? JSON.stringify(filters) : 'none');
-    
-    // Log query parameters before execution
-    console.log('Executing Prisma query with params:', {
-      page,
-      pageSize,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      whereClauseKeys: Object.keys(whereClause)
-    });
-
     // First check if we have any data at all in the table
     const totalAvailable = await prisma.mediaContact.count();
     console.log(`Total available contacts in database: ${totalAvailable}`);
     
-    // If we have no contacts at all, provide fallback data
+    // If we have no contacts at all, throw an error
     if (totalAvailable === 0) {
-      console.log('NO CONTACTS IN DATABASE - RETURNING FALLBACK DATA');
-      // Return fallback data that matches our database schema exactly
-      const fallbackContacts = generateFallbackContacts(10);
-      return {
-        contacts: fallbackContacts,
-        totalCount: fallbackContacts.length
-      };
+      console.log('NO CONTACTS IN DATABASE');
+      throw new MediaContactError('No media contacts found in the database.', MediaContactErrorType.NO_CONTACTS_FOUND);
     }
     
     // Execute paginated query with built filters
-    try {
-      const contacts = await prisma.mediaContact.findMany({
-        where: whereClause,
-        select: mediaContactFullSelect,
-        orderBy: { updated_at: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      });
-      
-      console.log(`Query returned ${contacts.length} contacts`);
-      
-      // If query returned no results but we know we have data, something might be wrong with the filter
-      if (contacts.length === 0 && totalAvailable > 0 && Object.keys(whereClause).length > 0) {
-        console.log('WARNING: Query returned no results despite data being in database. Possible filter issue.');
-      }
-      
-      // Get total count for pagination display
-      const totalCount = await prisma.mediaContact.count({
-        where: whereClause
-      });
-      
-      console.log(`Total count of contacts matching filter: ${totalCount}`);
-      
-      // Map the contacts to include emailVerified property and ensure all required fields are present
-      const mappedContacts = contacts.map(contact => {
-        // Ensure countries have the required code property
-        const countries = contact.countries?.map(country => ({
-          ...country,
-          code: country.code || `C${country.id.slice(-1)}` // Add code if missing
-        }));
-        
-        return {
-          ...contact,
-          emailVerified: contact.email_verified_status,
-          countries: countries || []
-        };
-      });
+    const contacts = await prisma.mediaContact.findMany({
+      where: whereClause,
+      select: mediaContactFullSelect,
+      orderBy: { updated_at: 'desc' },
+      skip: (pageNumber - 1) * itemsPerPage,
+      take: itemsPerPage,
+    });
+    
+    console.log(`Query returned ${contacts.length} contacts`);
+    
+    // Get total count for pagination display
+    const totalCount = await prisma.mediaContact.count({
+      where: whereClause
+    });
+    
+    // Check if we have any contacts matching the filters
+    if (totalCount === 0) {
+      throw new MediaContactError('No media contacts found matching your filters.', MediaContactErrorType.NO_CONTACTS_FOUND);
+    }
+    
+    console.log(`Total count of contacts matching filter: ${totalCount}`);
+    
+    // Map the contacts to include emailVerified property and ensure all required fields are present
+    const mappedContacts = contacts.map((contact: any) => {
+      // Ensure countries have the required code property
+      const countries = contact.countries?.map((country: any) => ({
+        ...country,
+        code: country.code || `C${country.id.slice(-1)}` // Add code if missing
+      }));
       
       return {
-        contacts: mappedContacts as unknown as MediaContactTableItem[],
-        totalCount: totalCount
+        ...contact,
+        emailVerified: contact.email_verified_status,
+        countries: countries || []
       };
-    } catch (error) {
-      console.error('Failed in Prisma query:', error);
-      throw error; // Re-throw to be caught by the outer try/catch
-    }
+    });
+    
+    return {
+      contacts: mappedContacts as unknown as MediaContactTableItem[],
+      totalCount
+    };
   } catch (error) {
     console.error('Error fetching media contacts:', error);
     
-    // Return fallback data in case of error
-    console.log('RETURNING FALLBACK DATA DUE TO ERROR');
-    const fallbackContacts = generateFallbackContacts(10);
+    // If it's already a MediaContactError, re-throw it
+    if (error instanceof MediaContactError) {
+      throw error;
+    }
     
-    return {
-      contacts: fallbackContacts,
-      totalCount: fallbackContacts.length
-    };
+    // Otherwise, assume it's a database connection issue
+    throw new MediaContactError('Error connecting to the database. Please try again later.', MediaContactErrorType.DB_NOT_CONNECTED);
   }
 }
 
-export type UpsertMediaContactData = {
-  id?: string;
-  name: string;
-  email: string;
-  title: string;
-  email_verified_status?: boolean | null;
-  bio?: string | null;
-  socials?: string[] | null;
-  authorLinks?: string[] | null;
-  outlets?: string[]; // Changed from outletIds to outlets (array of names)
-  countryIds?: string[];
-  beats?: string[]; // Changed from beatIds to beats (array of names)
-};
-
-export async function upsertMediaContactInDb(
-  data: UpsertMediaContactData
-): Promise<MediaContactTableItem> {
-  const { id, outlets, countryIds, beats, ...scalarData } = data;
-
-  // Operations for outlets (array of names)
-  const outletOperations = outlets?.map(name => ({
-    where: { name }, // Assumes 'name' is unique on Outlet model
-    create: { name },
-  }));
-
-  // Operations for beats (array of names)
-  const beatOperations = beats?.map(name => ({
-    where: { name }, // Assumes 'name' is unique on Beat model
-    create: { name },
-  }));
-
-  const countryConnections = countryIds?.map((cid) => ({ id: cid }));
-
-  const prismaScalarData: Omit<Prisma.MediaContactUncheckedCreateInput, 'id' | 'outlets' | 'countries' | 'beats' | 'updated_at' | 'created_at'> = {
-    ...scalarData,
-    email_verified_status: scalarData.email_verified_status === null ? undefined : scalarData.email_verified_status,
-    bio: scalarData.bio === null ? undefined : scalarData.bio,
-    socials: scalarData.socials === null ? undefined : scalarData.socials,
-    authorLinks: scalarData.authorLinks === null ? undefined : scalarData.authorLinks,
-  };
-
+/**
+ * Upsert a media contact in the database
+ * 
+ * @param contact - The media contact to upsert
+ * @returns The upserted media contact
+ * @throws MediaContactError when database is not connected
+ */
+export async function upsertMediaContactInDb(contact: MediaContactTableItem): Promise<MediaContactTableItem> {
   try {
+    // Test database connection first
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (connectionError) {
+      console.error('Database connection error:', connectionError);
+      throw new MediaContactError('Database connection failed. Please check your database configuration.', MediaContactErrorType.DB_NOT_CONNECTED);
+    }
+
+    // Extract relation data for separate handling
+    const { outlets, countries, beats, ...contactDataRaw } = contact;
+    
+    // Transform potentially null array fields to undefined or empty arrays for Prisma compatibility
+    const contactData = {
+      ...contactDataRaw,
+      // Convert null arrays to undefined (Prisma accepts undefined but not null)
+      socials: contactDataRaw.socials === null ? undefined : contactDataRaw.socials,
+      authorLinks: contactDataRaw.authorLinks === null ? undefined : contactDataRaw.authorLinks,
+      languages: contactDataRaw.languages === null ? undefined : contactDataRaw.languages,
+    };
+
+    // Prepare the upsert operation for the main contact
     const upsertedContact = await prisma.mediaContact.upsert({
-      where: id ? { id: id } : { email: data.email },
-      create: {
-        ...prismaScalarData,
-        outlets: outletOperations ? { connectOrCreate: outletOperations } : undefined,
-        countries: countryConnections ? { connect: countryConnections } : undefined,
-        beats: beatOperations ? { connectOrCreate: beatOperations } : undefined,
-      },
+      where: { id: contact.id },
       update: {
-        ...prismaScalarData,
-        outlets: outletOperations ? { set: [], connectOrCreate: outletOperations } : { set: [] }, // Clear existing and connect/create new
-        countries: countryConnections ? { set: countryConnections } : { set: [] },
-        beats: beatOperations ? { set: [], connectOrCreate: beatOperations } : { set: [] }, // Clear existing and connect/create new
+        ...contactData,
+        email_verified_status: contact.emailVerified,
+        // Clear existing relations to avoid duplicates
+        outlets: { set: [] },
+        countries: { set: [] },
+        beats: { set: [] },
       },
+      create: {
+        ...contactData,
+        email_verified_status: contact.emailVerified,
+      },
+      include: {
+        outlets: true,
+        countries: true,
+        beats: true,
+      },
+    });
+
+    // Handle relations separately to ensure proper connection
+    if (outlets && outlets.length > 0) {
+      await Promise.all(outlets.map(outlet => 
+        prisma.outlet.upsert({
+          where: { id: outlet.id },
+          update: { name: outlet.name },
+          create: { id: outlet.id, name: outlet.name },
+        })
+      ));
+
+      // Connect outlets to the contact
+      await prisma.mediaContact.update({
+        where: { id: upsertedContact.id },
+        data: {
+          outlets: {
+            connect: outlets.map(outlet => ({ id: outlet.id })),
+          },
+        },
+      });
+    }
+
+    // Handle countries with proper code property
+    if (countries && countries.length > 0) {
+      await Promise.all(countries.map(country => 
+        prisma.country.upsert({
+          where: { id: country.id },
+          update: { 
+            name: country.name,
+            code: country.code || `C${country.id.slice(-1)}` // Ensure code is present
+          },
+          create: { 
+            id: country.id, 
+            name: country.name,
+            code: country.code || `C${country.id.slice(-1)}` // Ensure code is present
+          },
+        })
+      ));
+
+      // Connect countries to the contact
+      await prisma.mediaContact.update({
+        where: { id: upsertedContact.id },
+        data: {
+          countries: {
+            connect: countries.map(country => ({ id: country.id })),
+          },
+        },
+      });
+    }
+
+    // Handle beats
+    if (beats && beats.length > 0) {
+      await Promise.all(beats.map(beat => 
+        prisma.beat.upsert({
+          where: { id: beat.id },
+          update: { name: beat.name },
+          create: { id: beat.id, name: beat.name },
+        })
+      ));
+
+      // Connect beats to the contact
+      await prisma.mediaContact.update({
+        where: { id: upsertedContact.id },
+        data: {
+          beats: {
+            connect: beats.map(beat => ({ id: beat.id })),
+          },
+        },
+      });
+    }
+
+    // Fetch the fully updated contact with all relations
+    const updatedContact = await prisma.mediaContact.findUnique({
+      where: { id: upsertedContact.id },
       select: mediaContactFullSelect,
     });
+
+    if (!updatedContact) {
+      throw new Error('Failed to retrieve updated contact');
+    }
+
     // Map the contact to include emailVerified property and ensure all required fields are present
     const mappedContact = {
-      ...upsertedContact,
-      emailVerified: upsertedContact.email_verified_status,
-      // Ensure countries have the required code property
-      countries: upsertedContact.countries?.map(country => ({
+      ...updatedContact,
+      emailVerified: updatedContact.email_verified_status,
+      countries: updatedContact.countries?.map(country => ({
         ...country,
-        code: country.code || `C${country.id.slice(-1)}` // Add code if missing
+        code: country.code || `C${country.id.slice(-1)}` // Ensure code is present
       })) || []
     };
-    
+
     return mappedContact as unknown as MediaContactTableItem;
   } catch (error) {
-    console.error("Error upserting media contact in DB:", error);
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') {
-        const target = error.meta?.target as string[] | string | undefined;
-        const fields = Array.isArray(target) ? target.join(', ') : target;
-        throw new Error(`A contact with this information already exists (e.g., email or other unique field: ${fields || 'unknown'}).`);
-      }
+    console.error('Error upserting media contact:', error);
+    
+    // If it's already a MediaContactError, re-throw it
+    if (error instanceof MediaContactError) {
+      throw error;
     }
-    throw new Error("Could not upsert media contact in the database.");
+    
+    // Otherwise, assume it's a database connection issue
+    throw new MediaContactError('Error connecting to the database. Please try again later.', MediaContactErrorType.DB_NOT_CONNECTED);
   }
 }

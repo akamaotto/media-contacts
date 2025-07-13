@@ -70,6 +70,7 @@ interface MediaContactsState {
   isDeleteConfirmationOpen: boolean; // For delete confirmation dialog
   contactToDelete: MediaContactTableItem | null; // For delete confirmation
   error: string | null;
+  errorType: string | null; // For specific error types: DB_NOT_CONNECTED, NO_CONTACTS_FOUND, etc.
   searchTerm: string;
   selectedCountryIds: string[];
   selectedBeatIds: string[];
@@ -117,7 +118,7 @@ export default function MediaContactsClientView({
   const firstRenderRef = useRef(true);
   const prevSearchTermRef = useRef('');
 
-  // State management with proper typing
+  // Initialize state with default values and initial data
   const [state, setState] = useState<MediaContactsState>(() => ({
     contacts: initialContacts,
     filteredContacts: [],
@@ -134,6 +135,7 @@ export default function MediaContactsClientView({
     isDeleteConfirmationOpen: false,
     contactToDelete: null,
     error: null,
+    errorType: null,
     searchTerm: '',
     selectedCountryIds: [],
     selectedBeatIds: [],
@@ -190,12 +192,12 @@ export default function MediaContactsClientView({
   /**
    * Fetch filtered contacts from the backend
    */
-  const fetchFilteredContacts = useCallback(async (filters: Partial<MediaContactFilters> = {}) => {
+  const fetchFilteredContacts = useCallback(async (filters: Partial<MediaContactFilters> = {}): Promise<void> => {
     try {
-      updateState({ isLoading: true });
+      updateState({ isLoading: true, error: null, errorType: null });
       
       // Merge default filters from state with provided ones
-      const mergedFilters: MediaContactFilters = {
+      const mergedFilters = {
         page: filters.page ?? state.currentPage,
         pageSize: filters.pageSize ?? state.pageSize,
         searchTerm: filters.searchTerm ?? state.searchTerm,
@@ -203,33 +205,75 @@ export default function MediaContactsClientView({
         beatIds: filters.beatIds ?? state.selectedBeatIds,
         regionCodes: filters.regionCodes ?? state.selectedRegionCodes,
         languageCodes: filters.languageCodes ?? state.selectedLanguageCodes,
-        emailVerified: filters.emailVerified ?? state.emailVerified,
+        emailVerified: filters.emailVerified ?? state.emailVerified
       };
       
+      console.log('Fetching contacts with filters:', mergedFilters);
+      
       const result = await getMediaContactsAction(mergedFilters);
-      // Directly use the result as PaginatedMediaContactsActionResult
+      
+      // Check if result is an error object
+      if ('error' in result) {
+        console.error('Server returned error:', result.error, 'Type:', result.errorType);
+        
+        // Show appropriate toast notification based on error type
+        if (result.errorType === 'DB_NOT_CONNECTED') {
+          toast.error('Database connection error. Please try again later or contact support.');
+        } else if (result.errorType === 'NO_CONTACTS_FOUND') {
+          toast.error('No contacts found. Try adjusting your filters or adding new contacts.');
+        } else {
+          toast.error(result.error || 'An error occurred while fetching contacts');
+        }
+        
+        updateState({
+          error: result.error,
+          errorType: result.errorType,
+          isLoading: false,
+          contacts: [],
+          filteredContacts: [],
+          totalCount: 0
+        });
+        return;
+      }
+      
+      // If no error, update with successful data
       updateState({
         contacts: result.contacts,
-        // filteredContacts: result.contacts, // Decide if client-side filtering is still needed on top
+        filteredContacts: result.contacts,
         totalCount: result.totalCount,
         currentPage: mergedFilters.page,
         pageSize: mergedFilters.pageSize,
         isLoading: false,
-        error: null
+        error: null,
+        errorType: null
       });
     } catch (error) {
       // Catch-all for network errors or unexpected issues in the try block
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while fetching contacts.';
-      console.error('Critical error fetching contacts:', error);
+      
+      console.error('Error fetching contacts:', error);
+      
+      // Provide more specific error messages based on error patterns
+      if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('ECONNREFUSED')) {
+        toast.error('Network error: Unable to connect to the server. Please check your connection and try again.');
+      } else if (errorMessage.includes('timeout')) {
+        toast.error('Request timed out. The server is taking too long to respond. Please try again later.');
+      } else {
+        toast.error(errorMessage);
+      }
+      
+      // Update state with error and reset data
       updateState({
+        error: errorMessage,
+        errorType: 'UNKNOWN_ERROR',
         isLoading: false,
-        error: errorMessage
+        contacts: [],
+        filteredContacts: [],
+        totalCount: 0
       });
-      toast.error(errorMessage);
     } finally {
       // Ensure isLoading is always reset, even if an error occurs before updateState is called in try/catch
-      // This uses a functional update to ensure it's based on the latest state if multiple updates are queued.
-      setState(prev => ({ ...prev, isLoading: false }));
+      updateState({ isLoading: false });
     }
   }, [state.currentPage, state.pageSize, state.searchTerm, state.selectedCountryIds, state.selectedBeatIds, state.selectedRegionCodes, state.selectedLanguageCodes, state.emailVerified, updateState]);
 
@@ -385,47 +429,8 @@ export default function MediaContactsClientView({
     };
   }, [state.isInitialized, fetchFilteredContacts, transformBackendCountries, transformBackendBeats, initialPage, initialPageSize, updateState]);
 
-  // useEffect for Debounced Search
+  // Handle filter changes and pagination
   useEffect(() => {
-    const handler = setTimeout(() => {
-      // This effect triggers when state.searchTerm changes.
-      // Fetch only if search term actually changed from the previous render's searchTerm.
-      if (prevSearchTermRef.current !== state.searchTerm) {
-        fetchFilteredContacts({
-          page: 1, // Ensure page is reset for a new search term activity
-          pageSize: state.pageSize,
-          searchTerm: state.searchTerm,
-          countryIds: state.selectedCountryIds,
-          beatIds: state.selectedBeatIds,
-          regionCodes: state.selectedRegionCodes,
-          languageCodes: state.selectedLanguageCodes,
-          emailVerified: state.emailVerified
-        });
-      }
-      prevSearchTermRef.current = state.searchTerm; // Update ref for the next comparison
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(handler);
-  }, [
-    state.searchTerm, 
-    // fetchFilteredContacts is included as a dependency because it's used in the effect.
-    // Other state dependencies like pageSize, selectedCountryIds, etc., are also included 
-    // because they are passed to fetchFilteredContacts, ensuring the fetch call uses their latest values.
-    fetchFilteredContacts, 
-    state.pageSize, 
-    state.selectedCountryIds, 
-    state.selectedBeatIds, 
-    state.selectedRegionCodes, 
-    state.selectedLanguageCodes, 
-    state.emailVerified
-  ]);
-
-  // useEffect for Main Filter/Pagination Changes (excluding searchTerm debouncing)
-  useEffect(() => {
-    if (!state.isInitialized) {
-      // Wait for initial data and filters to be loaded by fetchInitialData
-      return;
-    }
     if (firstRenderRef.current) {
       // On the very first render after initialization, fetchInitialData has already fetched.
       // We set firstRenderRef to false after this first pass to enable subsequent runs.
@@ -484,6 +489,12 @@ export default function MediaContactsClientView({
   }, [updateState]);
 
   const handleDataRefresh = useCallback(() => {
+    // Show loading toast to indicate refresh is in progress
+    const loadingToast = toast.loading('Refreshing data...');
+    
+    // Reset error state before fetching
+    updateState({ error: null, errorType: null });
+    
     fetchFilteredContacts({
       page: state.currentPage,
       pageSize: state.pageSize,
@@ -493,8 +504,19 @@ export default function MediaContactsClientView({
       regionCodes: state.selectedRegionCodes,
       languageCodes: state.selectedLanguageCodes,
       emailVerified: state.emailVerified,
-    });
-  }, [fetchFilteredContacts, state.currentPage, state.pageSize, state.searchTerm, state.selectedCountryIds, state.selectedBeatIds, state.selectedRegionCodes, state.selectedLanguageCodes, state.emailVerified]);
+    })
+      .then(() => {
+        // Dismiss loading toast and show success message if no error in state
+        toast.dismiss(loadingToast);
+        if (!state.error) {
+          toast.success('Data refreshed successfully');
+        }
+      })
+      .catch(() => {
+        // Error is already handled in fetchFilteredContacts, just dismiss the loading toast
+        toast.dismiss(loadingToast);
+      });
+  }, [fetchFilteredContacts, state.currentPage, state.pageSize, state.searchTerm, state.selectedCountryIds, state.selectedBeatIds, state.selectedRegionCodes, state.selectedLanguageCodes, state.emailVerified, state.error, updateState]);
 
   // Event Handlers using useCallback and centralized state management
   const handleSearchTermChange = useCallback((term: string) => {
@@ -646,121 +668,130 @@ if (!state.isInitialized) {
   );
 }
 
+if (state.error) {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-2xl">Error: {state.error}</div>
+    </div>
+  );
+}
+
 // Main component render
 return (
-<div className="flex flex-col min-h-screen bg-muted/40 w-full">
-  <div className="container mx-auto py-6 space-y-4 md:space-y-6">
+  <div className="flex flex-col min-h-screen bg-muted/40 w-full">
+    <div className="container mx-auto py-6 space-y-4 md:space-y-6">
+      <MediaContactsFilters
+        mainSearchTerm={state.searchTerm}
+        setMainSearchTerm={handleSearchTermChange} // Direct change handler for input
+        // Debouncing is handled by useEffect watching state.searchTerm
+        isLoading={state.isLoading}
+        // Country Filter
+        allCountries={state.allCountries}
+        selectedCountryIds={state.selectedCountryIds}
+        setSelectedCountryIds={handleSetSelectedCountryIds}
+        isCountryDropdownOpen={state.isCountryDropdownOpen}
+        setIsCountryDropdownOpen={(isOpen: boolean) => updateState({ isCountryDropdownOpen: isOpen })}
+        searchFilterCountryTerm={state.searchFilterCountryTerm}
+        setSearchFilterCountryTerm={handleSetSearchFilterCountryTerm}
+        countryOptions={state.allCountries}
+        // Beat Filter
+        allBeats={state.allBeats}
+        selectedBeatIds={state.selectedBeatIds}
+        setSelectedBeatIds={handleSetSelectedBeatIds}
+        isBeatDropdownOpen={state.isBeatDropdownOpen}
+        setIsBeatDropdownOpen={(isOpen: boolean) => updateState({ isBeatDropdownOpen: isOpen })}
+        searchFilterBeatTerm={state.searchFilterBeatTerm}
+        setSearchFilterBeatTerm={handleSetSearchFilterBeatTerm}
+        beatOptions={state.allBeats}
+        // Region Filter
+        allRegions={state.allRegions}
+        selectedRegionCodes={state.selectedRegionCodes}
+        setSelectedRegionCodes={handleSetSelectedRegionCodes}
+        isRegionDropdownOpen={state.isRegionDropdownOpen}
+        setIsRegionDropdownOpen={(isOpen: boolean) => updateState({ isRegionDropdownOpen: isOpen })}
+        searchFilterRegionTerm={state.searchFilterRegionTerm}
+        setSearchFilterRegionTerm={handleSetSearchFilterRegionTerm}
+        regionOptions={state.allRegions}
+        // Language Filter
+        allLanguages={state.allLanguages}
+        selectedLanguageCodes={state.selectedLanguageCodes}
+        setSelectedLanguageCodes={handleSetSelectedLanguageCodes}
+        isLanguageDropdownOpen={state.isLanguageDropdownOpen}
+        setIsLanguageDropdownOpen={(isOpen: boolean) => updateState({ isLanguageDropdownOpen: isOpen })}
+        searchFilterLanguageTerm={state.searchFilterLanguageTerm}
+        setSearchFilterLanguageTerm={handleSetSearchFilterLanguageTerm}
+        languageOptions={state.allLanguages}
+        // Email Verified Filter
+        emailVerifiedFilter={state.emailVerified}
+        setEmailVerifiedFilter={handleEmailVerifiedFilterChange}
+        isEmailVerifiedDropdownOpen={state.isEmailVerifiedDropdownOpen}
+        setIsEmailVerifiedDropdownOpen={(isOpen: boolean) => updateState({ isEmailVerifiedDropdownOpen: isOpen })}
+        // Actions
+        activeFiltersCount={() => activeFiltersCount} // Pass a function that returns the memoized value
+        clearAllFilters={handleClearAllFilters}
+      />
 
-<MediaContactsFilters
-mainSearchTerm={state.searchTerm}
-setMainSearchTerm={handleSearchTermChange} // Direct change handler for input
-// Debouncing is handled by useEffect watching state.searchTerm
-isLoading={state.isLoading}
-// Country Filter
-allCountries={state.allCountries}
-selectedCountryIds={state.selectedCountryIds}
-setSelectedCountryIds={handleSetSelectedCountryIds}
-isCountryDropdownOpen={state.isCountryDropdownOpen}
-setIsCountryDropdownOpen={(isOpen: boolean) => updateState({ isCountryDropdownOpen: isOpen })}
-  searchFilterCountryTerm={state.searchFilterCountryTerm}
-  setSearchFilterCountryTerm={handleSetSearchFilterCountryTerm}
-  countryOptions={state.allCountries}
-// Beat Filter
-allBeats={state.allBeats}
-selectedBeatIds={state.selectedBeatIds}
-setSelectedBeatIds={handleSetSelectedBeatIds}
-isBeatDropdownOpen={state.isBeatDropdownOpen}
-setIsBeatDropdownOpen={(isOpen: boolean) => updateState({ isBeatDropdownOpen: isOpen })}
-  searchFilterBeatTerm={state.searchFilterBeatTerm}
-  setSearchFilterBeatTerm={handleSetSearchFilterBeatTerm}
-  beatOptions={state.allBeats}
-// Region Filter
-allRegions={state.allRegions}
-selectedRegionCodes={state.selectedRegionCodes}
-setSelectedRegionCodes={handleSetSelectedRegionCodes}
-isRegionDropdownOpen={state.isRegionDropdownOpen}
-setIsRegionDropdownOpen={(isOpen: boolean) => updateState({ isRegionDropdownOpen: isOpen })}
-  searchFilterRegionTerm={state.searchFilterRegionTerm}
-  setSearchFilterRegionTerm={handleSetSearchFilterRegionTerm}
-  regionOptions={state.allRegions}
-// Language Filter
-allLanguages={state.allLanguages}
-selectedLanguageCodes={state.selectedLanguageCodes}
-setSelectedLanguageCodes={handleSetSelectedLanguageCodes}
-isLanguageDropdownOpen={state.isLanguageDropdownOpen}
-setIsLanguageDropdownOpen={(isOpen: boolean) => updateState({ isLanguageDropdownOpen: isOpen })}
-  searchFilterLanguageTerm={state.searchFilterLanguageTerm}
-  setSearchFilterLanguageTerm={handleSetSearchFilterLanguageTerm}
-  languageOptions={state.allLanguages}
-// Email Verified Filter
-emailVerifiedFilter={state.emailVerified}
-setEmailVerifiedFilter={handleEmailVerifiedFilterChange}
-isEmailVerifiedDropdownOpen={state.isEmailVerifiedDropdownOpen}
-setIsEmailVerifiedDropdownOpen={(isOpen: boolean) => updateState({ isEmailVerifiedDropdownOpen: isOpen })}
-// Actions
-activeFiltersCount={() => activeFiltersCount} // Pass a function that returns the memoized value
-clearAllFilters={handleClearAllFilters}
-/>
+      <div className="flex-grow overflow-auto">
+        <MediaContactsTable
+          data={state.contacts} // Use state.contacts which is updated by fetchFilteredContacts
+          totalCount={state.totalCount}
+          currentPage={state.currentPage}
+          setCurrentPage={(page) => updateState({ currentPage: page })}
+          pageSize={state.pageSize}
+          setPageSize={(size) => updateState({ pageSize: size })}
+          onEditContact={handleEditContactOpen} // For initiating delete from table row
+          onViewContact={handleViewContact}
+          onDataRefresh={handleDataRefresh}
+          error={state.error} // Pass error message to table component
+          errorType={state.errorType} // Pass error type to table component
+        />
+      </div>
 
-<div className="flex-grow overflow-auto">
-<MediaContactsTable
-  data={state.contacts} // Use state.contacts which is updated by fetchFilteredContacts
-  totalCount={state.totalCount}
-  currentPage={state.currentPage}
-  setCurrentPage={(page) => updateState({ currentPage: page })}
-  pageSize={state.pageSize}
-  setPageSize={(size) => updateState({ pageSize: size })}
-  onEditContact={handleEditContactOpen} // For initiating delete from table row
-  onViewContact={handleViewContact}
-  onDataRefresh={handleDataRefresh}
-/>
-</div>
+      {state.isEditSheetOpen && (
+        <UpdateMediaContactSheet
+          isOpen={state.isEditSheetOpen}
+          onOpenChange={(isOpen) => updateState({ isEditSheetOpen: isOpen, editingContact: isOpen ? state.editingContact : null })}
+          contact={state.editingContact}
+          onContactUpdate={handleContactUpserted} // Pass full Beat objects
+        />
+      )}
 
-{state.isEditSheetOpen && (
-<UpdateMediaContactSheet
-isOpen={state.isEditSheetOpen}
-onOpenChange={(isOpen) => updateState({ isEditSheetOpen: isOpen, editingContact: isOpen ? state.editingContact : null })}
-contact={state.editingContact}
-onContactUpdate={handleContactUpserted}         // Pass full Beat objects
-/>
-)}
+      {state.isViewSheetOpen && state.viewingContact && (
+        <ViewMediaContactSheet
+          isOpen={state.isViewSheetOpen}
+          onOpenChange={(isOpen) => updateState({ isViewSheetOpen: isOpen, viewingContact: isOpen ? state.viewingContact : null })}
+          contact={state.viewingContact} // Allow editing from view sheet // Allow deleting from view sheet
+          onContactDelete={handleDeleteContactFromSheet}
+          onContactEdit={handleEditContactOpen} // Callback after deletion from sheet
+        />
+      )}
 
-{state.isViewSheetOpen && state.viewingContact && (
-<ViewMediaContactSheet
-isOpen={state.isViewSheetOpen}
-onOpenChange={(isOpen) => updateState({ isViewSheetOpen: isOpen, viewingContact: isOpen ? state.viewingContact : null })}
-contact={state.viewingContact} // Allow editing from view sheet // Allow deleting from view sheet
-onContactDelete={handleDeleteContactFromSheet}
-onContactEdit={handleEditContactOpen} // Callback after deletion from sheet
-/>
-)}
-
-{/* Basic Delete Confirmation Dialog (Can be replaced with ShadCN Alert Dialog) */}
-{state.isDeleteConfirmationOpen && state.contactToDelete && (
-<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-<div className="bg-background p-6 rounded-lg shadow-xl">
-<h3 className="text-lg font-medium">Confirm Deletion</h3>
-<p className="text-sm text-muted-foreground mt-2">
-Are you sure you want to delete {state.contactToDelete.name}?
-</p>
-<div className="mt-4 flex justify-end space-x-2">
-<button 
-onClick={() => updateState({ isDeleteConfirmationOpen: false, contactToDelete: null })}
-className="px-4 py-2 border rounded-md text-sm"
->
-Cancel
-</button>
-<button 
-onClick={handleConfirmDeleteContact}
-className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm hover:bg-destructive/90"
->
-Delete
-</button>
-</div>
-</div>
-</div>
-)}
+      {/* Basic Delete Confirmation Dialog (Can be replaced with ShadCN Alert Dialog) */}
+      {state.isDeleteConfirmationOpen && state.contactToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-background p-6 rounded-lg shadow-xl">
+            <h3 className="text-lg font-medium">Confirm Deletion</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Are you sure you want to delete {state.contactToDelete.name}?
+            </p>
+            <div className="mt-4 flex justify-end space-x-2">
+              <button 
+                onClick={() => updateState({ isDeleteConfirmationOpen: false, contactToDelete: null })}
+                className="px-4 py-2 border rounded-md text-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleConfirmDeleteContact}
+                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm hover:bg-destructive/90"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   </div>
-</div>
-);
+  );
 }

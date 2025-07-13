@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { 
   getMediaContactsFromDb, 
   upsertMediaContactInDb, 
-  type UpsertMediaContactData,
+  MediaContactError,
+  MediaContactErrorType,
   type MediaContactFilters,
   type PaginatedMediaContactsResult 
 } from "./repository";
@@ -42,9 +43,9 @@ export interface PaginatedMediaContactsActionResult {
  * Server Action to fetch media contacts with optional filtering and pagination.
  * 
  * @param filters - Optional filter parameters for media contacts including pagination
- * @returns Promise resolving to paginated media contacts result
+ * @returns Promise resolving to paginated media contacts result or error object
  */
-export async function getMediaContactsAction(filters?: GetMediaContactsParams): Promise<PaginatedMediaContactsActionResult> {
+export async function getMediaContactsAction(filters?: GetMediaContactsParams): Promise<PaginatedMediaContactsActionResult | { error: string, errorType: string }> {
   try {
     // Validate filters if provided using fail-fast approach
     let validatedFilters: MediaContactFilters | undefined;
@@ -54,21 +55,45 @@ export async function getMediaContactsAction(filters?: GetMediaContactsParams): 
       
       if (!result.success) {
         console.error("Invalid filter parameters:", result.error);
-        throw new Error("Invalid filter parameters provided");
+        return {
+          error: "Invalid filter parameters provided",
+          errorType: "VALIDATION_ERROR"
+        };
       }
       
       validatedFilters = result.data;
     }
     
-    // Fetch contacts with validated filters including pagination
-    const result = await getMediaContactsFromDb(validatedFilters);
-    return {
-      contacts: result.contacts,
-      totalCount: result.totalCount
-    };
+    try {
+      // Fetch contacts with validated filters including pagination
+      const result = await getMediaContactsFromDb(validatedFilters);
+      return {
+        contacts: result.contacts,
+        totalCount: result.totalCount
+      };
+    } catch (error) {
+      console.error("Repository error in getMediaContactsAction:", error);
+      
+      // Handle specific repository errors
+      if (error instanceof MediaContactError) {
+        return {
+          error: error.message,
+          errorType: error.type
+        };
+      }
+      
+      // Handle other errors
+      return {
+        error: "Failed to fetch media contacts.",
+        errorType: "UNKNOWN_ERROR"
+      };
+    }
   } catch (error) {
-    console.error("Error in getMediaContactsAction:", error);
-    throw new Error("Failed to fetch media contacts via server action.");
+    console.error("Unexpected error in getMediaContactsAction:", error);
+    return {
+      error: "An unexpected error occurred while fetching media contacts.",
+      errorType: "UNKNOWN_ERROR"
+    };
   }
 }
 
@@ -107,6 +132,9 @@ export type UpsertMediaContactActionState = {
 /**
  * Server Action to create or update a media contact.
  */
+// Define the type for upsert data based on the schema
+export type UpsertMediaContactData = z.infer<typeof UpsertMediaContactActionSchema>;
+
 export async function upsertMediaContactAction(
   // prevState: UpsertMediaContactActionState, // For useActionState hook
   data: UpsertMediaContactData // Direct data object from form/client
@@ -122,7 +150,17 @@ export async function upsertMediaContactAction(
   }
 
   try {
-    const upsertedContact = await upsertMediaContactInDb(validatedFields.data);
+    // Convert the validated data to match the expected MediaContactTableItem format
+    const contactData = {
+      ...validatedFields.data,
+      emailVerified: validatedFields.data.email_verified_status || false,
+      updated_at: new Date(),
+      countries: validatedFields.data.countryIds?.map(id => ({ id, name: '', code: `C${id.slice(-1)}` })) || [],
+      outlets: validatedFields.data.outlets?.map(name => ({ id: '', name })) || [],
+      beats: validatedFields.data.beats?.map(name => ({ id: '', name })) || [],
+    } as unknown as MediaContactTableItem;
+
+    const upsertedContact = await upsertMediaContactInDb(contactData);
     revalidatePath('/'); // Revalidate the page displaying media contacts
     return {
       message: data.id ? "Contact updated successfully." : "Contact created successfully.",

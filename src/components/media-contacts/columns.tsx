@@ -69,6 +69,7 @@ export interface MediaContactTableItem {
   languages?: Language[];
   bio?: string | null;
   socials?: string[] | null;
+  authorLinks?: string[] | null;
   // Add any other fields that might be used in the application
   [key: string]: any; // For any additional dynamic properties
 }

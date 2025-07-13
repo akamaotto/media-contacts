@@ -61,6 +61,9 @@ const mediaContactUpsertSchema = z.object({
   socials: z.array(z.string().url({ message: "Invalid URL format." })).max(5, {
     message: "Maximum 5 social media links allowed."
   }),
+  authorLinks: z.array(z.string().url({ message: "Invalid URL format." })).max(5, {
+    message: "Maximum 5 author links allowed."
+  }),
   countryIds: z.array(z.string().uuid()).optional(), 
   beats: z.array(z.string().min(2, { message: "Beat must be at least 2 characters." })).max(10, {
     message: "Maximum 10 beats allowed."
@@ -83,6 +86,17 @@ enum SocialPlatformType {
   LinkedIn = "linkedin",
   Facebook = "facebook",
   Instagram = "instagram",
+  Other = "other"
+}
+
+/**
+ * Type for author link type detection
+ */
+enum AuthorLinkType {
+  Article = "article",
+  Blog = "blog",
+  Publication = "publication",
+  Portfolio = "portfolio",
   Other = "other"
 }
 
@@ -114,6 +128,41 @@ function detectSocialPlatform(url: string): SocialPlatformType {
 }
 
 /**
+ * Utility function to detect author link type from URL
+ * @param url The author link URL to analyze
+ * @returns The detected author link type
+ */
+function detectAuthorLinkType(url: string): AuthorLinkType {
+  try {
+    const lowercaseUrl = url.toLowerCase();
+    if (lowercaseUrl.includes('medium.com') || 
+        lowercaseUrl.includes('blog.') || 
+        lowercaseUrl.includes('/blog/')) {
+      return AuthorLinkType.Blog;
+    }
+    if (lowercaseUrl.includes('/article/') || 
+        lowercaseUrl.includes('/articles/') || 
+        lowercaseUrl.includes('news.')) {
+      return AuthorLinkType.Article;
+    }
+    if (lowercaseUrl.includes('publication') || 
+        lowercaseUrl.includes('magazine') || 
+        lowercaseUrl.includes('journal')) {
+      return AuthorLinkType.Publication;
+    }
+    if (lowercaseUrl.includes('portfolio') || 
+        lowercaseUrl.includes('about-me') || 
+        lowercaseUrl.includes('about.me')) {
+      return AuthorLinkType.Portfolio;
+    }
+    return AuthorLinkType.Other;
+  } catch (error) {
+    console.error('Error detecting author link type:', error);
+    return AuthorLinkType.Other;
+  }
+}
+
+/**
  * Props interface for UpdateMediaContactSheet component
  * Following Rust-inspired explicit typing pattern with comprehensive documentation
  */
@@ -135,9 +184,11 @@ export function UpdateMediaContactSheet({
   const [allCountries, setAllCountries] = useState<ApiCountry[]>([]);
   // Country selection is now handled by the CountryAutocomplete component
   const [formActionFeedback, setFormActionFeedback] = useState<UpsertMediaContactActionState | null>(null);
+  // State for social media and author links
+  const [socialTags, setSocialTags] = useState<string[]>([]);
+  const [authorTags, setAuthorTags] = useState<string[]>([]);
   const [beatTags, setBeatTags] = useState<string[]>([]);
   const [outletTags, setOutletTags] = useState<string[]>([]);
-  const [socialTags, setSocialTags] = useState<string[]>([]);
 
   const form = useForm<MediaContactUpsertFormData>({
     resolver: zodResolver(mediaContactUpsertSchema),
@@ -174,33 +225,32 @@ export function UpdateMediaContactSheet({
     if (isOpen) {
       if (contact) { 
         // Initialize tag states from contact data with explicit handling for null/undefined
-        // Ensure proper type conversion from potential complex objects to string arrays
-        const contactOutlets = contact.outlets ? 
-          (Array.isArray(contact.outlets) ? contact.outlets.map(o => typeof o === 'string' ? o : o.name || '').filter(Boolean) : []) : [];
-        
-        const contactBeats = contact.beats ? 
-          (Array.isArray(contact.beats) ? contact.beats.map(b => typeof b === 'string' ? b : b.name || '').filter(Boolean) : []) : [];
-        
         const contactSocials = contact.socials ? 
           (Array.isArray(contact.socials) ? contact.socials.filter(Boolean) : []) : [];
-          
-        // Set the form values from contact data
+        
+        // Handle author links array safely
+        const contactAuthorLinks = contact.authorLinks ? 
+          (Array.isArray(contact.authorLinks) ? contact.authorLinks.filter(Boolean) : []) : [];
+        
+        // Set form default values
         form.reset({
           name: contact.name || '',
           title: contact.title || '',
           email: contact.email || '',
+          email_verified_status: contact.email_verified_status || false,
           bio: contact.bio || '',
           socials: contactSocials,
-          email_verified_status: contact.email_verified_status || false,
+          authorLinks: contactAuthorLinks,
           countryIds: contact.countries?.map(c => c.id) || [],
-          beats: contactBeats,
-          outlets: contactOutlets,
+          beats: contact.beats?.map(b => b.name) || [],
+          outlets: contact.outlets?.map(o => o.name) || [],
         });
         
-        // Update the tag states
-        setOutletTags(contactOutlets);
-        setBeatTags(contactBeats);
+        // Set tag inputs
+        setBeatTags(contact.beats?.map(b => b.name) || []);
+        setOutletTags(contact.outlets?.map(o => o.name) || []);
         setSocialTags(contactSocials);
+        setAuthorTags(contactAuthorLinks);
       }
     }
   }, [contact, form, isOpen]);
@@ -229,6 +279,7 @@ export function UpdateMediaContactSheet({
         beats: data.beats ? [...data.beats] : [], 
         outlets: data.outlets ? [...data.outlets] : [],
         socials: data.socials ? [...data.socials] : [],
+        authorLinks: data.authorLinks ? [...data.authorLinks] : [],
       };
 
       const result = await upsertMediaContactAction(processedData);
@@ -467,7 +518,7 @@ export function UpdateMediaContactSheet({
               </div>
 
               {/* Socials - Enhanced with TagInput */}
-              <div>
+              <div className="mb-6">
                 <Label htmlFor="socials">Social Media Links</Label>
                 <Controller
                   name="socials"
@@ -499,6 +550,44 @@ export function UpdateMediaContactSheet({
                       return (
                         <Badge key={index} variant="outline" className="mr-2 mb-2">
                           {platform}: {url}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              
+              {/* Author Links - Enhanced with TagInput */}
+              <div>
+                <Label htmlFor="authorLinks">Author Links</Label>
+                <Controller
+                  name="authorLinks"
+                  control={form.control}
+                  render={({ field }) => {
+                    return (
+                      <TagInput
+                        tags={authorTags}
+                        onTagsChange={(newTags: string[]) => {
+                          setAuthorTags(newTags);
+                          field.onChange(newTags);
+                        }}
+                        placeholder="Add author article/blog URL..."
+                        validation={{
+                          maxTags: 5,
+                          pattern: /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+                        }}
+                        error={form.formState.errors.authorLinks?.message as string}
+                      />
+                    );
+                  }}
+                />
+                {authorTags.length > 0 && (
+                  <div className="mt-2">
+                    {authorTags.map((url, index) => {
+                      const linkType = detectAuthorLinkType(url);
+                      return (
+                        <Badge key={index} variant="outline" className="mr-2 mb-2">
+                          {linkType}: {url}
                         </Badge>
                       );
                     })}

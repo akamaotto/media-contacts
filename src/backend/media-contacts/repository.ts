@@ -40,6 +40,7 @@ const mediaContactFullSelect = {
   beats: { select: { id: true, name: true } },
   bio: true,
   socials: true,
+  authorLinks: true,
 } satisfies Prisma.MediaContactSelect;
 
 /**
@@ -90,9 +91,14 @@ function generateFallbackContacts(count: number): MediaContactTableItem[] {
     email: `contact${index + 1}@example.com`,
     title: index % 3 === 0 ? 'Editor' : index % 3 === 1 ? 'Reporter' : 'Columnist',
     email_verified_status: index % 2 === 0,
+    emailVerified: index % 2 === 0, // Add the emailVerified property
     updated_at: new Date().toISOString(),
     outlets: [{ id: `outlet-${index % 3}`, name: `Test Outlet ${index % 3 + 1}` }],
-    countries: [{ id: `country-${index % 5}`, name: `Country ${index % 5 + 1}` }],
+    countries: [{ 
+      id: `country-${index % 5}`, 
+      name: `Country ${index % 5 + 1}`,
+      code: `C${index % 5}` // Add the required code property
+    }],
     beats: [{ id: `beat-${index % 4}`, name: `Beat ${index % 4 + 1}` }],
     bio: index % 2 === 0 ? `This is a fallback contact bio for testing #${index + 1}` : null,
     socials: index % 3 === 0 ? [`https://twitter.com/test${index}`, `https://linkedin.com/in/test${index}`] : null,
@@ -247,8 +253,23 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
       
       console.log(`Total count of contacts matching filter: ${totalCount}`);
       
+      // Map the contacts to include emailVerified property and ensure all required fields are present
+      const mappedContacts = contacts.map(contact => {
+        // Ensure countries have the required code property
+        const countries = contact.countries?.map(country => ({
+          ...country,
+          code: country.code || `C${country.id.slice(-1)}` // Add code if missing
+        }));
+        
+        return {
+          ...contact,
+          emailVerified: contact.email_verified_status,
+          countries: countries || []
+        };
+      });
+      
       return {
-        contacts: contacts as unknown as MediaContactTableItem[],
+        contacts: mappedContacts as unknown as MediaContactTableItem[],
         totalCount: totalCount
       };
     } catch (error) {
@@ -277,6 +298,7 @@ export type UpsertMediaContactData = {
   email_verified_status?: boolean | null;
   bio?: string | null;
   socials?: string[] | null;
+  authorLinks?: string[] | null;
   outlets?: string[]; // Changed from outletIds to outlets (array of names)
   countryIds?: string[];
   beats?: string[]; // Changed from beatIds to beats (array of names)
@@ -306,6 +328,7 @@ export async function upsertMediaContactInDb(
     email_verified_status: scalarData.email_verified_status === null ? undefined : scalarData.email_verified_status,
     bio: scalarData.bio === null ? undefined : scalarData.bio,
     socials: scalarData.socials === null ? undefined : scalarData.socials,
+    authorLinks: scalarData.authorLinks === null ? undefined : scalarData.authorLinks,
   };
 
   try {
@@ -325,7 +348,18 @@ export async function upsertMediaContactInDb(
       },
       select: mediaContactFullSelect,
     });
-    return upsertedContact as unknown as MediaContactTableItem;
+    // Map the contact to include emailVerified property and ensure all required fields are present
+    const mappedContact = {
+      ...upsertedContact,
+      emailVerified: upsertedContact.email_verified_status,
+      // Ensure countries have the required code property
+      countries: upsertedContact.countries?.map(country => ({
+        ...country,
+        code: country.code || `C${country.id.slice(-1)}` // Add code if missing
+      })) || []
+    };
+    
+    return mappedContact as unknown as MediaContactTableItem;
   } catch (error) {
     console.error("Error upserting media contact in DB:", error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

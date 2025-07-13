@@ -18,6 +18,7 @@ model MediaContact {
   email                 String   @unique
   email_verified_status Boolean  @default(false)
   socials               String[] // Array of social media links/handles
+  authorLinks           String[] // Array of author links (articles, blogs, etc.)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

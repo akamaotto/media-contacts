@@ -15,7 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Pencil, Trash2, Mail, Link, Briefcase, Globe, User } from "lucide-react";
+import { Pencil, Trash2, Mail, Link, Briefcase, Globe, User, FileText } from "lucide-react";
 import { MediaContactTableItem } from "@/components/media-contacts/columns";
 import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 
@@ -106,8 +106,9 @@ export function ViewMediaContactSheet({
     onOpenChange(false);
   };
 
-  // Determine if contact has social links
+  // Determine if contact has social links or author links
   const hasSocials = contact.socials && contact.socials.length > 0;
+  const hasAuthorLinks = contact.authorLinks && contact.authorLinks.length > 0;
 
   /**
    * Detect social platform type from URL
@@ -129,7 +130,38 @@ export function ViewMediaContactSheet({
     if (lowercaseUrl.includes('instagram.com')) {
       return { icon: 'Instagram', name: 'Instagram' };
     }
-    return { icon: 'Link', name: 'Website' };
+    return { icon: 'Link', name: 'Social' };
+  };
+  
+  /**
+   * Detect author link type from URL
+   * @param url The author link URL to analyze
+   * @returns The detected link type with icon name and display name
+   */
+  const detectAuthorLinkType = (url: string): { icon: string; name: string } => {
+    const lowercaseUrl = url.toLowerCase();
+    
+    if (lowercaseUrl.includes('medium.com') || 
+        lowercaseUrl.includes('blog.') || 
+        lowercaseUrl.includes('/blog/')) {
+      return { icon: 'FileText', name: 'Blog' };
+    }
+    if (lowercaseUrl.includes('/article/') || 
+        lowercaseUrl.includes('/articles/') || 
+        lowercaseUrl.includes('news.')) {
+      return { icon: 'Newspaper', name: 'Article' };
+    }
+    if (lowercaseUrl.includes('publication') || 
+        lowercaseUrl.includes('magazine') || 
+        lowercaseUrl.includes('journal')) {
+      return { icon: 'BookOpen', name: 'Publication' };
+    }
+    if (lowercaseUrl.includes('portfolio') || 
+        lowercaseUrl.includes('about-me') ||
+        lowercaseUrl.includes('about.me')) {
+      return { icon: 'User', name: 'Portfolio' };
+    }
+    return { icon: 'FileText', name: 'Author Content' };
   };
 
   return (
@@ -259,7 +291,7 @@ export function ViewMediaContactSheet({
                 <section>
                   <h3 className="text-md font-medium mb-3 flex items-center">
                     <Link className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Social Media & Links
+                    Social Media Links
                   </h3>
                   <Card className="rounded-md py-2 overflow-hidden">
                     <CardContent className="px-4 py-0">
@@ -276,6 +308,37 @@ export function ViewMediaContactSheet({
                             >
                               <Link className="h-4 w-4 mr-2" />
                               {platform.name}: {url}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </section>
+              )}
+              
+              {/* Author Links */}
+              {hasAuthorLinks && (
+                <section>
+                  <h3 className="text-md font-medium mb-3 flex items-center">
+                    <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
+                    Author Links
+                  </h3>
+                  <Card className="rounded-md py-2 overflow-hidden">
+                    <CardContent className="px-4 py-0">
+                      <div className="grid gap-3 divide-y divide-border">
+                        {contact.authorLinks?.map((url: string, index: number) => {
+                          const linkType = detectAuthorLinkType(url);
+                          return (
+                            <a 
+                              key={index} 
+                              href={url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex items-center text-sm hover:underline text-blue-600 dark:text-blue-400 py-3"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              {linkType.name}: {url}
                             </a>
                           );
                         })}

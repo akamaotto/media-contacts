@@ -13,10 +13,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   trustHost: true,
   debug: process.env.NODE_ENV === "development",
-  // Explicit URL configuration for NextAuth v5
+  // Fix for Vercel production deployment
   basePath: "/api/auth",
-  // Enhanced CSRF protection
+  // Critical fix for production session persistence
   useSecureCookies: process.env.NODE_ENV === "production",
+  // Ensure proper domain handling in production
+  ...(process.env.NODE_ENV === "production" && {
+    url: process.env.AUTH_URL || "https://media-contacts.vercel.app",
+  }),
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
@@ -25,6 +29,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        // Enhanced production session persistence
+        ...(process.env.NODE_ENV === "production" && {
+          domain: ".vercel.app",
+          maxAge: 30 * 24 * 60 * 60, // 30 days
+        }),
       },
     },
     callbackUrl: {
@@ -33,6 +42,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        ...(process.env.NODE_ENV === "production" && {
+          domain: ".vercel.app",
+        }),
       },
     },
     csrfToken: {
@@ -42,6 +54,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        ...(process.env.NODE_ENV === "production" && {
+          domain: ".vercel.app",
+        }),
       },
     },
   },

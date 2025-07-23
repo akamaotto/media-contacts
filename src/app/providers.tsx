@@ -9,5 +9,15 @@ interface ProvidersProps {
 }
 
 export function Providers({ children, session }: ProvidersProps) {
-  return <SessionProvider session={session}>{children}</SessionProvider>;
+  return (
+    <SessionProvider 
+      session={session}
+      // Force session refetch to resolve hydration mismatches in production
+      refetchInterval={0}
+      refetchOnWindowFocus={false}
+      refetchWhenOffline={false}
+    >
+      {children}
+    </SessionProvider>
+  );
 }

@@ -30,16 +30,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Use auth() for consistent session handling
+  // Use auth() for consistent session handling with production-safe error handling
   let session;
+  let isAuthenticated = false;
+  
   try {
     session = await auth();
+    isAuthenticated = !!session;
   } catch (error) {
     // Handle errors gracefully during static generation/prerendering
-    console.error('Error getting session:', error);
+    console.error('Error getting session in RootLayout:', error);
     session = null;
+    isAuthenticated = false;
   }
-  const isAuthenticated = !!session;
   
   return (
     <html lang="en">

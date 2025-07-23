@@ -19,7 +19,7 @@ import type { Region as RegionType, Language as CountryLanguage } from '@/lib/co
 import type { Language as LanguageType } from '@/lib/language-data';
 
 // Import server actions with proper typing
-import { getMediaContactsAction } from '@/backend/media-contacts/actions';
+import { getMediaContactsAction } from '@/lib/actions/media-contacts';
 import { getCountries } from '@/app/actions/country-actions';
 import { getBeats } from '@/app/actions/beat-actions';
 import { getAllRegions } from '@/app/actions/region-actions';

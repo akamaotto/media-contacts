@@ -20,10 +20,10 @@ import type { Language as LanguageType } from '@/lib/language-data';
 
 // Import server actions with proper typing
 import { getMediaContactsAction } from '@/lib/actions/media-contacts';
-import { getCountries } from '@/app/actions/country-actions';
-import { getBeats } from '@/app/actions/beat-actions';
-import { getAllRegions } from '@/app/actions/region-actions';
-import { getAllLanguages } from '@/app/actions/language-actions';
+import { getCountries } from '@/backend/media-contacts-filters/country-actions';
+import { getBeats } from '@/backend/media-contacts-filters/beat-actions';
+import { getAllRegions } from '@/backend/media-contacts-filters/region-actions';
+import { getAllLanguages } from '@/backend/media-contacts-filters/language-actions';
 
 // Define backend types for data transformation
 interface BackendCountry {

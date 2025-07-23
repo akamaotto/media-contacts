@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/command";
 import { ChevronsUpDownIcon, CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Beat } from "@/app/actions/beat-actions";
+import { Beat } from "@/backend/media-contacts-filters/beat-actions";
 
 interface BeatFilterPopoverProps {
   allBeats: Beat[];

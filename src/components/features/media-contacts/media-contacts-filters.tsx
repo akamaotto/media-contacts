@@ -16,8 +16,8 @@ import { EmailVerificationFilter } from "./search-filters/EmailVerificationFilte
 import { cn } from "@/lib/utils"; // still used for ClearAllFilters button icon spacing
 
 // Use local/domain types instead of Prisma ORM models for UI layer
-import type { Country } from "@/app/actions/country-actions";
-import type { Beat } from "@/app/actions/beat-actions";
+import type { Country } from "@/backend/media-contacts-filters/country-actions";
+import type { Beat } from "@/backend/media-contacts-filters/beat-actions";
 import type { Region } from "@/lib/country-data";
 import type { Language } from "@/lib/language-data";
 

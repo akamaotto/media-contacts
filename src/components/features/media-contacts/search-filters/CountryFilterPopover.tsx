@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/command";
 import { ChevronsUpDownIcon, CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Country } from "@/app/actions/country-actions";
+import { Country } from "@/backend/media-contacts-filters/country-actions";
 
 interface CountryFilterPopoverProps {
   allCountries: Country[];

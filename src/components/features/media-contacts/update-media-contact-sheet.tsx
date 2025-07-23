@@ -34,9 +34,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { upsertMediaContactAction, type UpsertMediaContactActionState } from "@/backend/media-contacts/actions";
+import { upsertMediaContactAction, type UpsertMediaContactActionState } from "@/backend/media-contacts-table/actions";
 import { MediaContactTableItem, Country, Beat, Outlet } from '@/components/features/media-contacts/columns';
-import { getCountries, type Country as ApiCountry } from '@/app/actions/country-actions';
+import { getCountries, type Country as ApiCountry } from '@/backend/media-contacts-filters/country-actions';
 import { TagInput } from "@/components/ui/tag-input";
 import { toast } from "@/components/ui/sonner";
 import { OutletAutocomplete } from "@/components/features/media-contacts/outlet-autocomplete";

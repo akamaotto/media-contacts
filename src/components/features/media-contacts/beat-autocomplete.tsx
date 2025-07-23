@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { searchBeats } from "@/app/actions/beat-actions";
+import { searchBeats } from "@/backend/media-contacts-filters/beat-actions";
 
 export type Beat = {
   id: string;

@@ -1,5 +1,5 @@
 // Consolidated media contacts actions
-export { getMediaContactsAction } from '../../backend/media-contacts/actions'
+export { getMediaContactsAction, type PaginatedMediaContactsActionResult, type GetMediaContactsParams } from '../../backend/media-contacts/actions'
 export { deleteMediaContact } from '../../app/actions/delete-media-contact'
 export * from '../../app/actions/media-contact-actions'
 export * from '../../app/actions/beat-actions'

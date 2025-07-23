@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
-import { MediaContactTableItem } from '@/components/media-contacts/columns';
+import { MediaContactTableItem } from '@/components/features/media-contacts/columns';
 
 /**
  * Full select object for media contacts with complete relation data

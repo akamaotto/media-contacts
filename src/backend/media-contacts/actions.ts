@@ -10,7 +10,8 @@ import {
   type MediaContactFilters,
   type PaginatedMediaContactsResult 
 } from "./repository";
-import { MediaContactTableItem } from "@/components/media-contacts/columns"; 
+import { prisma } from "@/lib/prisma";
+import { MediaContactTableItem } from "@/components/features/media-contacts/columns"; 
 
 /**
  * Zod schema for validating media contact filter parameters
@@ -173,6 +174,108 @@ export async function upsertMediaContactAction(
       message: "Failed to save contact.",
       errors: { _form: [errorMessage] }, 
     };
+  }
+}
+
+// Additional schema for updateMediaContact (from app/actions consolidation)
+const UpdateMediaContactSchema = z.object({
+  email_verified_status: z.boolean().optional(),
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  title: z.string().optional().nullable(),
+  email: z.string().email({ message: "Invalid email address." }),
+  bio: z.string().optional().nullable(),
+  socials: z.string().optional().nullable(), // Comma-separated string
+  beatsEntry: z.string().optional(), // Comma-separated beat names
+  countryIds: z.array(z.string()).optional(),
+});
+
+export type UpdateMediaContactReturnType = {
+  success: boolean;
+  message?: string;
+  error?: string;
+  issues?: z.ZodIssue[];
+};
+
+/**
+ * Server Action to update an existing media contact (consolidated from app/actions)
+ * Uses direct Prisma calls for simpler update operations
+ */
+export async function updateMediaContact(
+  contactId: string,
+  data: z.infer<typeof UpdateMediaContactSchema>
+): Promise<UpdateMediaContactReturnType> {
+  if (!contactId) {
+    return { success: false, error: "Contact ID is missing." };
+  }
+
+  const validationResult = UpdateMediaContactSchema.safeParse(data);
+
+  if (!validationResult.success) {
+    return { 
+      success: false, 
+      error: "Invalid data provided.", 
+      issues: validationResult.error.issues 
+    };
+  }
+
+  const {
+    name,
+    title,
+    email,
+    email_verified_status,
+    bio,
+    socials: socialsString,
+    beatsEntry,
+    countryIds,
+  } = validationResult.data;
+
+  const socialsArray = socialsString
+    ? socialsString.split(',').map(s => s.trim()).filter(s => s.length > 0)
+    : [];
+
+  const processedBeatIds: string[] = [];
+  if (validationResult.data.beatsEntry) {
+    const beatNames = validationResult.data.beatsEntry.split(',')
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+
+    for (const name of beatNames) {
+      try {
+        const beat = await prisma.beat.upsert({
+          where: { name: name },
+          update: {},
+          create: { name: name },
+        });
+        processedBeatIds.push(beat.id);
+      } catch (e) {
+        console.error(`Failed to upsert beat: ${name}`, e);
+      }
+    }
+  }
+
+  try {
+    await prisma.mediaContact.update({
+      where: { id: contactId },
+      data: {
+        name,
+        title: title ?? undefined,
+        email,
+        email_verified_status: email_verified_status ?? false,
+        bio: bio ?? undefined,
+        socials: socialsArray,
+        beats: { set: processedBeatIds.map(id => ({ id })) },
+        countries: countryIds ? { set: countryIds.map(id => ({ id })) } : { set: [] },
+      },
+    });
+
+    revalidatePath('/');
+    return { success: true, message: "Contact updated successfully." };
+  } catch (error) {
+    console.error("Failed to update media contact:", error);
+    if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
+        return { success: false, error: "Contact not found." };
+    }
+    return { success: false, error: "Database error: Failed to update contact." };
   }
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
-import AppBrandHeader from '@/components/media-contacts/app-brand-header';
-import HeaderActionButtons from '@/components/media-contacts/header-action-buttons';
+import AppBrandHeader from '@/components/features/media-contacts/app-brand-header';
+import HeaderActionButtons from '@/components/features/media-contacts/header-action-buttons';
 import { usePathname } from 'next/navigation';
 
 interface AppHeaderProps {

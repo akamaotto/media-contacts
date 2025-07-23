@@ -1,11 +1,13 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import ProfileFormClient from "./profile-form-client";
 
+// Force dynamic rendering for pages with session checks
+export const dynamic = 'force-dynamic';
+
 export default async function ProfilePage() {
   // Server-side session check
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session) {
     redirect("/login");
   }

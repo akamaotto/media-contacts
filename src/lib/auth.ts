@@ -1,5 +1,4 @@
-// Re-export the auth helper from NextAuth route so that
-// server components can do `const session = await auth()`
-// without importing from the route file path.
+// Re-export the auth helper from NextAuth 5 configuration
+// Server components can use `const session = await auth()`
 
-export { auth } from "@/app/api/auth/[...nextauth]/route";
+export { auth } from "../../auth";

@@ -1,14 +1,13 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getServerSession } from "next-auth";
+import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
 // Check if user is admin
 async function checkAdminPermission() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session || (session.user as any).role !== "ADMIN") {
     throw new Error("Unauthorized");
   }

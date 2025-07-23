@@ -4,8 +4,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import "./globals.css";
 import { AppLayout } from "@/components/layout/app-layout";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth";
+import { DbKeepAliveClient } from "@/components/db-keepalive-client";
+
+// Force dynamic rendering for layout with session checks
+export const dynamic = 'force-dynamic';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +30,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession(authOptions);
+  // Use auth() for consistent session handling
+  let session;
+  try {
+    session = await auth();
+  } catch (error) {
+    // Handle errors gracefully during static generation/prerendering
+    console.error('Error getting session:', error);
+    session = null;
+  }
   const isAuthenticated = !!session;
   
   return (
@@ -35,13 +46,14 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers>
+        <Providers session={session}>
           {isAuthenticated ? (
             <AppLayout>{children}</AppLayout>
           ) : (
             children
           )}
           <Toaster richColors position="top-right" />
+          <DbKeepAliveClient />
         </Providers>
       </body>
     </html>

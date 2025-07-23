@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AppHeader } from './app-header';
-import { UpdateMediaContactSheet } from '@/components/media-contacts/update-media-contact-sheet';
+import { UpdateMediaContactSheet } from '@/components/features/media-contacts/update-media-contact-sheet';
 
 interface AppLayoutProps {
   children: React.ReactNode;

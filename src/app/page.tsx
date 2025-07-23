@@ -2,8 +2,8 @@ import React, { Suspense } from 'react';
 // IMPORTANT: Adjust this import path if MediaContactTableItem is defined elsewhere.
 // This was previously in 'src/components/media-contacts-feature/columns.tsx' which was deleted.
 // Assuming it's now in 'src/components/media-contacts/columns.tsx'
-import { MediaContactTableItem } from '@/components/media-contacts/columns';
-import MediaContactsClientView from '@/components/media-contacts/media-contacts-client-view';
+import { MediaContactTableItem } from '@/components/features/media-contacts/columns';
+import MediaContactsClientView from '@/components/features/media-contacts/media-contacts-client-view';
 import { getMediaContactsAction, type PaginatedMediaContactsActionResult } from '@/backend/media-contacts/actions'; // Import the server action with paginated type
 
 // No longer need prisma directly in the page component for this fetch
@@ -11,12 +11,14 @@ import { getMediaContactsAction, type PaginatedMediaContactsActionResult } from 
 
 // The local getMediaContacts function is removed, as we're using the server action.
 
-import { getServerSession } from "next-auth";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
+// Force dynamic rendering for pages with session checks
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session) {
     redirect("/login");
   }
@@ -28,11 +30,16 @@ export default async function HomePage() {
 
   try {
     // Get paginated results from server action with explicit default pagination
-    const result: PaginatedMediaContactsActionResult = await getMediaContactsAction({
+    const result = await getMediaContactsAction({
       page: 0,
       pageSize: 10,
       emailVerified: 'all'
     });
+    
+    // Check if result has error
+    if ('error' in result) {
+      throw new Error(result.error);
+    }
     
     // Log the initial data for debugging
     console.log('Initial data in HomePage:', { 
@@ -51,10 +58,11 @@ export default async function HomePage() {
           name: 'John Doe',
           email: 'john@example.com',
           title: 'Tech Journalist',
-          email_verified_status: true, // Changed from emailVerified to match interface
+          email_verified_status: true,
+          emailVerified: true,
           updated_at: new Date().toISOString(),
           outlets: [{ id: '1', name: 'Tech Daily' }],
-          countries: [{ id: '1', name: 'United States' }], // Removed code property to match interface
+          countries: [{ id: '1', name: 'United States', code: 'US' }],
           beats: [{ id: '1', name: 'Technology' }],
           bio: 'Technology journalist with 10 years of experience',
           socials: ['https://twitter.com/johndoe', 'https://linkedin.com/in/johndoe']
@@ -64,10 +72,11 @@ export default async function HomePage() {
           name: 'Jane Smith',
           email: 'jane@example.com',
           title: 'Senior Editor',
-          email_verified_status: false, // Changed from emailVerified to match interface
+          email_verified_status: false,
+          emailVerified: false,
           updated_at: new Date().toISOString(),
           outlets: [{ id: '2', name: 'Business Weekly' }],
-          countries: [{ id: '2', name: 'United Kingdom' }], // Removed code property to match interface
+          countries: [{ id: '2', name: 'United Kingdom', code: 'UK' }],
           beats: [{ id: '2', name: 'Business' }],
           bio: 'Business editor specializing in finance and tech',
           socials: ['https://twitter.com/janesmith']

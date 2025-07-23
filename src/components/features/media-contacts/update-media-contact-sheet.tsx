@@ -35,14 +35,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { upsertMediaContactAction, type UpsertMediaContactActionState } from "@/backend/media-contacts/actions";
-import { type UpsertMediaContactData } from "@/backend/media-contacts/repository";
-import { MediaContactTableItem, Country as TableCountry } from "@/components/media-contacts/columns";
+import { MediaContactTableItem, Country, Beat, Outlet } from '@/components/features/media-contacts/columns';
 import { getCountries, type Country as ApiCountry } from '@/app/actions/country-actions';
 import { TagInput } from "@/components/ui/tag-input";
 import { toast } from "@/components/ui/sonner";
-import { OutletAutocomplete } from "@/components/media-contacts/outlet-autocomplete";
-import { CountryAutocomplete } from "@/components/media-contacts/country-autocomplete";
-import { BeatAutocomplete } from "@/components/media-contacts/beat-autocomplete";
+import { OutletAutocomplete } from "@/components/features/media-contacts/outlet-autocomplete";
+import { CountryAutocomplete } from "@/components/features/media-contacts/country-autocomplete";
+import { BeatAutocomplete } from "@/components/features/media-contacts/beat-autocomplete";
 
 // Ensure necessary TypeScript configurations are applied
 /** @jsxRuntime automatic */
@@ -266,7 +265,7 @@ export function UpdateMediaContactSheet({
       // Destructure to avoid property collision and explicitly handle each field
       const { email, bio, countryIds, ...restData } = data;
       
-      const processedData: UpsertMediaContactData = {
+      const processedData = {
         ...restData,
         // Ensure email is always a string, never undefined
         email: email || '',
@@ -315,14 +314,12 @@ export function UpdateMediaContactSheet({
           countries: (data.countryIds?.map(id => {
             const country = allCountries.find((c: ApiCountry) => c.id === id);
             if (!country) return null;
-            // Create a properly typed TableCountry object
             return {
               id: country.id,
               name: country.name,
-              // TableCountry expects code to be a string
               code: country.code || ''
-            } as TableCountry;
-          }).filter(Boolean) as TableCountry[]) || [],
+            } as Country;
+          }).filter(Boolean) as Country[]) || [],
           beats: data.beats?.map(name => ({ id: '', name })) || [],
           bio: data.bio || null,
           socials: data.socials || null

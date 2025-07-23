@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,38 @@ import { Toaster, toast } from "@/components/ui/sonner";
 export default function LoginClient() {
   const router = useRouter();
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") || "/";
+  const { data: session, status } = useSession();
+  
+  // State for callback URL to handle SSR properly
+  const [callbackUrl, setCallbackUrl] = useState("/");
+  
+  // Handle search params safely on client side only
+  useEffect(() => {
+    if (params) {
+      const url = params.get("callbackUrl") || "/";
+      setCallbackUrl(url);
+    }
+  }, [params]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState("");
+  
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      // If we have a pending redirect, execute it
+      if (pendingRedirect && redirectUrl) {
+        router.push(redirectUrl);
+      } else if (status === "authenticated") {
+        // Otherwise, just go to the homepage if already logged in
+        router.push("/");
+      }
+    }
+  }, [status, session, pendingRedirect, redirectUrl, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,10 +56,17 @@ export default function LoginClient() {
 
     if (res?.error) {
       toast.error(res.error);
+      setLoading(false);
     } else {
-      router.push(res?.url || "/");
+      // Instead of immediate redirect, set pending redirect
+      // and wait for session to be available
+      toast.success("Login successful! Redirecting...");
+      setPendingRedirect(true);
+      setRedirectUrl(res?.url || "/");
+      
+      // Keep loading state active until redirect happens
+      // Loading state will be cleared by the router navigation
     }
-    setLoading(false);
   };
 
   return (

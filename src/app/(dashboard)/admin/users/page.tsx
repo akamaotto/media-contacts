@@ -1,13 +1,15 @@
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import UserTable from "./user-table";
 import { PrismaClient } from "@prisma/client";
 
+// Force dynamic rendering for pages with session checks
+export const dynamic = 'force-dynamic';
+
 export default async function AdminUsersPage() {
   // Server-side admin check
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session || (session.user as any).role !== "ADMIN") {
     notFound();
   }

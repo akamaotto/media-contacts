@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 
 // UI Components
 import { toast } from "sonner";
-import { MediaContactsTable } from '@/components/media-contacts/media-contacts-table';
-import { MediaContactsFilters } from '@/components/media-contacts/media-contacts-filters';
-import { UpdateMediaContactSheet } from '@/components/media-contacts/update-media-contact-sheet';
-import { ViewMediaContactSheet } from '@/components/media-contacts/view-media-contact-sheet';
-import HeaderActionButtons from '@/components/media-contacts/header-action-buttons';
-import AppBrandHeader from '@/components/media-contacts/app-brand-header';
+import { MediaContactsTable } from '@/components/features/media-contacts/media-contacts-table';
+import { MediaContactsFilters } from '@/components/features/media-contacts/media-contacts-filters';
+import { UpdateMediaContactSheet } from '@/components/features/media-contacts/update-media-contact-sheet';
+import { ViewMediaContactSheet } from '@/components/features/media-contacts/view-media-contact-sheet';
+import HeaderActionButtons from '@/components/features/media-contacts/header-action-buttons';
+import AppBrandHeader from '@/components/features/media-contacts/app-brand-header';
 
 // Import types with explicit type imports to avoid conflicts
 import type { MediaContactTableItem, Country, Beat, Outlet } from './columns';
@@ -190,7 +190,7 @@ export default function MediaContactsClientView({
 
 
   /**
-   * Fetch filtered contacts from the backend
+   * Fetch filtered contacts from the backend using the dedicated API endpoint
    */
   const fetchFilteredContacts = useCallback(async (filters: Partial<MediaContactFilters> = {}): Promise<void> => {
     try {
@@ -210,24 +210,64 @@ export default function MediaContactsClientView({
       
       console.log('Fetching contacts with filters:', mergedFilters);
       
-      const result = await getMediaContactsAction(mergedFilters);
+      // Build URL with query parameters for the API call
+      const queryParams = new URLSearchParams();
       
-      // Check if result is an error object
-      if ('error' in result) {
-        console.error('Server returned error:', result.error, 'Type:', result.errorType);
+      // Add search term if present
+      if (mergedFilters.searchTerm) {
+        queryParams.append('searchTerm', mergedFilters.searchTerm);
+      }
+      
+      // Add pagination parameters
+      queryParams.append('page', mergedFilters.page.toString());
+      queryParams.append('pageSize', mergedFilters.pageSize.toString());
+      
+      // Add email verification filter
+      queryParams.append('emailVerified', mergedFilters.emailVerified);
+      
+      // Add array parameters
+      mergedFilters.countryIds.forEach(id => queryParams.append('countryId', id));
+      mergedFilters.beatIds.forEach(id => queryParams.append('beatId', id));
+      mergedFilters.regionCodes.forEach(code => queryParams.append('regionCode', code));
+      mergedFilters.languageCodes.forEach(code => queryParams.append('languageCode', code));
+      
+      // Make the API call with enhanced error handling
+      console.log('Fetching media contacts with params:', queryParams.toString());
+      const response = await fetch(`/api/media-contacts?${queryParams.toString()}`);
+      
+      if (!response.ok) {
+        // Clone the response for detailed debugging
+        const responseClone = response.clone();
+        const responseText = await responseClone.text();
+        console.error('API error response status:', response.status);
+        console.error('API error raw response:', responseText);
+        
+        // Try to parse as JSON if possible
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+          console.error('API returned error data:', errorData);
+        } catch (e) {
+          console.error('API returned non-JSON error response');
+          errorData = { error: `Server error (${response.status}): ${responseText.substring(0, 100)}...`, errorType: 'PARSE_ERROR' };
+        }
         
         // Show appropriate toast notification based on error type
-        if (result.errorType === 'DB_NOT_CONNECTED') {
+        if (errorData.errorType === 'DB_NOT_CONNECTED') {
           toast.error('Database connection error. Please try again later or contact support.');
-        } else if (result.errorType === 'NO_CONTACTS_FOUND') {
+        } else if (errorData.errorType === 'NO_CONTACTS_FOUND') {
           toast.error('No contacts found. Try adjusting your filters or adding new contacts.');
+        } else if (errorData.errorType === 'AUTH_ERROR') {
+          toast.error('Authentication error. Please log in again.');
+          // Redirect to login page after a short delay
+          setTimeout(() => router.push('/login'), 2000);
         } else {
-          toast.error(result.error || 'An error occurred while fetching contacts');
+          toast.error(`Error: ${errorData.error || 'Failed to fetch contacts'} (${response.status})`);
         }
         
         updateState({
-          error: result.error,
-          errorType: result.errorType,
+          error: errorData.error || `Failed to fetch media contacts (Status: ${response.status})`,
+          errorType: errorData.errorType || 'API_ERROR',
           isLoading: false,
           contacts: [],
           filteredContacts: [],
@@ -236,7 +276,10 @@ export default function MediaContactsClientView({
         return;
       }
       
-      // If no error, update with successful data
+      // Parse successful response
+      const result = await response.json();
+      
+      // Update state with the fetched data
       updateState({
         contacts: result.contacts,
         filteredContacts: result.contacts,

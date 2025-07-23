@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { UploadCloudIcon, DownloadCloudIcon, PlusCircleIcon } from "lucide-react";
-import { UserAvatarMenu } from "@/components/user-avatar-menu";
+import { UserAvatarMenu } from "@/components/features/auth/user-avatar-menu";
 
 export interface HeaderActionButtonsProps {
   onAddContactOpen: () => void;

@@ -31,14 +31,14 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Environment variables - never commit these files
-# .env
-# .env.local
-# .env.development
-# .env.development.local
-# .env.test
-# .env.test.local
-# .env.production
-# .env.production.local
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
 
 # Allow example environment file
 !.env.example

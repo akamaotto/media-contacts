@@ -1,21 +1,22 @@
 // Consolidated media contacts actions - single source of truth from backend
 
-// Main table operations
+// Main media contacts operations (including delete)
 export { 
   getMediaContactsAction, 
   upsertMediaContactAction,
   updateMediaContact,
+  deleteMediaContact,
   type PaginatedMediaContactsActionResult, 
   type GetMediaContactsParams,
   type UpsertMediaContactActionState,
   type UpsertMediaContactData,
-  type UpdateMediaContactReturnType
-} from '../../backend/media-contacts-table/actions'
+  type UpdateMediaContactReturnType,
+  type DeleteMediaContactResult
+} from '../../backend/media-contacts/actions'
 
-// Filter and related operations
-export { deleteMediaContact } from '../../backend/media-contacts-filters/delete-media-contact'
-export * from '../../backend/media-contacts-filters/beat-actions'
-export * from '../../backend/media-contacts-filters/country-actions'
-export * from '../../backend/media-contacts-filters/language-actions'
-export * from '../../backend/media-contacts-filters/outlet-actions'
-export * from '../../backend/media-contacts-filters/region-actions'
+// Related entity operations
+export * from '../../backend/beats/actions'
+export * from '../../backend/countries/actions'
+export * from '../../backend/languages/actions'
+export * from '../../backend/outlets/actions'
+export * from '../../backend/regions/actions'

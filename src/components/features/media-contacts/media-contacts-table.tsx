@@ -368,19 +368,13 @@ export function MediaContactsTable({
   return (
     <div className="w-full space-y-4">
       {/* Table with fixed header */}
-      <div className="rounded-md border overflow-hidden">
+      <div className="rounded-md border">
         <div 
-          className="min-h-[400px] max-h-vh overflow-auto" 
+          className="overflow-auto" 
           ref={tableContainerRef}
-          style={{ height: '670px', position: 'relative' }}
+          
         >
-          {/* Diagnostic message commented out to avoid disrupting layout 
-          {table.getRowModel().rows.length > 0 && (
-            <div className="p-2 bg-green-100 text-xs">
-              {table.getRowModel().rows.length} rows available for rendering
-            </div>
-          )}
-          */}
+   
           <Table className="relative w-full">
             <TableHeader className="sticky top-0 z-10 bg-white border-b">
               {table.getHeaderGroups().map(headerGroup => (
@@ -410,11 +404,11 @@ export function MediaContactsTable({
               {/* Handle specific error states first */}
               {error ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    <div className="flex flex-col items-center justify-center py-8">
+                  <TableCell colSpan={columns.length} className="h-30 text-center">
+                    <div className="flex flex-col items-center justify-center py-10">
                       {errorType === 'DB_NOT_CONNECTED' ? (
                         <>
-                          <div className="text-destructive text-lg mb-2">⚠️ Database Connection Error</div>
+                          <div className="text-destructive text-lg mb-3">⚠️ Database Connection Error</div>
                           <p className="text-sm text-muted-foreground mb-4">
                             Unable to connect to the database. Please check your database configuration and try again.
                           </p>

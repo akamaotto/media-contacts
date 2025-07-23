@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import "./globals.css";
-import { AppLayout } from "@/components/layout/app-layout";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { auth } from "@/lib/auth";
 import { DbKeepAliveClient } from "@/components/db-keepalive-client";
 
@@ -51,7 +51,7 @@ export default async function RootLayout({
       >
         <Providers session={session}>
           {isAuthenticated ? (
-            <AppLayout>{children}</AppLayout>
+            <DashboardLayout>{children}</DashboardLayout>
           ) : (
             children
           )}

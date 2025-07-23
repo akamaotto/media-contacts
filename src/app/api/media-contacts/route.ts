@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMediaContactsFromDb, MediaContactError, MediaContactErrorType } from '@/backend/media-contacts-table/repository';
+import { getMediaContactsFromDb, MediaContactError, MediaContactErrorType } from '@/backend/media-contacts/repository';
 import { auth } from '../../../../auth';
 
 /**

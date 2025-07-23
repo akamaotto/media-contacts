@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { type Country } from "@/backend/media-contacts-filters/country-actions";
+import { type Country } from "@/lib/actions/media-contacts";
 
 interface CountryAutocompleteProps {
   countries: Country[];

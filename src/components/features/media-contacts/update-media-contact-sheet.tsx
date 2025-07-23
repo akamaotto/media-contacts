@@ -34,11 +34,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { upsertMediaContactAction, type UpsertMediaContactActionState } from "@/backend/media-contacts-table/actions";
+import { upsertMediaContactAction, getCountries, type UpsertMediaContactActionState, type Country as ApiCountry } from "@/lib/actions/media-contacts";
 import { MediaContactTableItem, Country, Beat, Outlet } from '@/components/features/media-contacts/columns';
-import { getCountries, type Country as ApiCountry } from '@/backend/media-contacts-filters/country-actions';
 import { TagInput } from "@/components/ui/tag-input";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { OutletAutocomplete } from "@/components/features/media-contacts/outlet-autocomplete";
 import { CountryAutocomplete } from "@/components/features/media-contacts/country-autocomplete";
 import { BeatAutocomplete } from "@/components/features/media-contacts/beat-autocomplete";

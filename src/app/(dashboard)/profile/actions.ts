@@ -1,7 +1,6 @@
-// Profile actions - consolidated from backend/users
-// This file now imports from the backend users feature for consistency
+// Profile actions - server actions only, no client imports
 
 export { 
   updateProfileAction as updateProfile,
-  getCurrentUserAction,
-} from '@/lib/actions/users';
+  type UpdateProfileActionState,
+} from './server-actions';

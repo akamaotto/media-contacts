@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { notFound } from "next/navigation";
-import UserTable from "./user-table";
+import UsersClientWrapper from "./users-client-wrapper";
 import { PrismaClient } from "@prisma/client";
 
 // Force dynamic rendering for pages with session checks
@@ -28,11 +28,6 @@ export default async function AdminUsersPage() {
   });
 
   return (
-    <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-6">User Management</h1>
-      <div className="w-full bg-white dark:bg-zinc-900 rounded-md border shadow-sm p-6">
-        <UserTable users={users} />
-      </div>
-    </div>
+    <UsersClientWrapper users={users} />
   );
 }

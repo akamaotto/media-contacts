@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { upsertUser, deleteUser } from "./actions";
 import { useActionState } from "react";
 import {
@@ -33,6 +33,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type User = {
   id: string;
@@ -42,7 +50,15 @@ type User = {
   createdAt: Date;
 };
 
-export default function UserTable({ users }: { users: User[] }) {
+interface UserTableProps {
+  users: User[];
+}
+
+export interface UserTableRef {
+  openAddUserDialog: () => void;
+}
+
+const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formState, formAction] = useActionState(upsertUser, { success: false });
@@ -87,6 +103,11 @@ export default function UserTable({ users }: { users: User[] }) {
     setIsOpen(true);
   };
 
+  // Expose handleAddUser to parent component via ref
+  useImperativeHandle(ref, () => ({
+    openAddUserDialog: handleAddUser
+  }));
+
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setIsOpen(true);
@@ -99,64 +120,77 @@ export default function UserTable({ users }: { users: User[] }) {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <Button onClick={handleAddUser}>Add User</Button>
-      </div>
-
-      <div className="rounded-md border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Role
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {user.name || "-"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {user.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {user.role}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditUser(user)}
-                    >
-                      Edit
-                    </Button>
-                    {user.email !== "akamaotto@gmail.com" && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Table with consistent styling matching Media Contacts table */}
+      <div className="rounded-md border overflow-hidden">
+        <div className="overflow-auto">
+          <Table className="relative w-full">
+            <TableHeader className="sticky top-0 z-10 bg-white border-b">
+              <TableRow>
+                <TableHead className="bg-white font-medium">
+                  Name
+                </TableHead>
+                <TableHead className="bg-white font-medium">
+                  Email
+                </TableHead>
+                <TableHead className="bg-white font-medium">
+                  Role
+                </TableHead>
+                <TableHead className="bg-white font-medium text-right">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    No users found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user.id} className="hover:bg-gray-100">
+                    <TableCell className="font-medium">
+                      {user.name || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {user.email}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        user.role === 'ADMIN' 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                      }`}>
+                        {user.role}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          Edit
+                        </Button>
+                        {user.email !== "akamaotto@gmail.com" && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -253,4 +287,8 @@ export default function UserTable({ users }: { users: User[] }) {
       </AlertDialog>
     </div>
   );
-}
+});
+
+UserTable.displayName = 'UserTable';
+
+export default UserTable;

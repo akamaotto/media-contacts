@@ -51,37 +51,7 @@ export default async function HomePage() {
     if (result.contacts.length === 0) {
       console.log('No contacts found in database, creating fallback data');
       
-      // Create some basic fallback data for display following Rust-inspired explicit typing
-      initialMediaContacts = [
-        {
-          id: '1',
-          name: 'John Doe',
-          email: 'john@example.com',
-          title: 'Tech Journalist',
-          email_verified_status: true,
-          emailVerified: true,
-          updated_at: new Date().toISOString(),
-          outlets: [{ id: '1', name: 'Tech Daily' }],
-          countries: [{ id: '1', name: 'United States', code: 'US' }],
-          beats: [{ id: '1', name: 'Technology' }],
-          bio: 'Technology journalist with 10 years of experience',
-          socials: ['https://twitter.com/johndoe', 'https://linkedin.com/in/johndoe']
-        },
-        {
-          id: '2',
-          name: 'Jane Smith',
-          email: 'jane@example.com',
-          title: 'Senior Editor',
-          email_verified_status: false,
-          emailVerified: false,
-          updated_at: new Date().toISOString(),
-          outlets: [{ id: '2', name: 'Business Weekly' }],
-          countries: [{ id: '2', name: 'United Kingdom', code: 'UK' }],
-          beats: [{ id: '2', name: 'Business' }],
-          bio: 'Business editor specializing in finance and tech',
-          socials: ['https://twitter.com/janesmith']
-        }
-      ];
+     
       totalCount = initialMediaContacts.length;
     } else {
       initialMediaContacts = result.contacts;
@@ -118,12 +88,10 @@ export default async function HomePage() {
 
 function HomePageSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="h-10 bg-gray-200 rounded w-1/4 animate-pulse"></div>
-      <div className="h-8 bg-gray-200 rounded w-full animate-pulse"></div>
-      <div className="space-y-2">
+    <div>
+      <div>
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-200 rounded w-full animate-pulse"></div>
+          <div key={i} className="rounded w-full animate-pulse"></div>
         ))}
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRef, useState } from "react";
-import { deleteMediaContact } from "@/backend/media-contacts-filters/delete-media-contact";
+import { deleteMediaContact } from "@/lib/actions/media-contacts";
 import { toast } from "sonner";
 import { 
   AlertDialog,

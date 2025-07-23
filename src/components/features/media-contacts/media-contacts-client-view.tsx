@@ -19,11 +19,13 @@ import type { Region as RegionType, Language as CountryLanguage } from '@/lib/co
 import type { Language as LanguageType } from '@/lib/language-data';
 
 // Import server actions with proper typing
-import { getMediaContactsAction } from '@/lib/actions/media-contacts';
-import { getCountries } from '@/backend/media-contacts-filters/country-actions';
-import { getBeats } from '@/backend/media-contacts-filters/beat-actions';
-import { getAllRegions } from '@/backend/media-contacts-filters/region-actions';
-import { getAllLanguages } from '@/backend/media-contacts-filters/language-actions';
+import { 
+  getMediaContactsAction,
+  getCountries,
+  getBeats,
+  getAllRegions,
+  getAllLanguages
+} from '@/lib/actions/media-contacts';
 
 // Define backend types for data transformation
 interface BackendCountry {
@@ -721,8 +723,8 @@ if (state.error) {
 
 // Main component render
 return (
-  <div className="flex flex-col min-h-screen bg-muted/40 w-full">
-    <div className="container mx-auto py-6 space-y-4 md:space-y-6">
+  <div className="flex flex-col min-h-screen w-full">
+    <div className="container mx-auto pb-6 space-y-4 md:space-y-6">
       <MediaContactsFilters
         mainSearchTerm={state.searchTerm}
         setMainSearchTerm={handleSearchTermChange} // Direct change handler for input

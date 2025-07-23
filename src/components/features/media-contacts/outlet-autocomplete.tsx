@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { searchOutlets } from "@/backend/media-contacts-filters/outlet-actions";
+import { searchOutlets } from "@/lib/actions/media-contacts";
 
 export type Outlet = {
   id: string;

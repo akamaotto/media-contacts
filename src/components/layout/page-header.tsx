@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Home } from "lucide-react";
-import { UserAvatarMenu } from "@/components/user-avatar-menu";
 import { Button } from "@/components/ui/button";
 
 interface PageHeaderProps {
@@ -21,7 +20,6 @@ export function PageHeader({ title }: PageHeaderProps) {
         </Button>
         <h1 className="text-2xl font-bold">{title}</h1>
       </div>
-      <UserAvatarMenu />
     </div>
   );
 }

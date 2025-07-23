@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
-import { Toaster, toast } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();

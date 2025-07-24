@@ -10,8 +10,9 @@ import { MediaContactsTable } from '@/components/features/media-contacts/media-c
 import { MediaContactsFilters } from '@/components/features/media-contacts/media-contacts-filters';
 import { UpdateMediaContactSheet } from '@/components/features/media-contacts/update-media-contact-sheet';
 import { ViewMediaContactSheet } from '@/components/features/media-contacts/view-media-contact-sheet';
-import HeaderActionButtons from '@/components/features/media-contacts/header-action-buttons';
 import AppBrandHeader from '@/components/features/media-contacts/app-brand-header';
+
+// CSVIntegrationWrapper removed - functionality moved to breadcrumb buttons
 
 // Import types with explicit type imports to avoid conflicts
 import type { MediaContactTableItem, Country, Beat, Outlet } from './columns';
@@ -474,6 +475,29 @@ export default function MediaContactsClientView({
     };
   }, [state.isInitialized, fetchFilteredContacts, transformBackendCountries, transformBackendBeats, initialPage, initialPageSize, updateState]);
 
+  // Listen for refresh events from CSV import
+  useEffect(() => {
+    const handleRefresh = () => {
+      console.log('Received refresh-media-contacts event, refreshing data...');
+      fetchFilteredContacts({
+        page: state.currentPage,
+        pageSize: state.pageSize,
+        searchTerm: state.searchTerm,
+        countryIds: state.selectedCountryIds,
+        beatIds: state.selectedBeatIds,
+        regionCodes: state.selectedRegionCodes,
+        languageCodes: state.selectedLanguageCodes,
+        emailVerified: state.emailVerified,
+      });
+    };
+
+    window.addEventListener('refresh-media-contacts', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('refresh-media-contacts', handleRefresh);
+    };
+  }, [fetchFilteredContacts, state.currentPage, state.pageSize, state.searchTerm, state.selectedCountryIds, state.selectedBeatIds, state.selectedRegionCodes, state.selectedLanguageCodes, state.emailVerified]);
+
   // Handle filter changes and pagination
   useEffect(() => {
     if (firstRenderRef.current) {
@@ -725,6 +749,7 @@ if (state.error) {
 return (
   <div className="flex flex-col min-h-screen w-full">
     <div className="container mx-auto pb-6 space-y-4 md:space-y-6">
+      {/* Button group 2 removed - functionality moved to breadcrumb buttons */}
       <MediaContactsFilters
         mainSearchTerm={state.searchTerm}
         setMainSearchTerm={handleSearchTermChange} // Direct change handler for input
@@ -811,31 +836,34 @@ return (
         />
       )}
 
-      {/* Basic Delete Confirmation Dialog (Can be replaced with ShadCN Alert Dialog) */}
-      {state.isDeleteConfirmationOpen && state.contactToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-background p-6 rounded-lg shadow-xl">
-            <h3 className="text-lg font-medium">Confirm Deletion</h3>
-            <p className="text-sm text-muted-foreground mt-2">
-              Are you sure you want to delete {state.contactToDelete.name}?
-            </p>
-            <div className="mt-4 flex justify-end space-x-2">
-              <button 
-                onClick={() => updateState({ isDeleteConfirmationOpen: false, contactToDelete: null })}
-                className="px-4 py-2 border rounded-md text-sm"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleConfirmDeleteContact}
-                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm hover:bg-destructive/90"
-              >
-                Delete
-              </button>
+      <div className="space-y-4">
+
+        {/* Basic Delete Confirmation Dialog (Can be replaced with ShadCN Alert Dialog) */}
+        {state.isDeleteConfirmationOpen && state.contactToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-background p-6 rounded-lg shadow-xl">
+              <h3 className="text-lg font-medium">Confirm Deletion</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Are you sure you want to delete {state.contactToDelete.name}?
+              </p>
+              <div className="mt-4 flex justify-end space-x-2">
+                <button 
+                  onClick={() => updateState({ isDeleteConfirmationOpen: false, contactToDelete: null })}
+                  className="px-4 py-2 border rounded-md text-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleConfirmDeleteContact}
+                  className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm hover:bg-destructive/90"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   </div>
   );

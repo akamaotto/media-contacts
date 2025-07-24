@@ -16,7 +16,8 @@ import {
 import { usePathname } from 'next/navigation'
 import { UserPlus } from 'lucide-react'
 import { DashboardLayoutTitle } from './dashboard-layout-title'
-import { getHomePageButtons, getUsersPageButtons, getDefaultButtons } from './dashboard-button-configs'
+import { BreadcrumbButtons } from './breadcrumb-buttons'
+import { getDefaultButtons } from './dashboard-button-configs'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -54,7 +55,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       return { 
         title: 'Home', 
         subtitle: 'Media Contacts Overview',
-        buttons: getHomePageButtons(() => setIsAddContactOpen(true))
+        buttons: [],
+        useBreadcrumbButtons: true // Use functional breadcrumb buttons for home page
       }
     } else if (pathname === '/profile') {
       return { 
@@ -105,11 +107,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main content area */}
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <DashboardLayoutTitle 
-            title={breadcrumb.title}
-            subtitle={breadcrumb.subtitle}
-            buttons={breadcrumb.buttons}
-          />
+          {breadcrumb.useBreadcrumbButtons ? (
+            <div className="flex items-center justify-between px-4 py-2">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">{breadcrumb.title}</h1>
+                <p className="text-muted-foreground">{breadcrumb.subtitle}</p>
+              </div>
+              <BreadcrumbButtons 
+                onAddContact={() => setIsAddContactOpen(true)}
+                currentFilters={{}}
+                onImportComplete={() => {
+                  // Trigger refresh of media contacts data after import
+                  window.dispatchEvent(new CustomEvent('refresh-media-contacts'));
+                }}
+                onRefresh={() => {
+                  // Trigger refresh of media contacts data
+                  window.dispatchEvent(new CustomEvent('refresh-media-contacts'));
+                }}
+              />
+            </div>
+          ) : (
+            <DashboardLayoutTitle 
+              title={breadcrumb.title}
+              subtitle={breadcrumb.subtitle}
+              buttons={breadcrumb.buttons}
+            />
+          )}
           {/* Main content */}
           <div>
             {children}

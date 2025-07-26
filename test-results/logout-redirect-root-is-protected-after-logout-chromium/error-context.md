@@ -1,0 +1,137 @@
+# Page snapshot
+
+```yaml
+- text: Search
+- textbox "Search"
+- text: Regions
+- combobox "Regions": Select regions...
+- text: Countries
+- combobox "Countries": Select countries...
+- text: Beats
+- combobox "Beats": Select beats...
+- text: Languages
+- combobox "Languages": Select languages...
+- text: Email Verification
+- combobox: All Contacts
+- table:
+  - rowgroup:
+    - row "Name Email Outlets Beats Countries Updated Actions":
+      - cell "Name":
+        - button "Name"
+      - cell "Email":
+        - button "Email"
+      - cell "Outlets"
+      - cell "Beats"
+      - cell "Countries"
+      - cell "Updated":
+        - button "Updated"
+      - cell "Actions"
+  - rowgroup:
+    - row "Kristina Murray IV Principal Implementation Analyst kristina_murray@yahoo.com Tech Chronicle Health & Wellness Today Artificial Intelligence Canada Jul 24, 2025 Open menu":
+      - cell "Kristina Murray IV Principal Implementation Analyst"
+      - cell "kristina_murray@yahoo.com"
+      - cell "Tech Chronicle Health & Wellness Today"
+      - cell "Artificial Intelligence"
+      - cell "Canada"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Brooke Bednar Internal Markets Coordinator brooke_bednar23@hotmail.com Tech Chronicle Eco Watch Renewable Energy Artificial Intelligence Japan United Kingdom Jul 24, 2025 Open menu":
+      - cell "Brooke Bednar Internal Markets Coordinator"
+      - cell "brooke_bednar23@hotmail.com"
+      - cell "Tech Chronicle Eco Watch"
+      - cell "Renewable Energy Artificial Intelligence"
+      - cell "Japan United Kingdom"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Gilberto Wintheiser Internal Intranet Architect gilberto.wintheiser42@gmail.com Global Finance Times Cybersecurity Germany United Kingdom Jul 24, 2025 Open menu":
+      - cell "Gilberto Wintheiser Internal Intranet Architect"
+      - cell "gilberto.wintheiser42@gmail.com"
+      - cell "Global Finance Times"
+      - cell "Cybersecurity"
+      - cell "Germany United Kingdom"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Dr. Ollie Deckow Direct Metrics Executive dr.ollie38@gmail.com Eco Watch Cybersecurity Biotechnology Canada Germany Jul 24, 2025 Open menu":
+      - cell "Dr. Ollie Deckow Direct Metrics Executive"
+      - cell "dr.ollie38@gmail.com"
+      - cell "Eco Watch"
+      - cell "Cybersecurity Biotechnology"
+      - cell "Canada Germany"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Mrs. Kathy Mraz Chief Assurance Liaison mrs._kathy@yahoo.com Eco Watch Health & Wellness Today Cybersecurity Biotechnology United States Jul 24, 2025 Open menu":
+      - cell "Mrs. Kathy Mraz Chief Assurance Liaison"
+      - cell "mrs._kathy@yahoo.com"
+      - cell "Eco Watch Health & Wellness Today"
+      - cell "Cybersecurity Biotechnology"
+      - cell "United States"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Willie Stiedemann District Data Designer willie_stiedemann@hotmail.com Eco Watch Health & Wellness Today Artificial Intelligence Germany United States Jul 24, 2025 Open menu":
+      - cell "Willie Stiedemann District Data Designer"
+      - cell "willie_stiedemann@hotmail.com"
+      - cell "Eco Watch Health & Wellness Today"
+      - cell "Artificial Intelligence"
+      - cell "Germany United States"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Katie Cartwright Internal Marketing Consultant katie_cartwright15@yahoo.com Global Finance Times Eco Watch Biotechnology Artificial Intelligence Japan United States Jul 24, 2025 Open menu":
+      - cell "Katie Cartwright Internal Marketing Consultant"
+      - cell "katie_cartwright15@yahoo.com"
+      - cell "Global Finance Times Eco Watch"
+      - cell "Biotechnology Artificial Intelligence"
+      - cell "Japan United States"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Phillip Wilkinson DDS Global Tactics Coordinator phillip_wilkinson@yahoo.com Health & Wellness Today Sports Report Daily Venture Capital Germany Jul 24, 2025 Open menu":
+      - cell "Phillip Wilkinson DDS Global Tactics Coordinator"
+      - cell "phillip_wilkinson@yahoo.com"
+      - cell "Health & Wellness Today Sports Report Daily"
+      - cell "Venture Capital"
+      - cell "Germany"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Clifton Pacocha Product Applications Specialist clifton_pacocha@gmail.com Tech Chronicle Eco Watch Renewable Energy Venture Capital Japan Jul 24, 2025 Open menu":
+      - cell "Clifton Pacocha Product Applications Specialist"
+      - cell "clifton_pacocha@gmail.com"
+      - cell "Tech Chronicle Eco Watch"
+      - cell "Renewable Energy Venture Capital"
+      - cell "Japan"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+    - row "Marlon Goyette Global Metrics Administrator marlon.goyette0@yahoo.com Tech Chronicle Biotechnology Venture Capital Japan United States Jul 24, 2025 Open menu":
+      - cell "Marlon Goyette Global Metrics Administrator"
+      - cell "marlon.goyette0@yahoo.com"
+      - cell "Tech Chronicle"
+      - cell "Biotechnology Venture Capital"
+      - cell "Japan United States"
+      - cell "Jul 24, 2025"
+      - cell "Open menu":
+        - button "Open menu"
+- paragraph: Rows per page
+- combobox: "10"
+- text: Showing 11 to 20 of 50 contacts
+- navigation "pagination":
+  - list:
+    - listitem:
+      - button "Go to first page"
+    - listitem:
+      - button "Go to previous page"
+    - listitem:
+      - button "Go to next page"
+    - listitem:
+      - button "Go to last page"
+- region "Notifications alt+T"
+- alert
+- button "Open Next.js Dev Tools":
+  - img
+```

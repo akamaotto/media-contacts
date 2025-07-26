@@ -13,6 +13,12 @@ interface Region {
   category: RegionCategory;
   parentCode?: string; // For subregions
   description?: string;
+  countries?: Array<{
+    id: string;
+    name: string;
+    code: string;
+    flag_emoji?: string;
+  }>; // Associated countries for flag display
 }
 
 export const regions: Region[] = [

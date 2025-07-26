@@ -39,8 +39,11 @@ model Outlet {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  // Relationships (Many-to-Many)
+  // Relationships
+  publisher     Publisher?     @relation("PublisherOutlets", fields: [publisherId], references: [id])
+  publisherId   String?
   mediaContacts MediaContact[] @relation("MediaContactOutlets")
+  categories    Category[]     @relation("OutletCategories")
 
   @@map("outlets")
 }
@@ -103,8 +106,38 @@ model Beat {
 
   // Relationships (Many-to-Many)
   mediaContacts MediaContact[] @relation("MediaContactBeats")
+  categories    Category[]     @relation("BeatCategories")
 
   @@map("beats")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g., "Technology", "Business", "Health"
+  description String?  // Optional description of the category
+  color       String?  // Optional color for UI theming (e.g., "#3B82F6")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relationships (Many-to-Many)
+  beats   Beat[]   @relation("BeatCategories")
+  outlets Outlet[] @relation("OutletCategories")
+
+  @@map("categories")
+}
+
+model Publisher {
+  id          String   @id @default(uuid())
+  name        String   @unique // Publisher name should be unique
+  description String?  // Optional description of the publisher
+  website     String?  // Publisher's main website
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relationships (One-to-Many)
+  outlets Outlet[] @relation("PublisherOutlets")
+
+  @@map("publishers")
 }
 
 enum Role {

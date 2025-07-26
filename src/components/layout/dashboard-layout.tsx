@@ -14,7 +14,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { usePathname } from 'next/navigation'
-import { UserPlus } from 'lucide-react'
+import { UserPlus, Plus } from 'lucide-react'
 import { DashboardLayoutTitle } from './dashboard-layout-title'
 import { BreadcrumbButtons } from './breadcrumb-buttons'
 import { getDefaultButtons } from './dashboard-button-configs'
@@ -49,6 +49,71 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
+  // Handle Add Country action for Countries page
+  const handleAddCountry = () => {
+    const countriesTableRef = (window as any).__countriesTableRef;
+    if (countriesTableRef?.current) {
+      countriesTableRef.current.openAddCountryModal();
+    } else {
+      console.warn('CountriesTable ref not available');
+    }
+  };
+
+  // Handle Add Language action for Languages page
+  const handleAddLanguage = () => {
+    const languagesTableRef = (window as any).__languagesTableRef;
+    if (languagesTableRef?.current) {
+      languagesTableRef.current.openAddLanguageModal();
+    } else {
+      console.warn('LanguagesTable ref not available');
+    }
+  };
+
+  // Handle Add Region action for Regions page
+  const handleAddRegion = () => {
+    if (typeof window !== 'undefined' && (window as any).openAddRegionSheet) {
+      (window as any).openAddRegionSheet();
+    } else {
+      console.warn('openAddRegionSheet function not available');
+    }
+  };
+
+  // Handle Add Beat action for Beats page
+  const handleAddBeat = () => {
+    if (typeof window !== 'undefined' && (window as any).openAddBeatModal) {
+      (window as any).openAddBeatModal();
+    } else {
+      console.warn('openAddBeatModal function not available');
+    }
+  };
+
+  // Handle Add Category action for Categories page
+  const handleAddCategory = () => {
+    if (typeof window !== 'undefined' && (window as any).openAddCategoryModal) {
+      (window as any).openAddCategoryModal();
+    } else {
+      console.warn('openAddCategoryModal function not available');
+    }
+  };
+
+  // Handle Add Publisher action for Publishers page
+  const handleAddPublisher = () => {
+    if (typeof window !== 'undefined' && (window as any).openAddPublisherModal) {
+      (window as any).openAddPublisherModal();
+    } else {
+      console.warn('openAddPublisherModal function not available');
+    }
+  };
+
+  // Handle Add Outlet action for Outlets page
+  const handleAddOutlet = () => {
+    if (typeof window !== 'undefined' && (window as any).openAddOutletModal) {
+      (window as any).openAddOutletModal();
+    } else {
+      console.warn('openAddOutletModal function not available');
+    }
+  };
+
   // Generate breadcrumb and buttons based on current path
   const getBreadcrumb = () => {
     if (pathname === '/') {
@@ -63,6 +128,94 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         title: 'Profile', 
         subtitle: 'Manage your account settings',
         buttons: getDefaultButtons()
+      }
+    } else if (pathname === '/publishers') {
+      return { 
+        title: 'Publishers', 
+        subtitle: 'Manage media publishers and their outlets',
+        buttons: [{
+          label: "Add Publisher",
+          onClick: handleAddPublisher,
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
+      }
+    } else if (pathname === '/outlets') {
+      return { 
+        title: 'Outlets', 
+        subtitle: 'Manage media outlets and their categories',
+        buttons: [{
+          label: "Add Outlet",
+          onClick: handleAddOutlet,
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
+      }
+    } else if (pathname === '/beats') {
+      return { 
+        title: 'Beats', 
+        subtitle: 'Manage and organize journalist beats',
+        buttons: [{
+          label: "Add Beat",
+          onClick: handleAddBeat,
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
+      }
+    } else if (pathname === '/categories') {
+      return { 
+        title: 'Categories', 
+        subtitle: 'Organize beats and outlets by editorial themes',
+        buttons: [{
+          label: "Add Category",
+          onClick: handleAddCategory,
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
+      }
+    } else if (pathname === '/countries') {
+      return { 
+        title: 'Countries', 
+        subtitle: 'Manage and organize countries',
+        buttons: [{
+          label: "Add Country",
+          onClick: handleAddCountry,
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
+      }
+    } else if (pathname === '/languages') {
+      return { 
+        title: 'Languages', 
+        subtitle: 'Manage and organize languages',
+        buttons: [{
+          label: "Add Language",
+          onClick: handleAddLanguage,
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
+      }
+    } else if (pathname === '/regions') {
+      return { 
+        title: 'Regions', 
+        subtitle: 'Manage and organize regions',
+        buttons: [{
+          label: "Add Region",
+          onClick: handleAddRegion,
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
+      }
+    } else if (pathname === '/publishers') {
+      return { 
+        title: 'Publishers', 
+        subtitle: 'Manage media publishers and their outlets',
+        buttons: [{
+          label: "Add Publisher",
+          onClick: handleAddPublisher,
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
       }
     } else if (pathname === '/admin/users') {
       return { 

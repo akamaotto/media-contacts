@@ -12,6 +12,13 @@ import {
   IconDashboard,
   IconUserCog,
   IconLogout,
+  IconBuilding,
+  IconBuildingStore,
+  IconTag,
+  IconTags,
+  IconWorld,
+  IconLanguage,
+  IconMap2,
 } from "@tabler/icons-react"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
@@ -47,6 +54,48 @@ export function MediaContactsSidebar({ ...props }: React.ComponentProps<typeof S
         url: "/",
         icon: IconDashboard,
         isActive: pathname === "/"
+      },
+      {
+        title: "Publishers",
+        url: "/publishers",
+        icon: IconBuilding,
+        isActive: pathname === "/publishers"
+      },
+      {
+        title: "Outlets",
+        url: "/outlets",
+        icon: IconBuildingStore,
+        isActive: pathname === "/outlets"
+      },
+      {
+        title: "Beats",
+        url: "/beats",
+        icon: IconTag,
+        isActive: pathname === "/beats"
+      },
+      {
+        title: "Categories",
+        url: "/categories",
+        icon: IconTags,
+        isActive: pathname === "/categories"
+      },
+      {
+        title: "Countries",
+        url: "/countries",
+        icon: IconWorld,
+        isActive: pathname === "/countries"
+      },
+      {
+        title: "Languages",
+        url: "/languages",
+        icon: IconLanguage,
+        isActive: pathname === "/languages"
+      },
+      {
+        title: "Regions",
+        url: "/regions",
+        icon: IconMap2,
+        isActive: pathname === "/regions"
       },
       {
         title: "Users",

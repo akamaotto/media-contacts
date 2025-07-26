@@ -79,38 +79,29 @@ export const RegionFilterPopover: React.FC<RegionFilterPopoverProps> = ({
             <CommandList>
               <CommandEmpty>No regions found.</CommandEmpty>
               <CommandGroup>
-                {regionOptions
-                  .filter((region) => {
-                    const label = region?.name || "";
-                    const searchTerm = searchFilterRegionTerm || "";
-                    return (
-                      searchTerm === "" ||
-                      label.toLowerCase().includes(searchTerm.toLowerCase())
-                    );
-                  })
-                  .map((region) => (
-                    <CommandItem
-                      key={region.code}
-                      value={region.name}
-                      onSelect={() => {
-                        setSelectedRegionCodes((prev) =>
-                          prev.includes(region.code)
-                            ? prev.filter((code) => code !== region.code)
-                            : [...prev, region.code]
-                        );
-                      }}
-                    >
-                      <CheckIcon
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedRegionCodes.includes(region.code)
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {region.name}
-                    </CommandItem>
-                  ))}
+                {regionOptions.map((region) => (
+                  <CommandItem
+                    key={region.code}
+                    value={region.name}
+                    onSelect={() => {
+                      setSelectedRegionCodes((prev) =>
+                        prev.includes(region.code)
+                          ? prev.filter((code) => code !== region.code)
+                          : [...prev, region.code]
+                      );
+                    }}
+                  >
+                    <CheckIcon
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedRegionCodes.includes(region.code)
+                          ? "opacity-100"
+                          : "opacity-0"
+                      )}
+                    />
+                    {region.name}
+                  </CommandItem>
+                ))}
               </CommandGroup>
             </CommandList>
           </Command>

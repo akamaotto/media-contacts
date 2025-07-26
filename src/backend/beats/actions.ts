@@ -6,16 +6,29 @@ export interface Beat {
   id: string;
   name: string;
   description?: string | null;
+  contactCount?: number;
+  countries?: Array<{
+    id: string;
+    name: string;
+    code: string;
+    flag_emoji?: string | null;
+  }>;
+  categories?: Array<{
+    id: string;
+    name: string;
+    description?: string | null;
+    color?: string | null;
+  }>;
 }
 
 /**
- * Server action to fetch all beats from the database
+ * Server action to fetch all beats from the database with contact counts and countries
  * Following Rust-inspired explicit return type and error handling
- * @returns Array of Beat objects, or fallback data if the database query fails
+ * @returns Array of Beat objects with contact counts and countries, or fallback data if the database query fails
  */
-export async function getBeats(): Promise<Beat[]> {
+export async function getAllBeats(): Promise<Beat[]> {
   try {
-    console.log('Fetching beats from database...');
+    console.log('Fetching all beats from database with contact counts and countries...');
     
     // Validate Prisma client availability using fail-fast approach
     if (!prisma) {
@@ -23,30 +36,76 @@ export async function getBeats(): Promise<Beat[]> {
     }
     
     const beats = await prisma.beat.findMany({
-      select: {
-        id: true,
-        name: true,
-        description: true,
+      include: {
+        mediaContacts: {
+          include: {
+            countries: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                flag_emoji: true
+              }
+            }
+          }
+        },
+        categories: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            color: true,
+          },
+        },
       },
       orderBy: {
         name: 'asc',
       },
     });
     
-    console.log(`Successfully fetched ${beats.length} beats from database`);
+    // Transform data to include contact counts and unique countries
+    const transformedBeats: Beat[] = beats.map(beat => {
+      const contactCount = beat.mediaContacts.length;
+      
+      // Get unique countries from all contacts covering this beat
+      const countryMap = new Map();
+      beat.mediaContacts.forEach(contact => {
+        contact.countries.forEach(country => {
+          if (!countryMap.has(country.id)) {
+            countryMap.set(country.id, {
+              id: country.id,
+              name: country.name,
+              code: country.code,
+              flag_emoji: country.flag_emoji
+            });
+          }
+        });
+      });
+      
+      return {
+        id: beat.id,
+        name: beat.name,
+        description: beat.description,
+        contactCount,
+        countries: Array.from(countryMap.values())
+      };
+    });
     
-    // Validate the returned data
-    if (!beats || !Array.isArray(beats)) {
-      console.warn('Beat data is not in expected format, using fallback data');
-      return generateFallbackBeats();
-    }
-    
-    return beats;
+    console.log(`Successfully fetched ${transformedBeats.length} beats from database`);
+    return transformedBeats;
   } catch (error) {
     console.error("Failed to fetch beats:", error);
     // Return fallback data to prevent UI breakage
     return generateFallbackBeats();
   }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use getAllBeats() instead
+ */
+export async function getBeats(): Promise<Beat[]> {
+  return getAllBeats();
 }
 
 /**
@@ -130,5 +189,125 @@ export async function getBeatByName(name: string): Promise<Beat | null> {
   } catch (error) {
     console.error('Error getting beat by name:', error);
     return null;
+  }
+}
+
+/**
+ * Server action to create a new beat in database
+ * @param beatData - Beat data to create
+ * @returns Created Beat object
+ */
+export async function createBeat(beatData: { name: string; description?: string }, categoryIds?: string[]): Promise<Beat> {
+  try {
+    console.log('Creating beat:', beatData, 'with categories:', categoryIds);
+    
+    const newBeat = await prisma.beat.create({
+      data: {
+        name: beatData.name.trim(),
+        description: beatData.description?.trim() || null,
+        categories: categoryIds && categoryIds.length > 0 ? {
+          connect: categoryIds.map(id => ({ id }))
+        } : undefined,
+      },
+      include: {
+        categories: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            color: true,
+          },
+        },
+      },
+    });
+    
+    console.log('Successfully created beat:', newBeat.id);
+    return newBeat;
+  } catch (error) {
+    console.error('Error creating beat:', error);
+    
+    // Handle unique constraint violation
+    if (error instanceof Error && error.message.includes('Unique constraint')) {
+      throw new Error(`Beat with name "${beatData.name}" already exists`);
+    }
+    
+    throw new Error('Failed to create beat');
+  }
+}
+
+/**
+ * Server action to update an existing beat in database
+ * @param id - Beat ID to update
+ * @param beatData - Updated beat data
+ * @returns Updated Beat object
+ */
+export async function updateBeat(id: string, beatData: { name: string; description?: string }, categoryIds?: string[]): Promise<Beat> {
+  try {
+    console.log('Updating beat:', id, beatData, 'with categories:', categoryIds);
+    
+    const updatedBeat = await prisma.beat.update({
+      where: { id },
+      data: {
+        name: beatData.name.trim(),
+        description: beatData.description?.trim() || null,
+        categories: categoryIds !== undefined ? {
+          set: categoryIds.map(id => ({ id }))
+        } : undefined,
+      },
+      include: {
+        categories: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            color: true,
+          },
+        },
+      },
+    });
+    
+    console.log('Successfully updated beat:', updatedBeat.id);
+    return updatedBeat;
+  } catch (error) {
+    console.error('Error updating beat:', error);
+    
+    // Handle unique constraint violation
+    if (error instanceof Error && error.message.includes('Unique constraint')) {
+      throw new Error(`Beat with name "${beatData.name}" already exists`);
+    }
+    
+    // Handle not found
+    if (error instanceof Error && error.message.includes('Record to update not found')) {
+      throw new Error('Beat not found');
+    }
+    
+    throw new Error('Failed to update beat');
+  }
+}
+
+/**
+ * Server action to delete a beat from database
+ * @param id - Beat ID to delete
+ * @returns Success message
+ */
+export async function deleteBeat(id: string): Promise<{ message: string }> {
+  try {
+    console.log('Deleting beat:', id);
+    
+    await prisma.beat.delete({
+      where: { id },
+    });
+    
+    console.log('Successfully deleted beat:', id);
+    return { message: 'Beat deleted successfully' };
+  } catch (error) {
+    console.error('Error deleting beat:', error);
+    
+    // Handle not found
+    if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
+      throw new Error('Beat not found');
+    }
+    
+    throw new Error('Failed to delete beat');
   }
 }

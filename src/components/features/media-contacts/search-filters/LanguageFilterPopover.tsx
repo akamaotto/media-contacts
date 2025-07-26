@@ -78,42 +78,33 @@ export const LanguageFilterPopover: React.FC<LanguageFilterPopoverProps> = ({
           <CommandList>
             <CommandEmpty>No languages found.</CommandEmpty>
             <CommandGroup>
-              {languageOptions
-                .filter((language) => {
-                  const label = language?.name || language?.label || "";
-                  const searchTerm = searchFilterLanguageTerm || "";
-                  return (
-                    searchTerm === "" ||
-                    label.toLowerCase().includes(searchTerm.toLowerCase())
-                  );
-                })
-                .map((language) => {
-                  const code = language?.code || language?.value || "";
-                  const name = language?.name || language?.label || "";
-                  return (
-                    <CommandItem
-                      key={code}
-                      value={name}
-                      onSelect={() => {
-                        setSelectedLanguageCodes((prev) =>
-                          prev.includes(code)
-                            ? prev.filter((prevCode) => prevCode !== code)
-                            : [...prev, code]
-                        );
-                      }}
-                    >
-                      <CheckIcon
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedLanguageCodes.includes(code)
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {name}
-                    </CommandItem>
-                  );
-                })}
+              {languageOptions.map((language) => {
+                const code = language.code;
+                const name = language.name;
+                return (
+                  <CommandItem
+                    key={code}
+                    value={name}
+                    onSelect={() => {
+                      setSelectedLanguageCodes((prev) =>
+                        prev.includes(code)
+                          ? prev.filter((prevCode) => prevCode !== code)
+                          : [...prev, code]
+                      );
+                    }}
+                  >
+                    <CheckIcon
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedLanguageCodes.includes(code)
+                          ? "opacity-100"
+                          : "opacity-0"
+                      )}
+                    />
+                    {name}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

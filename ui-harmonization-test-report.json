@@ -1,0 +1,471 @@
+{
+  "timestamp": "2025-07-26T12:48:56.218Z",
+  "summary": {
+    "passed": 92,
+    "failed": 0,
+    "warnings": 0,
+    "successRate": "100.0%"
+  },
+  "details": [
+    {
+      "name": "publishers add sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers edit sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers old add modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers old edit modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats edit sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats old add modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats old edit modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories edit sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories old add modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories old edit modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets edit sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets old add modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets old edit modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "countries add sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "countries edit sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "countries old add modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "countries old edit modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "regions add sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "regions edit sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "regions old add modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "regions old edit modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "languages add sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "languages edit sheet naming",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "languages old add modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "languages old edit modal removed",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers add sheet uses Sheet component",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers add sheet has consistent width",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers add sheet handles overflow",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers add sheet has form validation",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers add sheet has loading states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers edit sheet uses Sheet component",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet uses Sheet component",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet has consistent width",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet handles overflow",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet has form validation",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet has loading states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats edit sheet uses Sheet component",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet uses Sheet component",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet has consistent width",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet handles overflow",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet has form validation",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet has loading states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories edit sheet uses Sheet component",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet uses Sheet component",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet has consistent width",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet handles overflow",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet has form validation",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet has loading states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets edit sheet uses Sheet component",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers table has search input",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers table has dropdown actions",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers table has count badges",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers table has empty states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers table has loading states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats table has search input",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats table has dropdown actions",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats table has count badges",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats table has empty states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats table has loading states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories table has search input",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories table has dropdown actions",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories table has count badges",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories table has empty states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories table has loading states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets table has search input",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets table has dropdown actions",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets table has count badges",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets table has empty states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets table has loading states",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers client view imports sheets",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats client view imports sheets",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories client view imports sheets",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets client view imports sheets",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers add sheet has form labels",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers add sheet has descriptions",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers table has screen reader support",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet has form labels",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet has descriptions",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats table has screen reader support",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet has form labels",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet has descriptions",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories table has screen reader support",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet has form labels",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet has descriptions",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets table has screen reader support",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "publishers add sheet is responsive",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "beats add sheet is responsive",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "categories add sheet is responsive",
+      "status": "PASS",
+      "message": ""
+    },
+    {
+      "name": "outlets add sheet is responsive",
+      "status": "PASS",
+      "message": ""
+    }
+  ]
+}

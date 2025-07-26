@@ -116,11 +116,10 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
     const pageNumber = filters?.page || 1;
     const itemsPerPage = filters?.pageSize || 10;
     console.log('Repository received filters:', JSON.stringify(filters));
-    
-    // Build filter conditions using Prisma's WHERE clause - starting with empty where
+        // Build filter conditions using Prisma's WHERE clause
     const whereClause: Prisma.MediaContactWhereInput = {};
     
-    // Apply filters if provided, following fail-fast validation approach
+    // Apply filters if provided
     if (filters) {
       const conditions: Prisma.MediaContactWhereInput[] = [];
       
@@ -128,7 +127,6 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
       if (filters.searchTerm && filters.searchTerm.trim() !== '') {
         const searchTerm = filters.searchTerm.trim();
         console.log(`Applying search term filter: "${searchTerm}"`);
-        // Search across multiple fields with expanded search coverage
         conditions.push({
           OR: [
             { name: { contains: searchTerm, mode: 'insensitive' } },
@@ -193,7 +191,7 @@ export async function getMediaContactsFromDb(filters?: MediaContactFilters): Pro
         });
       }
       
-      // Combine all conditions with AND logic
+      // Apply conditions only if we have some
       if (conditions.length > 0) {
         whereClause.AND = conditions;
       }

@@ -34,9 +34,24 @@ import type { Language } from '@/lib/language-data';
 export interface Country {
   id: string;
   name: string;
-  code: string;
-  regions?: Array<{ code: string; name: string }>;
-  languages?: Array<{ code: string; name: string }>;
+  code?: string | null;
+  phone_code?: string | null;
+  capital?: string | null;
+  flag_emoji?: string | null;
+  regions?: {
+    id: string;
+    name: string;
+    code: string;
+    category: string;
+  }[];
+  languages?: {
+    id: string;
+    name: string;
+    code: string;
+  }[];
+  _count?: {
+    mediaContacts: number;
+  };
   [key: string]: any; // Allow additional properties
 }
 

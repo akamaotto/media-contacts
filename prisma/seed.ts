@@ -51,14 +51,16 @@ async function main() {
   const regionMap = await seedRegions(prisma);
   console.log(`[DEBUG] In main() after seedRegions: regionMap.size = ${regionMap.size}`);
   
+  // Seed languages
+  const languageMap = await seedLanguages(prisma);
+  console.log(`[DEBUG] In main() after seedLanguages: languageMap.size = ${languageMap.size}`);
+  
   // Create defensive copies of the maps to prevent reference issues
   const regionMapCopy = new Map(regionMap);
-  console.log(`[DEBUG] In main() after creating regionMapCopy: regionMapCopy.size = ${regionMapCopy.size}`);
-  
-  // Assuming languageMap will be populated similarly when re-enabled
-  const languageMap = new Map<string, string>(); 
-  const countryMap = await seedCountriesAndRelatedData(prisma, regionMapCopy, languageMap);
-  await seedRemainingData(prisma, countryMap, regionMap, languageMap);
+  const languageMapCopy = new Map(languageMap);
+  console.log(`[DEBUG] In main() after creating copies: regionMapCopy.size = ${regionMapCopy.size}, languageMapCopy.size = ${languageMapCopy.size}`); 
+  const countryMap = await seedCountriesAndRelatedData(prisma, regionMapCopy, languageMapCopy);
+  await seedRemainingData(prisma, countryMap, regionMap, languageMapCopy);
   
   // Validate region-country integrity after seeding is complete
   const validationResults = await validateRegionCountryIntegrity(prisma, countrySourceData, regionSourceData);
@@ -181,10 +183,45 @@ async function seedRegions(prisma: PrismaClient): Promise<Map<string, string>> {
   return new Map(regionMap);
 }
 
+async function seedLanguages(prisma: PrismaClient): Promise<Map<string, string>> {
+  console.log('\nSeeding languages...');
+  const languageMap = new Map<string, string>();
+  
+  console.log(`[DEBUG] Starting seedLanguages with ${languageSourceData.length} languages from source data`);
+  
+  for (const languageData of languageSourceData) {
+    try {
+      console.log(`[DEBUG] Processing language: ${languageData.name} (${languageData.code})`);
+      
+      const language = await prisma.language.upsert({
+        where: { code: languageData.code },
+        update: {
+          name: languageData.name,
+        },
+        create: {
+          code: languageData.code,
+          name: languageData.name,
+        },
+      });
+      
+      languageMap.set(languageData.code, language.id);
+      console.log(`Upserted language: ${language.name} (${language.code}) -> ID: ${language.id}`);
+    } catch (error: any) {
+      console.error(`Error upserting language ${languageData.name} (${languageData.code}):`, error);
+      // Continue with other languages even if one fails
+    }
+  }
+  
+  console.log(`[DEBUG] Completed seedLanguages. Created/updated ${languageMap.size} languages`);
+  console.log(`[DEBUG] Language map contents:`, Array.from(languageMap.entries()).slice(0, 5)); // Show first 5 for debugging
+  
+  return new Map(languageMap);
+}
+
 async function seedCountriesAndRelatedData(
   prisma: PrismaClient, 
   regionMap: Map<string, string>,
-  languageMap: Map<string, string> // Re-added, will be empty for now
+  languageMap: Map<string, string> // Now populated with language code -> ID mappings
 ): Promise<Map<string, string>> {
   // Create another defensive copy at the start of this function
   const localRegionMap = new Map(regionMap);
@@ -203,12 +240,11 @@ async function seedCountriesAndRelatedData(
 
   for (const countryData of countrySourceData) {
     try {
-      // Temporarily disable language connections for diagnostics
-      const languageConnections: { id: string }[] = [];
-      // const languageConnections = (countryData.languages || [])
-      //   .map(langCode => languageMap?.get(langCode?.trim())) // Add optional chaining for safety
-      //   .filter((id): id is string => !!id) 
-      //   .map(id => ({ id }));
+      // Connect countries to their languages using the populated languageMap
+      const languageConnections = (countryData.languages || [])
+        .map(langCode => languageMap?.get(langCode?.trim())) // Add optional chaining for safety
+        .filter((id): id is string => !!id) 
+        .map(id => ({ id }));
 
       const collectedRegionCodes = new Set<string>();
       if (countryData.continent_code) {

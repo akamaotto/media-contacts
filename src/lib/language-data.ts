@@ -2,10 +2,12 @@
  * Language interface definition following ISO 639 standards
  */
 export interface Language {
+  id?: string;        // Database ID (optional for compatibility with static data)
   code: string;       // ISO 639-1 two-letter code
   name: string;       // English name of the language
   native?: string;    // Native name of the language
   rtl?: boolean;      // Right-to-left script
+  countries?: any[];  // Associated countries (for database version)
 }
 
 /**

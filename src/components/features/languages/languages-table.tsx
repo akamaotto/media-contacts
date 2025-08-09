@@ -16,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Edit, Trash2, Search, Globe, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getAllLanguages } from "@/backend/languages/actions";
-import { Language } from "@/lib/language-data";
+import { Language } from "@/lib/types/geography";
 import { toast } from 'sonner';
 
 interface LanguagesTableProps {

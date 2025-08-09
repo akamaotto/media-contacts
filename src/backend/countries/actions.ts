@@ -3,6 +3,8 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { prisma } from "@/lib/prisma";
+import { ActivityTrackingService } from '@/backend/dashboard/activity';
+import { auth } from "@/lib/auth";
 
 export interface Country {
   id: string;
@@ -83,13 +85,15 @@ export async function getLanguagesForCountryForm(): Promise<Array<{id: string, n
  */
 export async function getCountries(): Promise<Country[]> {
   try {
-    console.log('Fetching countries from database...');
+    console.log('getCountries: Starting database query...');
     
     // Validate Prisma client availability using fail-fast approach
     if (!prisma) {
+      console.error('getCountries: Prisma client is not available');
       throw new Error('Prisma client is not available');
     }
     
+    console.log('getCountries: Prisma client is available, executing query...');
     const countries = await prisma.country.findMany({
       select: {
         id: true,
@@ -124,18 +128,21 @@ export async function getCountries(): Promise<Country[]> {
       },
     });
     
-    console.log(`Successfully fetched ${countries.length} countries from database`);
+    console.log(`getCountries: Successfully fetched ${countries.length} countries from database`);
     
     // Validate the returned data
     if (!countries || !Array.isArray(countries)) {
-      console.warn('Country data is not in expected format, using fallback data');
+      console.warn('getCountries: Country data is not in expected format, using fallback data');
       return generateFallbackCountries();
     }
     
+    console.log('getCountries: Returning real country data');
     return countries;
   } catch (error) {
-    console.error("Failed to fetch countries:", error);
+    console.error("getCountries: Failed to fetch countries:", error);
+    console.error("getCountries: Error details:", error);
     // Return fallback data to prevent UI breakage
+    console.log('getCountries: Returning fallback data due to error');
     return generateFallbackCountries(); 
   }
 }
@@ -338,6 +345,26 @@ export async function createCountry(
       }
     });
 
+    // Log activity for the create operation
+    const session = await auth();
+    if (session?.user?.id) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'create',
+        entity: 'country',
+        entityId: newCountry.id,
+        entityName: newCountry.name,
+        userId: session.user.id,
+        details: {
+          code: newCountry.code,
+          capital: newCountry.capital,
+          flag_emoji: newCountry.flag_emoji,
+          regions: newCountry.regions?.map(r => r.name) || [],
+          languages: newCountry.languages?.map(l => l.name) || []
+        }
+      });
+    }
+
     revalidatePath('/countries');
     
     return {
@@ -480,6 +507,26 @@ export async function updateCountry(
       }
     });
 
+    // Log activity for the update operation
+    const session = await auth();
+    if (session?.user?.id) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'update',
+        entity: 'country',
+        entityId: updatedCountry.id,
+        entityName: updatedCountry.name,
+        userId: session.user.id,
+        details: {
+          code: updatedCountry.code,
+          capital: updatedCountry.capital,
+          flag_emoji: updatedCountry.flag_emoji,
+          regions: updatedCountry.regions?.map(r => r.name) || [],
+          languages: updatedCountry.languages?.map(l => l.name) || []
+        }
+      });
+    }
+
     revalidatePath('/countries');
     
     return {
@@ -560,6 +607,24 @@ export async function deleteCountry(
     await prisma.country.delete({
       where: { id: countryId }
     });
+
+    // Log activity for the delete operation
+    const session = await auth();
+    if (session?.user?.id) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'delete',
+        entity: 'country',
+        entityId: countryId,
+        entityName: countryWithContacts.name,
+        userId: session.user.id,
+        details: {
+          code: countryWithContacts.code,
+          capital: countryWithContacts.capital,
+          flag_emoji: countryWithContacts.flag_emoji
+        }
+      });
+    }
 
     revalidatePath('/countries');
     

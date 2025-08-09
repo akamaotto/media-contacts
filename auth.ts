@@ -17,9 +17,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   basePath: "/api/auth",
   // Critical fix for production session persistence
   useSecureCookies: process.env.NODE_ENV === "production",
-  // Ensure proper domain handling in production
-  ...(process.env.NODE_ENV === "production" && {
-    url: process.env.AUTH_URL || "https://media-contacts.vercel.app",
+  // Use AUTH_URL from environment variables
+  ...(process.env.AUTH_URL && {
+    url: process.env.AUTH_URL,
   }),
   cookies: {
     sessionToken: {
@@ -30,7 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         path: "/",
         secure: process.env.NODE_ENV === "production",
         // Enhanced production session persistence
-        ...(process.env.NODE_ENV === "production" && {
+        ...(process.env.NODE_ENV === "production" && process.env.AUTH_URL?.includes('vercel.app') && {
           domain: ".vercel.app",
           maxAge: 30 * 24 * 60 * 60, // 30 days
         }),
@@ -42,7 +42,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        ...(process.env.NODE_ENV === "production" && {
+        ...(process.env.NODE_ENV === "production" && process.env.AUTH_URL?.includes('vercel.app') && {
           domain: ".vercel.app",
         }),
       },
@@ -54,7 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        ...(process.env.NODE_ENV === "production" && {
+        ...(process.env.NODE_ENV === "production" && process.env.AUTH_URL?.includes('vercel.app') && {
           domain: ".vercel.app",
         }),
       },

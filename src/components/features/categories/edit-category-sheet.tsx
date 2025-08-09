@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Loader2, Save, X } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2, Save, Search, X } from 'lucide-react';
 
 import {
   Sheet,
@@ -25,13 +25,30 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
+import { getAllBeats, searchBeats } from '@/backend/beats/actions';
 import type { Category } from '@/backend/categories/actions';
+import type { Beat } from '@/backend/beats/actions';
 
 const categoryFormSchema = z.object({
   name: z.string().min(1, 'Category name is required').max(100, 'Category name must be less than 100 characters'),
   description: z.string().max(500, 'Description must be less than 500 characters').optional(),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Color must be a valid hex color (e.g., #3B82F6)').optional(),
+  beatIds: z.array(z.string()).optional(),
 });
 
 interface EditCategorySheetProps {
@@ -43,6 +60,10 @@ interface EditCategorySheetProps {
 
 export function EditCategorySheet({ category, isOpen, onOpenChange, onSuccess }: EditCategorySheetProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [beats, setBeats] = useState<Beat[]>([]);
+  const [openBeatSelect, setOpenBeatSelect] = useState(false);
+  const [beatSearchQuery, setBeatSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Beat[]>([]);
 
   const form = useForm({
     resolver: zodResolver(categoryFormSchema),
@@ -50,8 +71,47 @@ export function EditCategorySheet({ category, isOpen, onOpenChange, onSuccess }:
       name: category.name || '',
       description: category.description || '',
       color: category.color || '#3B82F6',
+      beatIds: category.beats?.map(beat => beat.id) || [],
     } as any,
   });
+
+  // Fetch all beats on component mount
+  useEffect(() => {
+    const fetchBeats = async () => {
+      try {
+        const data = await getAllBeats();
+        setBeats(data);
+        setSearchResults(data); // Initialize search results with all beats
+      } catch (error) {
+        console.error('Failed to fetch beats:', error);
+      }
+    };
+    
+    if (isOpen) {
+      fetchBeats();
+    }
+  }, [isOpen]);
+
+  // Handle beat search
+  useEffect(() => {
+    const performSearch = async () => {
+      if (beatSearchQuery.trim().length < 2) {
+        setSearchResults(beats); // Show all beats if query is too short
+        return;
+      }
+
+      try {
+        const results = await searchBeats(beatSearchQuery);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Failed to search beats:', error);
+        setSearchResults([]);
+      }
+    };
+
+    const debounceTimer = setTimeout(performSearch, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [beatSearchQuery, beats]);
 
   // Reset form when category changes
   useEffect(() => {
@@ -59,6 +119,7 @@ export function EditCategorySheet({ category, isOpen, onOpenChange, onSuccess }:
       name: category.name || '',
       description: category.description || '',
       color: category.color || '#3B82F6',
+      beatIds: category.beats?.map(beat => beat.id) || [],
     });
   }, [category, form]);
 
@@ -75,6 +136,7 @@ export function EditCategorySheet({ category, isOpen, onOpenChange, onSuccess }:
           name: data.name.trim(),
           description: data.description?.trim() || undefined,
           color: data.color?.trim() || undefined,
+          beatIds: data.beatIds || [],
         }),
       });
 
@@ -189,6 +251,104 @@ export function EditCategorySheet({ category, isOpen, onOpenChange, onSuccess }:
                           />
                         ))}
                       </div>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="beatIds"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Associated Beats (Optional)</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      <Popover open={openBeatSelect} onOpenChange={setOpenBeatSelect}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openBeatSelect}
+                            className="w-full justify-between"
+                            disabled={isSubmitting}
+                          >
+                            {field.value && field.value.length > 0
+                              ? `${field.value.length} beat${field.value.length === 1 ? '' : 's'} selected`
+                              : "Search and select beats..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput 
+                              placeholder="Search beats..." 
+                              value={beatSearchQuery}
+                              onValueChange={setBeatSearchQuery}
+                            />
+                            <CommandEmpty>No beats found.</CommandEmpty>
+                            <CommandGroup className="max-h-64 overflow-auto">
+                              {searchResults.map((beat) => (
+                                <CommandItem
+                                  key={beat.id}
+                                  onSelect={() => {
+                                    const currentIds = field.value || [];
+                                    const isSelected = currentIds.includes(beat.id);
+                                    const newIds = isSelected
+                                      ? currentIds.filter((id: string) => id !== beat.id)
+                                      : [...currentIds, beat.id];
+                                    field.onChange(newIds);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value?.includes(beat.id) ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{beat.name}</span>
+                                    {beat.description && (
+                                      <span className="text-sm text-muted-foreground">{beat.description}</span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      
+                      {/* Selected beats display */}
+                      {field.value && field.value.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {field.value.map((beatId: string) => {
+                            const beat = beats.find(b => b.id === beatId);
+                            if (!beat) return null;
+                            return (
+                              <Badge 
+                                key={beatId} 
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {beat.name}
+                                <button
+                                  type="button"
+                                  className="ml-1 hover:bg-gray-200 rounded-full"
+                                  onClick={() => {
+                                    const newIds = field.value.filter((id: string) => id !== beatId);
+                                    field.onChange(newIds);
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </FormControl>
                   <FormMessage />

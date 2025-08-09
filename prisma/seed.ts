@@ -1,7 +1,47 @@
 import { PrismaClient } from '@prisma/client';
-import { regions as regionSourceData, languages as languageSourceData, countries as countrySourceData } from '../src/lib/country-data';
 import { mockOutlets, mockBeats, mockMediaContacts } from '../src/lib/mock-data';
 import { validateRegionCountryIntegrity, normalizeRegionCode } from './region-validation';
+
+// NOTE: Static data imports have been removed as part of the static content cleanup.
+// The seed file now requires manual data entry or database migration for:
+// - Regions data (previously regionSourceData)
+// - Languages data (previously languageSourceData) 
+// - Countries data (previously countrySourceData)
+//
+// To seed this data, you can either:
+// 1. Import data from an existing database
+// 2. Use the admin interface to manually add regions, languages, and countries
+// 3. Create a separate data migration script with your specific data
+//
+// Example data structures for reference:
+//
+// interface Region {
+//   code: string;
+//   name: string;
+//   category: 'continent' | 'subregion' | 'economic' | 'political' | 'organization' | 'trade_agreement' | 'geographical' | 'other';
+//   parentCode?: string;
+//   description?: string;
+// }
+//
+// interface Language {
+//   code: string;
+//   name: string;
+//   native?: string;
+//   rtl?: boolean;
+// }
+//
+// interface CountryData {
+//   name: string;
+//   code: string;
+//   phone_code?: string;
+//   capital?: string;
+//   region?: string[];
+//   continent_code?: string;
+//   languages?: string[];
+//   flag_emoji?: string;
+//   latitude?: number;
+//   longitude?: number;
+// }
 
 // Extend PrismaClient to include the custom types
 declare global {
@@ -48,34 +88,72 @@ async function main() {
   
   console.log('Database cleared successfully');
 
-  const regionMap = await seedRegions(prisma);
-  console.log(`[DEBUG] In main() after seedRegions: regionMap.size = ${regionMap.size}`);
+  // NOTE: Static data seeding has been removed. 
+  // To seed regions, languages, and countries, you need to:
+  // 1. Import data from an existing database, or
+  // 2. Use the admin interface to manually add data, or  
+  // 3. Create a separate migration script with your specific data
   
-  // Seed languages
-  const languageMap = await seedLanguages(prisma);
-  console.log(`[DEBUG] In main() after seedLanguages: languageMap.size = ${languageMap.size}`);
+  console.log('IMPORTANT: Regions, languages, and countries data seeding has been disabled.');
+  console.log('Please use the admin interface or create a separate migration script to add this data.');
   
-  // Create defensive copies of the maps to prevent reference issues
-  const regionMapCopy = new Map(regionMap);
-  const languageMapCopy = new Map(languageMap);
-  console.log(`[DEBUG] In main() after creating copies: regionMapCopy.size = ${regionMapCopy.size}, languageMapCopy.size = ${languageMapCopy.size}`); 
-  const countryMap = await seedCountriesAndRelatedData(prisma, regionMapCopy, languageMapCopy);
-  await seedRemainingData(prisma, countryMap, regionMap, languageMapCopy);
+  // Only seed mock data that doesn't depend on static geography data
+  await seedMockData(prisma);
   
-  // Validate region-country integrity after seeding is complete
-  const validationResults = await validateRegionCountryIntegrity(prisma, countrySourceData, regionSourceData);
-  console.log(`[VALIDATION RESULTS] Integrity passed: ${validationResults.integrityPassed}`);
-  
-  // Log any potential improvement suggestions
-  if (!validationResults.integrityPassed) {
-    console.log('\n[SUGGESTIONS FOR IMPROVEMENT]');
-    console.log('Consider adding the following missing region codes to the region data:');
-    validationResults.missingRegionCodes.forEach(code => {
-      console.log(`{ code: '${code}', name: '${code} Region', category: 'subregion', parentCode: '[DETERMINE APPROPRIATE PARENT]' },`);
-    });
-  }
+  console.log('Seeding completed. Note: Geography data (regions, languages, countries) was not seeded.');
+  console.log('Please add this data manually through the admin interface or a separate migration script.');
 }
 
+/**
+ * Seed mock data that doesn't depend on geography data
+ */
+async function seedMockData(prisma: PrismaClient) {
+  console.log('Seeding mock outlets and beats...');
+  
+  // Seed mock outlets
+  for (const outlet of mockOutlets) {
+    await prisma.outlet.upsert({
+      where: { name: outlet.name },
+      update: {
+        description: outlet.description,
+        website: outlet.website,
+      },
+      create: {
+        name: outlet.name,
+        description: outlet.description,
+        website: outlet.website,
+      },
+    });
+  }
+  
+  // Seed mock beats
+  for (const beat of mockBeats) {
+    await prisma.beat.upsert({
+      where: { name: beat.name },
+      update: {
+        description: beat.description,
+      },
+      create: {
+        name: beat.name,
+        description: beat.description,
+      },
+    });
+  }
+  
+  console.log(`Seeded ${mockOutlets.length} outlets and ${mockBeats.length} beats`);
+}
+
+/*
+ * COMMENTED OUT: The following functions have been disabled because they depend on static data
+ * that has been removed as part of the static content cleanup. 
+ * 
+ * To re-enable geography data seeding, you need to:
+ * 1. Create your own data source (JSON files, API calls, etc.)
+ * 2. Update these functions to use your data source instead of static imports
+ * 3. Uncomment and modify the functions below
+ */
+
+/*
 async function seedRegions(prisma: PrismaClient): Promise<Map<string, string>> {
   console.log(`[DEBUG] Starting seedRegions. regionSourceData length: ${regionSourceData.length}`);  
   const regionMap = new Map<string, string>(); // code -> id
@@ -516,6 +594,7 @@ async function seedRemainingData(
 
   console.log('\nSeeding finished.');
 }
+*/
 
 main()
   .catch((e) => {

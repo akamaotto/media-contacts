@@ -34,7 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import type { Region } from "@/lib/country-data";
+import type { Region } from "@/lib/types/geography";
 
 // Validation schema for region editing
 const editRegionSchema = z.object({

@@ -2,16 +2,19 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { 
-  getMediaContactsFromDb, 
-  upsertMediaContactInDb, 
+import {
+  getMediaContactsFromDb,
+  upsertMediaContactInDb,
   MediaContactError,
   MediaContactErrorType,
   type MediaContactFilters,
-  type PaginatedMediaContactsResult 
+  type PaginatedMediaContactsResult
 } from "./repository";
 import { prisma } from "@/lib/prisma";
-import { MediaContactTableItem } from "@/components/features/media-contacts/columns"; 
+import { MediaContactTableItem } from "@/components/features/media-contacts/types";
+import { ActivityTrackingService } from '@/backend/dashboard/activity';
+import { cacheInvalidationService } from '@/lib/cache-invalidation';
+import { auth } from "@/lib/auth";
 
 /**
  * Zod schema for validating media contact filter parameters
@@ -42,7 +45,7 @@ export interface PaginatedMediaContactsActionResult {
 
 /**
  * Server Action to fetch media contacts with optional filtering and pagination.
- * 
+ *
  * @param filters - Optional filter parameters for media contacts including pagination
  * @returns Promise resolving to paginated media contacts result or error object
  */
@@ -50,10 +53,10 @@ export async function getMediaContactsAction(filters?: GetMediaContactsParams): 
   try {
     // Validate filters if provided using fail-fast approach
     let validatedFilters: MediaContactFilters | undefined;
-    
+
     if (filters) {
       const result = MediaContactFiltersSchema.safeParse(filters);
-      
+
       if (!result.success) {
         console.error("Invalid filter parameters:", result.error);
         return {
@@ -61,10 +64,10 @@ export async function getMediaContactsAction(filters?: GetMediaContactsParams): 
           errorType: "VALIDATION_ERROR"
         };
       }
-      
+
       validatedFilters = result.data;
     }
-    
+
     try {
       // Fetch contacts with validated filters including pagination
       const result = await getMediaContactsFromDb(validatedFilters);
@@ -74,7 +77,7 @@ export async function getMediaContactsAction(filters?: GetMediaContactsParams): 
       };
     } catch (error) {
       console.error("Repository error in getMediaContactsAction:", error);
-      
+
       // Handle specific repository errors
       if (error instanceof MediaContactError) {
         return {
@@ -82,7 +85,7 @@ export async function getMediaContactsAction(filters?: GetMediaContactsParams): 
           errorType: error.type
         };
       }
-      
+
       // Handle other errors
       return {
         error: "Failed to fetch media contacts.",
@@ -103,10 +106,11 @@ const UpsertMediaContactActionSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1, { message: "Name is required." }),
   email: z.string().email({ message: "Invalid email address." }),
-  title: z.string().min(1, { message: "Title is required." }), 
+  title: z.string().min(1, { message: "Title is required." }),
   email_verified_status: z.boolean().nullable().optional(),
   bio: z.string().nullable().optional(),
   socials: z.array(z.string()).nullable().optional(),
+  authorLinks: z.array(z.string()).nullable().optional(), // Added missing authorLinks field
   outlets: z.array(z.string()).optional(), // Changed from outletIds to outlets (array of names)
   countryIds: z.array(z.string().uuid()).optional(),
   beats: z.array(z.string()).optional(), // Changed from beatIds to beats (array of names)
@@ -122,6 +126,7 @@ export type UpsertMediaContactActionState = {
     email_verified_status?: string[];
     bio?: string[];
     socials?: string[];
+    authorLinks?: string[]; // Added missing authorLinks field
     outletIds?: string[];
     countryIds?: string[];
     beatIds?: string[];
@@ -151,20 +156,77 @@ export async function upsertMediaContactAction(
   }
 
   try {
+    // Get current user session for activity logging
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return {
+        message: "Authentication required.",
+        errors: { _form: ["User must be authenticated to perform this action."] },
+      };
+    }
+
     // Convert the validated data to match the expected MediaContactTableItem format
+    const { countryIds, outlets: outletNames, beats: beatNames, ...baseData } = validatedFields.data;
     const contactData = {
-      ...validatedFields.data,
+      ...baseData,
+      id: validatedFields.data.id, // Explicitly ensure ID is included for updates
       emailVerified: validatedFields.data.email_verified_status || false,
       updated_at: new Date(),
-      countries: validatedFields.data.countryIds?.map(id => ({ id, name: '', code: `C${id.slice(-1)}` })) || [],
-      outlets: validatedFields.data.outlets?.map(name => ({ id: '', name })) || [],
-      beats: validatedFields.data.beats?.map(name => ({ id: '', name })) || [],
+      countries: countryIds?.map(id => ({ id, name: '', code: `C${id.slice(-1)}` })) || [],
+      outlets: outletNames?.map(name => ({ id: '', name })) || [],
+      beats: beatNames?.map(name => ({ id: '', name })) || [],
     } as unknown as MediaContactTableItem;
 
+    // Debug logging for the action
+    console.log('upsertMediaContactAction: Processing contact:', {
+      hasId: !!validatedFields.data.id,
+      id: validatedFields.data.id,
+      email: validatedFields.data.email,
+      isUpdate: !!validatedFields.data.id
+    });
+    
+    console.log('upsertMediaContactAction: Final contactData object:', {
+      hasId: !!contactData.id,
+      id: contactData.id,
+      email: contactData.email,
+      keys: Object.keys(contactData)
+    });
+
+    // Debug logging to ensure ID is properly set for updates
+    if (data.id) {
+      console.log('Updating contact with ID:', data.id);
+    } else {
+      console.log('Creating new contact (no ID provided)');
+    }
+
+    const isUpdate = !!data.id;
     const upsertedContact = await upsertMediaContactInDb(contactData);
+
+    // Log activity for the operation
+    const activityService = new ActivityTrackingService();
+    await activityService.logActivity({
+      type: isUpdate ? 'update' : 'create',
+      entity: 'media_contact',
+      entityId: upsertedContact.id,
+      entityName: upsertedContact.name,
+      userId: userId,
+      details: {
+        email: upsertedContact.email,
+        title: upsertedContact.title,
+        outlets: validatedFields.data.outlets || [],
+        beats: validatedFields.data.beats || [],
+        countries: validatedFields.data.countryIds || []
+      }
+    });
+
+    // Invalidate dashboard cache
+    await cacheInvalidationService.invalidateOnCrudOperation('media_contact');
+
     revalidatePath('/'); // Revalidate the page displaying media contacts
     return {
-      message: data.id ? "Contact updated successfully." : "Contact created successfully.",
+      message: isUpdate ? "Contact updated successfully." : "Contact created successfully.",
       data: upsertedContact,
     };
   } catch (error) {
@@ -172,7 +234,7 @@ export async function upsertMediaContactAction(
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
     return {
       message: "Failed to save contact.",
-      errors: { _form: [errorMessage] }, 
+      errors: { _form: [errorMessage] },
     };
   }
 }
@@ -184,7 +246,8 @@ const UpdateMediaContactSchema = z.object({
   title: z.string().optional().nullable(),
   email: z.string().email({ message: "Invalid email address." }),
   bio: z.string().optional().nullable(),
-  socials: z.string().optional().nullable(), // Comma-separated string
+  socials: z.array(z.string()).optional().nullable(), // Array of social media URLs
+  authorLinks: z.array(z.string()).optional().nullable(), // Array of author link URLs
   beatsEntry: z.string().optional(), // Comma-separated beat names
   countryIds: z.array(z.string()).optional(),
 });
@@ -211,10 +274,10 @@ export async function updateMediaContact(
   const validationResult = UpdateMediaContactSchema.safeParse(data);
 
   if (!validationResult.success) {
-    return { 
-      success: false, 
-      error: "Invalid data provided.", 
-      issues: validationResult.error.issues 
+    return {
+      success: false,
+      error: "Invalid data provided.",
+      issues: validationResult.error.issues
     };
   }
 
@@ -224,14 +287,15 @@ export async function updateMediaContact(
     email,
     email_verified_status,
     bio,
-    socials: socialsString,
+    socials,
+    authorLinks,
     beatsEntry,
     countryIds,
   } = validationResult.data;
 
-  const socialsArray = socialsString
-    ? socialsString.split(',').map(s => s.trim()).filter(s => s.length > 0)
-    : [];
+  // Handle socials and authorLinks as arrays (no need to split strings)
+  const socialsArray = socials || [];
+  const authorLinksArray = authorLinks || [];
 
   const processedBeatIds: string[] = [];
   if (validationResult.data.beatsEntry) {
@@ -254,6 +318,14 @@ export async function updateMediaContact(
   }
 
   try {
+    // Get current user session for activity logging
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return { success: false, error: "Authentication required." };
+    }
+
     await prisma.mediaContact.update({
       where: { id: contactId },
       data: {
@@ -263,17 +335,40 @@ export async function updateMediaContact(
         email_verified_status: email_verified_status ?? false,
         bio: bio ?? undefined,
         socials: socialsArray,
+        authorLinks: authorLinksArray,
         beats: { set: processedBeatIds.map(id => ({ id })) },
         countries: countryIds ? { set: countryIds.map(id => ({ id })) } : { set: [] },
       },
     });
+
+    // Log activity for the update operation
+    const activityService = new ActivityTrackingService();
+    await activityService.logActivity({
+      type: 'update',
+      entity: 'media_contact',
+      entityId: contactId,
+      entityName: name,
+      userId: userId,
+      details: {
+        email: email,
+        title: title,
+        bio: bio,
+        beats: validationResult.data.beatsEntry?.split(',').map(s => s.trim()) || [],
+        countries: countryIds || [],
+        socials: socialsArray,
+        authorLinks: authorLinksArray
+      }
+    });
+
+    // Invalidate dashboard cache
+    await cacheInvalidationService.invalidateOnCrudOperation('media_contact');
 
     revalidatePath('/');
     return { success: true, message: "Contact updated successfully." };
   } catch (error) {
     console.error("Failed to update media contact:", error);
     if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
-        return { success: false, error: "Contact not found." };
+      return { success: false, error: "Contact not found." };
     }
     return { success: false, error: "Database error: Failed to update contact." };
   }
@@ -292,7 +387,7 @@ export type DeleteMediaContactResult = {
 
 /**
  * Server action to delete a media contact
- * 
+ *
  * @param contactId - The ID of the contact to delete
  * @returns A result object with success status and message/error
  */
@@ -301,54 +396,94 @@ export async function deleteMediaContact(
 ): Promise<DeleteMediaContactResult> {
   // 1. Validate input with explicit type handling
   if (!contactId) {
-    return { 
-      success: false, 
-      error: "Contact ID is missing" 
+    return {
+      success: false,
+      error: "Contact ID is missing"
     };
   }
-  
+
   const validationResult = DeleteMediaContactSchema.safeParse({ id: contactId });
-  
+
   if (!validationResult.success) {
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: "Invalid contact ID format",
     };
   }
-  
-  // 2. Attempt to delete the contact with proper error handling
+
+  // 2. Get current user session for activity logging
+  const session = await auth();
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return {
+      success: false,
+      error: "Authentication required"
+    };
+  }
+
+  // 3. Attempt to delete the contact with proper error handling
   try {
+    // First, get the contact details for activity logging
+    const contactToDelete = await prisma.mediaContact.findUnique({
+      where: { id: contactId },
+      select: { name: true, email: true }
+    });
+
+    if (!contactToDelete) {
+      return {
+        success: false,
+        error: "Contact not found"
+      };
+    }
+
     await prisma.mediaContact.delete({
-      where: { 
-        id: contactId 
+      where: {
+        id: contactId
       },
     });
-    
-    // 3. Revalidate the path to refresh the data
+
+    // Log activity for the delete operation
+    const activityService = new ActivityTrackingService();
+    await activityService.logActivity({
+      type: 'delete',
+      entity: 'media_contact',
+      entityId: contactId,
+      entityName: contactToDelete.name,
+      userId: userId,
+      details: {
+        email: contactToDelete.email
+      }
+    });
+
+    // Invalidate dashboard cache
+    await cacheInvalidationService.invalidateOnCrudOperation('media_contact');
+
+    // 4. Revalidate the path to refresh the data
     revalidatePath('/');
-    
-    return { 
-      success: true, 
-      message: "Contact deleted successfully" 
+
+    return {
+      success: true,
+      message: "Contact deleted successfully"
     };
   } catch (error) {
     console.error("Failed to delete media contact:", error);
-    
+
     // 4. Handle specific Prisma errors for better user feedback
     if (error instanceof Error && 'code' in error) {
       const prismaError = error as { code: string };
-      
+
       if (prismaError.code === 'P2025') {
-        return { 
-          success: false, 
-          error: "Contact not found" 
+        return {
+          success: false,
+          error: "Contact not found"
         };
       }
     }
-    
-    return { 
-      success: false, 
-      error: "Database error: Failed to delete contact" 
+
+    return {
+      success: false,
+      error: "Database error: Failed to delete contact"
     };
   }
 }

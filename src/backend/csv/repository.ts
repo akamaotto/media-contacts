@@ -3,7 +3,7 @@ import { stringify } from "csv-stringify/sync";
 import { prisma } from "@/lib/prisma";
 import { validateCsvRow, validateCsvHeaders, CsvContactData } from "./validation";
 import { mapCsvRowToMediaContact, mapMediaContactToCsvRow, generateCsvHeaders } from "./mappers";
-import { PrismaClient } from "@prisma/client";
+
 
 // Constants for processing
 const BATCH_SIZE = 100;

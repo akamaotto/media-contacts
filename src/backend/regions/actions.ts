@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { regions, Region } from "@/lib/country-data";
+import { Region } from "@/lib/types/geography";
 import type { Region as PrismaRegion } from "@prisma/client";
 
 /**
@@ -47,42 +47,16 @@ export async function getAllRegions(): Promise<Region[]> {
       })) || [],
     }));
     
-    // If no database regions exist, seed with static data
-    if (formattedRegions.length === 0) {
-      console.log('No regions in database, seeding with static data...');
-      await seedRegionsFromStaticData();
-      // Recursively call to get the seeded data
-      return getAllRegions();
-    }
-    
     console.log(`Successfully fetched ${formattedRegions.length} regions from database`);
     return formattedRegions;
   } catch (error) {
     console.error("Error fetching regions from database:", error);
-    // Return static data as fallback
-    console.log('Falling back to static region data');
-    return regions || generateFallbackRegions();
+    // Return empty array instead of static fallback
+    return [];
   }
 }
 
-/**
- * Generate fallback region data when static data is unavailable
- * @returns Array of common Region objects
- */
-function generateFallbackRegions(): Region[] {
-  console.log('Generating fallback regions data');
-  
-  // Return a set of common regions as fallback
-  return [
-    { code: 'na', name: 'North America', category: 'continent' },
-    { code: 'eu', name: 'Europe', category: 'continent' },
-    { code: 'as', name: 'Asia', category: 'continent' },
-    { code: 'af', name: 'Africa', category: 'continent' },
-    { code: 'oc', name: 'Oceania', category: 'continent' },
-    { code: 'sa', name: 'South America', category: 'continent' },
-    { code: 'an', name: 'Antarctica', category: 'continent' },
-  ];
-}
+
 
 /**
  * Server action to fetch regions by category
@@ -94,52 +68,56 @@ export async function getRegionsByCategory(category: string): Promise<Region[]> 
   try {
     console.log(`Fetching regions by category: ${category}`);
     
-    // Validate input parameter with fail-fast approach
+    // Validate input parameter
     if (!category || typeof category !== 'string') {
       console.warn('Invalid category provided to getRegionsByCategory:', category);
-      return generateFallbackRegionsByCategory(category);
+      return [];
     }
     
-    // Validate region data availability
-    if (!regions || !Array.isArray(regions) || regions.length === 0) {
-      console.warn('Region data is unavailable for category filtering');
-      return generateFallbackRegionsByCategory(category);
-    }
+    // Fetch regions from database by category
+    const dbRegions = await prisma.region.findMany({
+      where: {
+        category: category
+      },
+      include: {
+        countries: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            flag_emoji: true,
+          }
+        }
+      },
+      orderBy: [
+        { name: 'asc' }
+      ]
+    });
     
-    const filteredRegions = regions.filter(region => region.category === category);
-    console.log(`Found ${filteredRegions.length} regions with category ${category}`);
+    // Convert to Region interface format
+    const formattedRegions: Region[] = dbRegions.map(region => ({
+      code: region.code,
+      name: region.name,
+      category: region.category as any,
+      parentCode: region.parent_code || undefined,
+      description: region.description || undefined,
+      countries: region.countries.map(country => ({
+        id: country.id,
+        name: country.name,
+        code: country.code || '',
+        flag_emoji: country.flag_emoji || undefined,
+      })) || [],
+    }));
     
-    return filteredRegions;
+    console.log(`Found ${formattedRegions.length} regions with category ${category}`);
+    return formattedRegions;
   } catch (error) {
     console.error(`Error fetching regions by category ${category}:`, error);
-    return generateFallbackRegionsByCategory(category);
+    return [];
   }
 }
 
-/**
- * Generate fallback regions for a specific category
- * @param category - The region category to generate fallbacks for
- * @returns Array of Region objects for the given category
- */
-function generateFallbackRegionsByCategory(category: string): Region[] {
-  console.log(`Generating fallback regions for category: ${category}`);
-  
-  // If category is continent, return the same continents as in generateFallbackRegions
-  if (category === 'continent') {
-    return [
-      { code: 'na', name: 'North America', category: 'continent' },
-      { code: 'eu', name: 'Europe', category: 'continent' },
-      { code: 'as', name: 'Asia', category: 'continent' },
-      { code: 'af', name: 'Africa', category: 'continent' },
-      { code: 'oc', name: 'Oceania', category: 'continent' },
-      { code: 'sa', name: 'South America', category: 'continent' },
-      { code: 'an', name: 'Antarctica', category: 'continent' },
-    ];
-  }
-  
-  // Return empty array for other categories, or enhance with specific fallbacks if needed
-  return [];
-}
+
 
 /**
  * Get regions by parent code (for subregions)
@@ -151,101 +129,56 @@ export async function getRegionsByParent(parentCode: string): Promise<Region[]> 
   try {
     console.log(`Fetching regions by parent code: ${parentCode}`);
     
-    // Validate input parameter with fail-fast approach
+    // Validate input parameter
     if (!parentCode || typeof parentCode !== 'string') {
       console.warn('Invalid parent code provided to getRegionsByParent:', parentCode);
-      return generateFallbackRegionsByParent(parentCode);
+      return [];
     }
     
-    // Validate region data availability
-    if (!regions || !Array.isArray(regions) || regions.length === 0) {
-      console.warn('Region data is unavailable for parent code filtering');
-      return generateFallbackRegionsByParent(parentCode);
-    }
+    // Fetch regions from database by parent code
+    const dbRegions = await prisma.region.findMany({
+      where: {
+        parent_code: parentCode
+      },
+      include: {
+        countries: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            flag_emoji: true,
+          }
+        }
+      },
+      orderBy: [
+        { name: 'asc' }
+      ]
+    });
     
-    // Filter regions by parent code
-    const filteredRegions = regions.filter(region => region.parentCode === parentCode);
+    // Convert to Region interface format
+    const formattedRegions: Region[] = dbRegions.map(region => ({
+      code: region.code,
+      name: region.name,
+      category: region.category as any,
+      parentCode: region.parent_code || undefined,
+      description: region.description || undefined,
+      countries: region.countries.map(country => ({
+        id: country.id,
+        name: country.name,
+        code: country.code || '',
+        flag_emoji: country.flag_emoji || undefined,
+      })) || [],
+    }));
     
-    // Log results for debugging
-    console.log(`Found ${filteredRegions.length} regions with parent code ${parentCode}`);
-    
-    return filteredRegions;
+    console.log(`Found ${formattedRegions.length} regions with parent code ${parentCode}`);
+    return formattedRegions;
   } catch (error) {
     console.error(`Error fetching regions by parent code ${parentCode}:`, error);
-    return generateFallbackRegionsByParent(parentCode);
+    return [];
   }
 }
 
-/**
- * Generate fallback regions for a specific parent code
- * @param parentCode - The parent region code to generate fallbacks for
- * @returns Array of Region objects for the given parent code
- */
-function generateFallbackRegionsByParent(parentCode: string): Region[] {
-  console.log(`Generating fallback regions for parent code: ${parentCode}`);
-  
-  // Common subregions for North America (as an example)
-  if (parentCode === 'na') {
-    return [
-      { code: 'us', name: 'United States', category: 'subregion', parentCode: 'na' },
-      { code: 'ca', name: 'Canada', category: 'subregion', parentCode: 'na' },
-      { code: 'mx', name: 'Mexico', category: 'subregion', parentCode: 'na' },
-    ];
-  }
-  
-  // Common subregions for Europe
-  if (parentCode === 'eu') {
-    return [
-      { code: 'we', name: 'Western Europe', category: 'subregion', parentCode: 'eu' },
-      { code: 'ee', name: 'Eastern Europe', category: 'subregion', parentCode: 'eu' },
-      { code: 'se', name: 'Southern Europe', category: 'subregion', parentCode: 'eu' },
-      { code: 'ne', name: 'Northern Europe', category: 'subregion', parentCode: 'eu' },
-    ];
-  }
-  
-  // Return empty array for other parent codes
-  return [];
-}
 
-/**
- * Seed database with static region data
- * @returns Promise that resolves when seeding is complete
- */
-async function seedRegionsFromStaticData(): Promise<void> {
-  try {
-    console.log('Seeding database with static region data...');
-    
-    if (!regions || regions.length === 0) {
-      console.warn('No static region data available for seeding');
-      return;
-    }
-    
-    // Insert static regions into database
-    for (const region of regions) {
-      await prisma.region.upsert({
-        where: { code: region.code },
-        update: {
-          name: region.name,
-          category: region.category,
-          parent_code: region.parentCode || null,
-          description: region.description || null,
-        },
-        create: {
-          code: region.code,
-          name: region.name,
-          category: region.category,
-          parent_code: region.parentCode || null,
-          description: region.description || null,
-        },
-      });
-    }
-    
-    console.log(`Seeded ${regions.length} regions into database`);
-  } catch (error) {
-    console.error('Error seeding regions:', error);
-    throw error;
-  }
-}
 
 /**
  * Create a new region in the database

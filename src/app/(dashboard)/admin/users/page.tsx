@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import UsersClientWrapper from "./users-client-wrapper";
-import { PrismaClient } from "@prisma/client";
+
 
 // Force dynamic rendering for pages with session checks
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export default async function AdminUsersPage() {
 
   // Fetch all users
   // Use type assertion to work around TypeScript errors
-  const users = await (prisma as unknown as PrismaClient & { user: any }).user.findMany({
+  const users = await prisma.user.findMany({
     orderBy: { name: "asc" },
     select: {
       id: true,

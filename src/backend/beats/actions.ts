@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { ActivityTrackingService } from '@/backend/dashboard/activity';
+import { auth } from "@/lib/auth";
 
 export interface Beat {
   id: string;
@@ -87,7 +89,8 @@ export async function getAllBeats(): Promise<Beat[]> {
         name: beat.name,
         description: beat.description,
         contactCount,
-        countries: Array.from(countryMap.values())
+        countries: Array.from(countryMap.values()),
+        categories: beat.categories
       };
     });
     
@@ -201,6 +204,10 @@ export async function createBeat(beatData: { name: string; description?: string 
   try {
     console.log('Creating beat:', beatData, 'with categories:', categoryIds);
     
+    // Get current user session for activity logging
+    const session = await auth();
+    const userId = session?.user?.id;
+    
     const newBeat = await prisma.beat.create({
       data: {
         name: beatData.name.trim(),
@@ -220,6 +227,22 @@ export async function createBeat(beatData: { name: string; description?: string 
         },
       },
     });
+    
+    // Log activity for the create operation
+    if (userId) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'create',
+        entity: 'beat',
+        entityId: newBeat.id,
+        entityName: newBeat.name,
+        userId: userId,
+        details: {
+          description: newBeat.description,
+          categories: newBeat.categories?.map(cat => cat.name) || []
+        }
+      });
+    }
     
     console.log('Successfully created beat:', newBeat.id);
     return newBeat;
@@ -245,6 +268,10 @@ export async function updateBeat(id: string, beatData: { name: string; descripti
   try {
     console.log('Updating beat:', id, beatData, 'with categories:', categoryIds);
     
+    // Get current user session for activity logging
+    const session = await auth();
+    const userId = session?.user?.id;
+    
     const updatedBeat = await prisma.beat.update({
       where: { id },
       data: {
@@ -265,6 +292,22 @@ export async function updateBeat(id: string, beatData: { name: string; descripti
         },
       },
     });
+    
+    // Log activity for the update operation
+    if (userId) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'update',
+        entity: 'beat',
+        entityId: updatedBeat.id,
+        entityName: updatedBeat.name,
+        userId: userId,
+        details: {
+          description: updatedBeat.description,
+          categories: updatedBeat.categories?.map(cat => cat.name) || []
+        }
+      });
+    }
     
     console.log('Successfully updated beat:', updatedBeat.id);
     return updatedBeat;
@@ -294,9 +337,43 @@ export async function deleteBeat(id: string): Promise<{ message: string }> {
   try {
     console.log('Deleting beat:', id);
     
+    // Get current user session for activity logging
+    const session = await auth();
+    const userId = session?.user?.id;
+    
+    // Get beat details before deletion for activity logging
+    const beatToDelete = await prisma.beat.findUnique({
+      where: { id },
+      select: {
+        name: true,
+        description: true,
+        categories: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+    
     await prisma.beat.delete({
       where: { id },
     });
+    
+    // Log activity for the delete operation
+    if (userId && beatToDelete) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'delete',
+        entity: 'beat',
+        entityId: id,
+        entityName: beatToDelete.name,
+        userId: userId,
+        details: {
+          description: beatToDelete.description,
+          categories: beatToDelete.categories?.map(cat => cat.name) || []
+        }
+      });
+    }
     
     console.log('Successfully deleted beat:', id);
     return { message: 'Beat deleted successfully' };

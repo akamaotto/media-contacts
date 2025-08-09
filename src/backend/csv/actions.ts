@@ -17,7 +17,7 @@ import {
 } from './relation-mappers';
 import Papa from 'papaparse';
 import { promises as fsPromises } from 'fs';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 export interface ImportProgress {
   percentage: number;
@@ -172,7 +172,7 @@ export async function importMediaContactsFromCsv({
             // Process contact with relations immediately (no batching for relations)
             if (!dryRun) {
               try {
-                const prisma = new PrismaClient();
+                // Use singleton prisma instance
                 
                 // Check if contact already exists
                 const existingContact = await prisma.mediaContact.findUnique({
@@ -195,7 +195,7 @@ export async function importMediaContactsFromCsv({
                   );
                 }
                 
-                await prisma.$disconnect();
+                // Singleton pattern - no need to disconnect
                 result.validRows++;
                 
                 // Add any warnings about rejected countries to the result
@@ -261,7 +261,7 @@ export async function importMediaContactsFromCsv({
 export async function exportMediaContactsToCsv(options: ExportOptions): Promise<ExportResult> {
   try {
     const { fields, filters } = options;
-    const prisma = new PrismaClient();
+    // Use singleton prisma instance
     
     // Generate CSV headers
     const headers = generateCsvHeaders(fields);
@@ -283,7 +283,7 @@ export async function exportMediaContactsToCsv(options: ExportOptions): Promise<
       }
     );
     
-    await prisma.$disconnect();
+    // Singleton pattern - no need to disconnect
     
     return {
       success: true,

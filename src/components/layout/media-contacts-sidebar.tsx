@@ -50,10 +50,16 @@ export function MediaContactsSidebar({ ...props }: React.ComponentProps<typeof S
     },
     navMain: [
       {
-        title: "Home",
+        title: "Dashboard",
         url: "/",
         icon: IconDashboard,
         isActive: pathname === "/"
+      },
+      {
+        title: "Media Contacts",
+        url: "/media-contacts",
+        icon: IconDatabase,
+        isActive: pathname === "/media-contacts"
       },
       {
         title: "Publishers",

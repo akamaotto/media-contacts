@@ -7,7 +7,7 @@ import { EditRegionSheet } from "./edit-region-sheet";
 import { DeleteRegionDialog } from "./delete-region-dialog";
 import { RegionDetailSheet } from "./region-detail-sheet";
 import { getAllRegions } from "@/backend/regions/actions";
-import type { Region } from "@/lib/country-data";
+import type { Region } from "@/lib/types/geography";
 
 interface RegionsClientViewProps {
   // Future props if needed

@@ -28,6 +28,9 @@ model MediaContact {
   countries Country[] @relation("MediaContactCountries")
   beats     Beat[]    @relation("MediaContactBeats")
 
+  @@index([updated_at])
+  @@index([name])
+  @@index([email_verified_status])
   @@map("media_contacts")
 }
 
@@ -156,6 +159,7 @@ model User {
 
   accounts       Account[]
   sessions       Session[]
+  activityLogs   ActivityLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -201,4 +205,33 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+model DashboardMetric {
+  id          String   @id @default(uuid())
+  metricType  String   // 'total_contacts', 'total_publishers', etc.
+  value       Int
+  date        DateTime @default(now())
+  metadata    Json?    // Additional context data
+  
+  @@map("dashboard_metrics")
+  @@index([metricType, date])
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  type        String   // 'create', 'update', 'delete', 'import', 'export'
+  entity      String   // 'media_contact', 'outlet', 'publisher', etc.
+  entityId    String   // ID of the affected entity
+  entityName  String   // Human-readable name of the entity
+  userId      String   // User who performed the action
+  details     Json?    // Additional details about the action
+  timestamp   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id])
+  
+  @@map("activity_logs")
+  @@index([timestamp])
+  @@index([type, entity])
+  @@index([userId])
 }

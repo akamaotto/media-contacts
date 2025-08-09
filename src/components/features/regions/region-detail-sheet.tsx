@@ -20,7 +20,7 @@ import {
   Edit,
   X
 } from "lucide-react";
-import type { Region } from "@/lib/country-data";
+import type { Region } from "@/lib/types/geography";
 
 interface RegionDetailSheetProps {
   isOpen: boolean;

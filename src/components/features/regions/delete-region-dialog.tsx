@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import type { Region } from "@/lib/country-data";
+import type { Region } from "@/lib/types/geography";
 
 interface DeleteRegionDialogProps {
   isOpen: boolean;

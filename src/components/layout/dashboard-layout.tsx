@@ -118,10 +118,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const getBreadcrumb = () => {
     if (pathname === '/') {
       return { 
-        title: 'Home', 
-        subtitle: 'Media Contacts Overview',
-        buttons: [],
-        useBreadcrumbButtons: true // Use functional breadcrumb buttons for home page
+        title: 'Dashboard', 
+        subtitle: 'Analytics and insights for your media contacts',
+        buttons: []
       }
     } else if (pathname === '/profile') {
       return { 
@@ -228,11 +227,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           icon: <UserPlus className="h-4 w-4" />
         }]
       }
-    } else {
+    } else if (pathname === '/media-contacts') {
       return { 
         title: 'Media Contacts', 
-        subtitle: 'Manage your media contacts database',
-        buttons: getDefaultButtons()
+        subtitle: 'Manage your media contacts, search by criteria, and organize your media database',
+        buttons: [{
+          label: "Add Contact",
+          onClick: () => setIsAddContactOpen(true),
+          variant: "default" as const,
+          icon: <Plus className="h-4 w-4" />
+        }]
+      }
+    } else {
+      return { 
+        title: 'Dashboard', 
+        subtitle: 'Analytics and insights for your media contacts',
+        buttons: []
       }
     }
   }
@@ -260,26 +270,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main content area */}
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {breadcrumb.useBreadcrumbButtons ? (
-            <div className="flex items-center justify-between px-4 py-2">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">{breadcrumb.title}</h1>
-                <p className="text-muted-foreground">{breadcrumb.subtitle}</p>
-              </div>
-              <BreadcrumbButtons 
-                onAddContact={() => setIsAddContactOpen(true)}
-                currentFilters={{}}
-                onImportComplete={() => {
-                  // Trigger refresh of media contacts data after import
-                  window.dispatchEvent(new CustomEvent('refresh-media-contacts'));
-                }}
-                onRefresh={() => {
-                  // Trigger refresh of media contacts data
-                  window.dispatchEvent(new CustomEvent('refresh-media-contacts'));
-                }}
-              />
-            </div>
-          ) : (
+          {/* Only show DashboardLayoutTitle for non-dashboard pages */}
+          {pathname !== '/' && (
             <DashboardLayoutTitle 
               title={breadcrumb.title}
               subtitle={breadcrumb.subtitle}

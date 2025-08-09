@@ -16,7 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Pencil, Trash2, Mail, Link, Briefcase, Globe, User, FileText } from "lucide-react";
-import { MediaContactTableItem } from "@/components/media-contacts/columns";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MediaContactTableItem } from './types';
 import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 
 /**
@@ -26,9 +27,10 @@ import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 interface ViewMediaContactSheetProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  contact: MediaContactTableItem | null;
-  onContactDelete: (contactId: string) => void;  // Updated to accept contactId parameter
-  onContactEdit: (contact: MediaContactTableItem) => void;
+  contact: MediaContactTableItem | null | undefined;
+  isLoading?: boolean; // Added loading state prop
+  onContactDelete?: (contactId: string) => void;  // Made optional since it's handled internally
+  onContactEdit?: (contact: MediaContactTableItem) => void; // Made optional since it's handled internally
 }
 
 /**
@@ -39,12 +41,13 @@ export function ViewMediaContactSheet({
   isOpen,
   onOpenChange,
   contact,
-  onContactDelete,
-  onContactEdit,
+  isLoading = false,
+  onContactDelete = () => {},
+  onContactEdit = () => {},
 }: ViewMediaContactSheetProps): React.ReactElement {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
-  // Safety check to prevent rendering with no contact
+  // If no contact at all, don't render
   if (!contact) {
     return <></>;
   }
@@ -111,6 +114,18 @@ export function ViewMediaContactSheet({
   const hasAuthorLinks = contact.authorLinks && contact.authorLinks.length > 0;
 
   /**
+   * Normalize URL to ensure it has a protocol
+   * @param url The URL to normalize
+   * @returns The normalized URL with protocol
+   */
+  const normalizeUrl = (url: string): string => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    return url;
+  };
+
+  /**
    * Detect social platform type from URL
    * @param url The social media URL to analyze
    * @returns The detected platform with icon name and display name
@@ -167,14 +182,27 @@ export function ViewMediaContactSheet({
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="sm:max-w-xl flex flex-col p-0">
+        <SheetContent side="right" className="sm:max-w-2xl flex flex-col p-0">
           <SheetHeader className="p-6 border-b">
             <div className="flex items-start justify-between">
-              <div className="flex flex-col">
-                <SheetTitle className="text-xl font-bold">{contact.name}</SheetTitle>
-                <SheetDescription className="text-base mt-1">
-                  {contact.title}
-                </SheetDescription>
+              <div className="flex flex-col space-y-3">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-300 font-semibold text-lg">
+                    {contact.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <SheetTitle className="text-2xl font-semibold text-slate-900 dark:text-white">{contact.name}</SheetTitle>
+                    <SheetDescription className="text-base mt-1 text-slate-600 dark:text-slate-400">
+                      {contact.title}
+                    </SheetDescription>
+                  </div>
+                </div>
+                {(contact.email_verified_status || contact.emailVerified) && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Verified Contact</span>
+                  </div>
+                )}
               </div>
             </div>
           </SheetHeader>
@@ -183,18 +211,14 @@ export function ViewMediaContactSheet({
             <div className="space-y-8">
               {/* Contact Information */}
               <section>
-                <h3 className="text-md font-medium mb-3 flex items-center">
-                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                  Contact Information
-                </h3>
-                <Card className="rounded-sm overflow-hidden">
-                  <CardContent className="px-4 py-0 divide-y divide-border">
+                <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Contact Information</h3>
+                <div className="space-y-4">
                     {contact.email && (
-                      <div className="flex items-center pb-4">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <div className="flex items-center">
+                      <div className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <Mail className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
                           <span 
-                            className="text-sm hover:underline cursor-pointer" 
+                            className="text-sm hover:underline cursor-pointer text-slate-700 dark:text-slate-300 truncate" 
                             onClick={() => {
                               navigator.clipboard.writeText(contact.email);
                               toast.success(`Email copied to clipboard`, {
@@ -205,8 +229,10 @@ export function ViewMediaContactSheet({
                           >
                             {contact.email}
                           </span>
-                          {contact.email_verified_status && (
-                            <Badge variant="default" className="ml-2">Verified</Badge>
+                          {(contact.email_verified_status || contact.emailVerified) && (
+                            <Badge variant="secondary" className="text-xs">
+                              Verified
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -214,24 +240,18 @@ export function ViewMediaContactSheet({
                     
                     {/* Outlets */}
                     {contact.outlets && contact.outlets.length > 0 && (
-                      <div className="flex items-center py-4">
-                        <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{contact.outlets.map(o => o.name).join(', ')}</span>
-                      </div>
-                    )}
-                    
-                    {/* Outlets */}
-                    {contact.outlets && contact.outlets.length > 0 && (
-                      <div className="flex items-start py-4">
-                        <Globe className="h-4 w-4 mr-2 my-1 text-muted-foreground" />
-                        <div>
-                          <span className="text-sm font-medium block mb-1">Outlets</span>
-                          <div className="flex flex-wrap gap-1">
-                            {contact.outlets.map(outlet => (
-                              <Badge key={outlet.id} variant="outline" className="font-normal">
-                                {outlet.name}
-                              </Badge>
-                            ))}
+                      <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-start gap-3">
+                          <Briefcase className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm font-medium text-slate-900 dark:text-white block mb-2">Media Outlets</span>
+                            <div className="flex flex-wrap gap-2">
+                              {contact.outlets.map(outlet => (
+                                <Badge key={outlet.id} variant="secondary" className="text-xs">
+                                  {outlet.name}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -239,16 +259,18 @@ export function ViewMediaContactSheet({
                     
                     {/* Beats */}
                     {contact.beats && contact.beats.length > 0 && (
-                      <div className="flex items-start py-4">
-                        <Briefcase className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                        <div>
-                          <span className="text-sm font-medium block mb-1">Beats</span>
-                          <div className="flex flex-wrap gap-1">
-                            {contact.beats.map(beat => (
-                              <Badge key={beat.id} variant="secondary" className="font-normal">
-                                {beat.name}
-                              </Badge>
-                            ))}
+                      <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-start gap-3">
+                          <FileText className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm font-medium text-slate-900 dark:text-white block mb-2">Coverage Beats</span>
+                            <div className="flex flex-wrap gap-2">
+                              {contact.beats.map(beat => (
+                                <Badge key={beat.id} variant="secondary" className="text-xs">
+                                  {beat.name}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -256,113 +278,149 @@ export function ViewMediaContactSheet({
                     
                     {/* Countries */}
                     {contact.countries && contact.countries.length > 0 && (
-                      <div className="flex items-start pt-4">
-                        <Globe className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                        <div>
-                          <span className="text-sm font-medium block mb-1">Countries</span>
-                          <div className="flex flex-wrap gap-1">
-                            {contact.countries.map(country => (
-                              <Badge key={country.id} variant="outline" className="font-normal">
-                                {country.name}
-                              </Badge>
-                            ))}
+                      <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-start gap-3">
+                          <Globe className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm font-medium text-slate-900 dark:text-white block mb-2">Geographic Coverage</span>
+                            <div className="flex flex-wrap gap-2">
+                              {contact.countries.map(country => (
+                                <Badge key={country.id} variant="secondary" className="text-xs">
+                                  {country.name}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                </div>
               </section>
               
               {/* Bio */}
-              {contact.bio && (
+              {isLoading ? (
                 <section>
-                  <h3 className="text-md font-medium mb-3">Bio</h3>
-                  <Card className="rounded-md overflow-hidden">
-                    <CardContent className="px-4 py-0">
-                      <p className="text-sm whitespace-pre-line">{contact.bio}</p>
-                    </CardContent>
-                  </Card>
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Biography</h3>
+                  <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </section>
+              ) : contact.bio && (
+                <section>
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Biography</h3>
+                  <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">{contact.bio}</p>
+                  </div>
                 </section>
               )}
               
               {/* Social Media */}
-              {hasSocials && (
+              {isLoading ? (
                 <section>
-                  <h3 className="text-md font-medium mb-3 flex items-center">
-                    <Link className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Social Media Links
-                  </h3>
-                  <Card className="rounded-md py-2 overflow-hidden">
-                    <CardContent className="px-4 py-0">
-                      <div className="grid gap-3 divide-y divide-border">
-                        {contact.socials?.map((url, index) => {
-                          const platform = detectSocialPlatform(url);
-                          return (
-                            <a 
-                              key={index} 
-                              href={url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="flex items-center text-sm hover:underline text-blue-600 dark:text-blue-400 py-3"
-                            >
-                              <Link className="h-4 w-4 mr-2" />
-                              {platform.name}: {url}
-                            </a>
-                          );
-                        })}
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Social Media</h3>
+                  <div className="space-y-3">
+                    {[1, 2].map((index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      >
+                        <Skeleton className="h-4 w-4 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <Skeleton className="h-4 w-20 mb-1" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    ))}
+                  </div>
+                </section>
+              ) : hasSocials && (
+                <section>
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Social Media</h3>
+                  <div className="space-y-3">
+                    {contact.socials?.map((url, index) => {
+                      const platform = detectSocialPlatform(url);
+                      return (
+                        <a 
+                          key={index} 
+                          href={normalizeUrl(url)} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200"
+                        >
+                          <Link className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-slate-900 dark:text-white">{platform.name}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{url}</div>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
                 </section>
               )}
               
               {/* Author Links */}
-              {hasAuthorLinks && (
+              {isLoading ? (
                 <section>
-                  <h3 className="text-md font-medium mb-3 flex items-center">
-                    <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Author Links
-                  </h3>
-                  <Card className="rounded-md py-2 overflow-hidden">
-                    <CardContent className="px-4 py-0">
-                      <div className="grid gap-3 divide-y divide-border">
-                        {contact.authorLinks?.map((url: string, index: number) => {
-                          const linkType = detectAuthorLinkType(url);
-                          return (
-                            <a 
-                              key={index} 
-                              href={url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="flex items-center text-sm hover:underline text-blue-600 dark:text-blue-400 py-3"
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              {linkType.name}: {url}
-                            </a>
-                          );
-                        })}
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Published Work</h3>
+                  <div className="space-y-3">
+                    {[1, 2].map((index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      >
+                        <Skeleton className="h-4 w-4 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <Skeleton className="h-4 w-24 mb-1" />
+                          <Skeleton className="h-3 w-40" />
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    ))}
+                  </div>
+                </section>
+              ) : hasAuthorLinks && (
+                <section>
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Published Work</h3>
+                  <div className="space-y-3">
+                    {contact.authorLinks?.map((url: string, index: number) => {
+                      const linkType = detectAuthorLinkType(url);
+                      return (
+                        <a 
+                          key={index} 
+                          href={normalizeUrl(url)} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200"
+                        >
+                          <FileText className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-slate-900 dark:text-white">{linkType.name}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{url}</div>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
                 </section>
               )}
             </div>
           </ScrollArea>
           
           <SheetFooter className="p-6 border-t">
-            <div className="flex justify-between w-full">
+            <div className="flex justify-between w-full gap-4">
               <Button 
                 variant="destructive" 
                 onClick={handleDeleteClick} 
-                className="gap-1"
+                className="gap-2"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
               </Button>
               <Button 
                 onClick={handleEditClick}
-                className="gap-1"
+                className="gap-2"
               >
                 <Pencil className="h-4 w-4" />
                 Edit

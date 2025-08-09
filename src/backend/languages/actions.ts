@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { languages, Language } from "@/lib/language-data";
+import { Language } from "@/lib/types/geography";
 
 /**
  * Server action to fetch all available languages from database
@@ -29,14 +29,6 @@ export async function getAllLanguages(): Promise<Language[]> {
       }
     });
     
-    // If no languages in database, seed from static data
-    if (!dbLanguages || dbLanguages.length === 0) {
-      console.log('No languages found in database, seeding from static data...');
-      await seedLanguagesFromStaticData();
-      // Recursively call to get the seeded data
-      return getAllLanguages();
-    }
-    
     // Format database languages to match expected interface
     const formattedLanguages: Language[] = dbLanguages.map(lang => ({
       id: lang.id,
@@ -50,64 +42,12 @@ export async function getAllLanguages(): Promise<Language[]> {
     return formattedLanguages;
   } catch (error) {
     console.error("Error fetching languages from database:", error);
-    // Return static data as fallback
-    console.log('Falling back to static language data');
-    return languages || generateFallbackLanguages();
+    // Return empty array instead of static fallback
+    return [];
   }
 }
 
-/**
- * Seed languages from static data into database
- * @returns Promise that resolves when seeding is complete
- */
-async function seedLanguagesFromStaticData(): Promise<void> {
-  try {
-    console.log('Seeding languages from static data...');
-    
-    if (!languages || languages.length === 0) {
-      console.warn('No static language data available for seeding');
-      return;
-    }
-    
-    // Create languages in database from static data
-    for (const language of languages) {
-      await prisma.language.upsert({
-        where: { code: language.code },
-        update: {
-          name: language.name,
-        },
-        create: {
-          code: language.code,
-          name: language.name,
-        }
-      });
-    }
-    
-    console.log(`Successfully seeded ${languages.length} languages into database`);
-  } catch (error) {
-    console.error('Error seeding languages from static data:', error);
-    throw error;
-  }
-}
 
-/**
- * Generate fallback language data when static data is unavailable
- * @returns Array of common Language objects
- */
-function generateFallbackLanguages(): Language[] {
-  console.log('Generating fallback languages data');
-  
-  // Return a small set of common languages as fallback
-  return [
-    { code: 'en', name: 'English', native: 'English' },
-    { code: 'es', name: 'Spanish', native: 'Español' },
-    { code: 'fr', name: 'French', native: 'Français' },
-    { code: 'de', name: 'German', native: 'Deutsch' },
-    { code: 'zh', name: 'Chinese', native: '中文' },
-    { code: 'ja', name: 'Japanese', native: '日本語' },
-    { code: 'ar', name: 'Arabic', native: 'العربية' },
-  ];
-}
 
 /**
  * Server action to create a new language in database
@@ -257,8 +197,8 @@ export async function getLanguagesByCodes(codes: string[]): Promise<Language[]> 
     }));
   } catch (error) {
     console.error(`Error fetching languages by codes:`, error);
-    // Fallback to static data
-    return languages.filter(language => codes.includes(language.code));
+    // Return empty array instead of static fallback
+    return [];
   }
 }
 
@@ -311,11 +251,7 @@ export async function searchLanguages(searchTerm: string): Promise<Language[]> {
     }));
   } catch (error) {
     console.error(`Error searching languages:`, error);
-    // Fallback to static data
-    return languages.filter(
-      language => 
-        language.name.toLowerCase().includes(term) || 
-        (language.native && language.native.toLowerCase().includes(term))
-    );
+    // Return empty array instead of static fallback
+    return [];
   }
 }

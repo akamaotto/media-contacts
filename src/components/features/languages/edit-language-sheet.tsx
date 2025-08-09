@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Save, X, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Language } from '@/lib/language-data';
+import { Language } from '@/lib/types/geography';
 import { getCountries } from '@/backend/countries/actions';
 import {
   Command,

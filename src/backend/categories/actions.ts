@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { ActivityTrackingService } from '@/backend/dashboard/activity';
+import { auth } from "@/lib/auth";
 
 export interface Category {
   id: string;
@@ -90,6 +92,10 @@ export async function createCategory(categoryData: {
   try {
     console.log('Creating category:', categoryData);
     
+    // Get current user session for activity logging
+    const session = await auth();
+    const userId = session?.user?.id;
+    
     const newCategory = await prisma.category.create({
       data: {
         name: categoryData.name.trim(),
@@ -125,6 +131,23 @@ export async function createCategory(categoryData: {
       outlets: newCategory.outlets,
     };
     
+    // Log activity for the create operation
+    if (userId) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'create',
+        entity: 'category',
+        entityId: newCategory.id,
+        entityName: newCategory.name,
+        userId: userId,
+        details: {
+          description: newCategory.description,
+          color: newCategory.color,
+          beats: newCategory.beats?.map(beat => beat.name) || []
+        }
+      });
+    }
+    
     console.log('Successfully created category:', newCategory.id);
     return transformedCategory;
   } catch (error) {
@@ -143,14 +166,20 @@ export async function createCategory(categoryData: {
  * Server action to update an existing category in database
  * @param id - Category ID to update
  * @param categoryData - Updated category data
+ * @param beatIds - Optional array of beat IDs to associate with this category
  * @returns Updated Category object
  */
 export async function updateCategory(
   id: string, 
-  categoryData: { name: string; description?: string; color?: string; }
+  categoryData: { name: string; description?: string; color?: string; },
+  beatIds?: string[]
 ): Promise<Category> {
   try {
-    console.log('Updating category:', id, categoryData);
+    console.log('Updating category:', id, categoryData, 'with beats:', beatIds);
+    
+    // Get current user session for activity logging
+    const session = await auth();
+    const userId = session?.user?.id;
     
     const updatedCategory = await prisma.category.update({
       where: { id },
@@ -158,6 +187,9 @@ export async function updateCategory(
         name: categoryData.name.trim(),
         description: categoryData.description?.trim() || null,
         color: categoryData.color?.trim() || null,
+        beats: beatIds !== undefined ? {
+          set: beatIds.map(id => ({ id }))
+        } : undefined,
       },
       include: {
         beats: {
@@ -188,6 +220,23 @@ export async function updateCategory(
       outlets: updatedCategory.outlets,
     };
     
+    // Log activity for the update operation
+    if (userId) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'update',
+        entity: 'category',
+        entityId: updatedCategory.id,
+        entityName: updatedCategory.name,
+        userId: userId,
+        details: {
+          description: updatedCategory.description,
+          color: updatedCategory.color,
+          beats: updatedCategory.beats?.map(beat => beat.name) || []
+        }
+      });
+    }
+    
     console.log('Successfully updated category:', updatedCategory.id);
     return transformedCategory;
   } catch (error) {
@@ -216,9 +265,45 @@ export async function deleteCategory(id: string): Promise<{ message: string }> {
   try {
     console.log('Deleting category:', id);
     
+    // Get current user session for activity logging
+    const session = await auth();
+    const userId = session?.user?.id;
+    
+    // Get category details before deletion for activity logging
+    const categoryToDelete = await prisma.category.findUnique({
+      where: { id },
+      select: {
+        name: true,
+        description: true,
+        color: true,
+        beats: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+    
     await prisma.category.delete({
       where: { id },
     });
+    
+    // Log activity for the delete operation
+    if (userId && categoryToDelete) {
+      const activityService = new ActivityTrackingService();
+      await activityService.logActivity({
+        type: 'delete',
+        entity: 'category',
+        entityId: id,
+        entityName: categoryToDelete.name,
+        userId: userId,
+        details: {
+          description: categoryToDelete.description,
+          color: categoryToDelete.color,
+          beats: categoryToDelete.beats?.map(beat => beat.name) || []
+        }
+      });
+    }
     
     console.log('Successfully deleted category:', id);
     return { message: 'Category deleted successfully' };

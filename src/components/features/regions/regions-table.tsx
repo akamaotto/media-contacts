@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getAllRegions } from "@/backend/regions/actions";
-import type { Region } from "@/lib/country-data";
+import type { Region } from "@/lib/types/geography";
 
 interface RegionsTableProps {
   onEdit?: (region: Region) => void;

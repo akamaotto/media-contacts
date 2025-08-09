@@ -5,7 +5,7 @@ import { LanguagesTable } from './languages-table';
 import { AddLanguageSheet } from './add-language-sheet';
 import { EditLanguageSheet } from './edit-language-sheet';
 import { DeleteLanguageDialog } from './delete-language-dialog';
-import { Language } from '@/lib/language-data';
+import { Language } from '@/lib/types/geography';
 
 export function LanguagesClientView() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);

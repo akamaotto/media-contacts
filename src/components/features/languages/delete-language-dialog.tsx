@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Language } from '@/lib/language-data';
+import { Language } from '@/lib/types/geography';
 
 interface DeleteLanguageDialogProps {
   isOpen: boolean;

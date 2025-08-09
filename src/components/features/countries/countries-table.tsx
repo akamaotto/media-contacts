@@ -43,22 +43,18 @@ interface Country {
     name: string;
     code: string;
     category: string;
-  }[];
+  }[] | null;
   languages?: {
     id: string;
     name: string;
     code: string;
-  }[];
+  }[] | null;
   _count?: {
     mediaContacts: number;
   };
 }
 
-interface CountriesResponse {
-  countries: Country[];
-  total: number;
-  timestamp: string;
-}
+
 
 export function CountriesTable() {
   const [countries, setCountries] = useState<Country[]>([]);
@@ -80,9 +76,20 @@ export function CountriesTable() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: CountriesResponse = await response.json();
-      setCountries(data.countries);
-      setFilteredCountries(data.countries);
+      const data = await response.json();
+      
+      // The API returns an array of countries directly, not wrapped in an object
+      const countriesArray = Array.isArray(data) ? data : [];
+      
+      // Ensure we have valid country data with proper array initialization
+      const validatedCountries = countriesArray.map((country: any) => ({
+        ...country,
+        regions: Array.isArray(country.regions) ? country.regions : [],
+        languages: Array.isArray(country.languages) ? country.languages : []
+      }));
+      
+      setCountries(validatedCountries);
+      setFilteredCountries(validatedCountries);
 
     } catch (err) {
       console.error("Failed to fetch countries:", err);
@@ -117,14 +124,14 @@ export function CountriesTable() {
           country.code?.toLowerCase().includes(searchLower) ||
           country.capital?.toLowerCase().includes(searchLower) ||
           country.phone_code?.includes(searchTerm) ||
-          country.regions?.some(region => 
+          (country.regions && country.regions.length > 0 && country.regions.some(region => 
             region.name.toLowerCase().includes(searchLower) ||
             region.code.toLowerCase().includes(searchLower)
-          ) ||
-          country.languages?.some(language => 
+          )) ||
+          (country.languages && country.languages.length > 0 && country.languages.some(language => 
             language.name.toLowerCase().includes(searchLower) ||
             language.code.toLowerCase().includes(searchLower)
-          )
+          ))
         );
       });
       setFilteredCountries(filtered);
@@ -236,7 +243,7 @@ export function CountriesTable() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {country.regions && country.regions.length > 0 ? (
+                      {country.regions && Array.isArray(country.regions) && country.regions.length > 0 ? (
                         country.regions.map((region) => (
                           <Badge 
                             key={region.id} 
@@ -254,7 +261,7 @@ export function CountriesTable() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {country.languages && country.languages.length > 0 ? (
+                      {country.languages && Array.isArray(country.languages) && country.languages.length > 0 ? (
                         country.languages.map((language) => (
                           <Badge 
                             key={language.id} 

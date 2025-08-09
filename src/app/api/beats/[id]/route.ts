@@ -4,21 +4,33 @@ import { updateBeat, deleteBeat } from '@/backend/beats/actions';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Check authentication
     const session = await auth();
     if (!session) {
+      console.error('Beats API: No session found');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Please log in to update beats' },
         { status: 401 }
       );
     }
 
-    const { id } = await params;
+    if (!session.user?.id) {
+      console.error('Beats API: Session exists but no user ID');
+      return NextResponse.json(
+        { error: 'Invalid session - Please log in again' },
+        { status: 401 }
+      );
+    }
+
+    console.log('Beats API: Authenticated user:', session.user.email);
+
     const body = await request.json();
-    const { name, description } = body;
+    const { name, description, categoryIds } = body;
+    
+    console.log('Beats API: Update data:', { name, description, categoryIds });
 
     // Basic validation
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -28,11 +40,25 @@ export async function PUT(
       );
     }
 
-    // Update beat in database
-    const updatedBeat = await updateBeat(id, {
-      name: name.trim(),
-      description: description?.trim() || undefined,
-    });
+    // Validate categoryIds if provided
+    if (categoryIds && !Array.isArray(categoryIds)) {
+      return NextResponse.json(
+        { error: 'Category IDs must be an array' },
+        { status: 400 }
+      );
+    }
+
+    // Update beat using the server action
+    const updatedBeat = await updateBeat(
+      params.id,
+      {
+        name: name.trim(),
+        description: description?.trim() || undefined,
+      },
+      categoryIds
+    );
+
+    console.log('Beats API: Successfully updated beat:', updatedBeat.id);
 
     return NextResponse.json({
       message: 'Beat updated successfully',
@@ -49,16 +75,24 @@ export async function PUT(
           { status: 409 } // Conflict
         );
       }
+      
       if (error.message.includes('not found')) {
         return NextResponse.json(
           { error: error.message },
           { status: 404 }
         );
       }
+      
+      if (error.message.includes('Prisma')) {
+        return NextResponse.json(
+          { error: 'Database error - Please try again' },
+          { status: 500 }
+        );
+      }
     }
     
     return NextResponse.json(
-      { error: 'Failed to update beat' },
+      { error: 'Failed to update beat - Please check your input and try again' },
       { status: 500 }
     );
   }
@@ -66,24 +100,38 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Check authentication
     const session = await auth();
     if (!session) {
+      console.error('Beats API: No session found');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Please log in to delete beats' },
         { status: 401 }
       );
     }
 
-    const { id } = await params;
+    if (!session.user?.id) {
+      console.error('Beats API: Session exists but no user ID');
+      return NextResponse.json(
+        { error: 'Invalid session - Please log in again' },
+        { status: 401 }
+      );
+    }
 
-    // Delete beat from database
-    const result = await deleteBeat(id);
+    console.log('Beats API: Authenticated user:', session.user.email);
+    console.log('Beats API: Deleting beat:', params.id);
 
-    return NextResponse.json(result);
+    // Delete beat using the server action
+    const result = await deleteBeat(params.id);
+
+    console.log('Beats API: Successfully deleted beat:', params.id);
+
+    return NextResponse.json({
+      message: result.message
+    });
   } catch (error) {
     console.error('Error deleting beat:', error);
     
@@ -98,7 +146,7 @@ export async function DELETE(
     }
     
     return NextResponse.json(
-      { error: 'Failed to delete beat' },
+      { error: 'Failed to delete beat - Please try again' },
       { status: 500 }
     );
   }

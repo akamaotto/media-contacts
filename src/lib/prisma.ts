@@ -12,41 +12,26 @@ import { PrismaClient } from '@prisma/client';
 declare global {
   // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
-  // eslint-disable-next-line no-var
-  var prismaConnected: boolean;
-}
-
-// Track connection state to avoid redundant connection attempts
-if (global.prismaConnected === undefined) {
-  global.prismaConnected = false;
 }
 
 // Initialize PrismaClient with explicit error handling.
 function createPrismaClient(): PrismaClient {
   try {
     const client = new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+      log: process.env.NODE_ENV === 'development' ? ['info', 'warn', 'error'] : ['error'],
     });
     
-    // Connect explicitly and handle connection errors
-    if (!global.prismaConnected) {
-      client.$connect()
-        .then(() => {
-          console.log('Prisma client connected successfully');
-          global.prismaConnected = true;
-        })
-        .catch((err) => {
-          console.error('Failed to connect Prisma client:', err);
-          global.prismaConnected = false;
-        });
-    }
+    // Don't force connection on initialization - let Prisma handle it lazily
+    // This prevents issues with connection timing
     
     return client;
   } catch (error) {
     console.error('Error initializing Prisma client:', error);
-    // Create a minimal mock client that won't throw errors when methods are called
-    // This prevents cascading errors in the application
-    return {} as PrismaClient;
+    // Return a proper PrismaClient instance even if there are initialization issues
+    // Prisma will handle connection errors when queries are actually executed
+    return new PrismaClient({
+      log: ['error'],
+    });
   }
 }
 

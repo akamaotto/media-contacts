@@ -11,6 +11,14 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
+  // Fix for Vercel deployment issue with Next.js 15
+  serverExternalPackages: ['@prisma/client'],
+  // Use standalone output to avoid Vercel deployment issues
+  output: 'standalone',
+  // Disable image optimization to avoid issues
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;

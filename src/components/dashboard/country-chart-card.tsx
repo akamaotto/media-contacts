@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DashboardChart } from './dashboard-chart';
 import { TimeRange } from './dashboard-chart';
-import { BarChart3 } from 'lucide-react';
 
 interface CountryChartCardProps {
   timeRange: TimeRange;

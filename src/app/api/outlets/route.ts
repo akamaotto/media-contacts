@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { getAllOutlets, createOutlet } from '@/backend/outlets/actions';
+import { getOutlets } from '@/features/outlets/lib/queries';
+import { createOutlet } from '@/features/outlets/lib/actions';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -10,10 +13,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const outlets = await getAllOutlets();
+    const outlets = await getOutlets();
     return NextResponse.json(outlets);
   } catch (error) {
     console.error('Error in GET /api/outlets:', error);
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message || 'Failed to fetch outlets' },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to fetch outlets' },
       { status: 500 }
@@ -30,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, website, publisherId, categoryIds } = body;
+    const { name, description, website, publisherId, categoryIds, countryIds } = body;
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -39,15 +48,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const outlet = await createOutlet(
-      {
-        name,
-        description,
-        website,
-        publisherId,
-      },
-      categoryIds
-    );
+    const outlet = await createOutlet({
+      name,
+      description,
+      website,
+      publisherId,
+      categoryIds,
+      countryIds,
+    });
 
     return NextResponse.json(outlet, { status: 201 });
   } catch (error) {

@@ -28,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           isOpen={isAddContactOpen}
           onOpenChange={setIsAddContactOpen}
           contact={null} // null means we're adding a new contact
-          onContactUpdate={() => {
+          onSuccess={() => {
             setIsAddContactOpen(false);
             // We would typically refresh data here, but that's handled by individual pages
           }}

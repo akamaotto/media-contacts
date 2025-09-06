@@ -1,76 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { updateRegion, deleteRegion } from "@/backend/regions/actions";
+import { NextRequest } from 'next/server';
+import { getRegionsController } from '../factory';
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
-) {
-  try {
-    const session = await auth();
-    
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Get controller instance
+const regionsController = getRegionsController();
 
-    const { code } = await params;
-    const body = await request.json();
-    const { name, category, parentCode, description } = body;
-
-    // Basic validation
-    if (!name || !category) {
-      return NextResponse.json(
-        { error: "Name and category are required" },
-        { status: 400 }
-      );
-    }
-
-    // Update region in database
-    const updatedRegion = await updateRegion(code, {
-      name,
-      category,
-      parentCode: parentCode || undefined,
-      description: description || undefined,
-    });
-    
-    return NextResponse.json(
-      { message: "Region updated successfully", region: updatedRegion },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error updating region:", error);
-    return NextResponse.json(
-      { error: "Failed to update region" },
-      { status: 500 }
-    );
-  }
+export async function GET(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  return regionsController.handleGetById(request, { params: Promise.resolve({ id: code }) });
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
-) {
-  try {
-    const session = await auth();
-    
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  return regionsController.handleUpdate(request, { params: Promise.resolve({ id: code }) });
+}
 
-    const { code } = await params;
-
-    // Delete region from database
-    await deleteRegion(code);
-    
-    return NextResponse.json(
-      { message: "Region deleted successfully" },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error deleting region:", error);
-    return NextResponse.json(
-      { error: "Failed to delete region" },
-      { status: 500 }
-    );
-  }
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  return regionsController.handleDelete(request, { params: Promise.resolve({ id: code }) });
 }

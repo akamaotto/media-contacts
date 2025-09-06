@@ -118,7 +118,8 @@ export function DashboardChart({
     try {
       setError(null);
       const response = await fetch(
-        `/api/dashboard/charts?type=${dataType}&timeRange=${selectedTimeRange}`
+        `/api/dashboard/charts?type=${dataType}&timeRange=${selectedTimeRange}&_=${Date.now()}`,
+        { cache: 'no-store' }
       );
       
       if (!response.ok) {
@@ -145,20 +146,7 @@ export function DashboardChart({
     await fetchChartData();
   };
 
-  const handleTimeRangeChange = (newTimeRange: TimeRange) => {
-    if (onTimeRangeChange) {
-      onTimeRangeChange(newTimeRange);
-    }
-    setIsLoading(true);
-    fetchChartData(newTimeRange);
-  };
-
-  const timeRangeLabels = {
-    '7d': '7 days',
-    '30d': '30 days',
-    '3m': '3 months',
-    '1y': '1 year'
-  };
+  
 
   const chartTypeIcons = {
     bar: BarChart3,
@@ -168,13 +156,14 @@ export function DashboardChart({
 
   const IconComponent = chartTypeIcons[chartType];
 
-  // Prepare data for charts
-  const preparedData = chartData?.data?.map((item, index) => ({
+  // Prepare data for charts (defensive: ensure array shape)
+  const rawData = Array.isArray(chartData?.data) ? (chartData!.data as ChartDataPoint[]) : [];
+  const preparedData = rawData.map((item, index) => ({
     name: item.label,
     value: item.value,
     color: item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length],
     ...item.metadata
-  })) || [];
+  }));
 
   // Render chart based on type
   const renderChart = () => {

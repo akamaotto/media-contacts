@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { type Country } from '@/backend/countries/actions';
+import type { Country } from './types';
 
 interface DeleteCountryDialogProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ export function DeleteCountryDialog({ isOpen, onClose, onSuccess, country }: Del
     }
   };
 
-  const mediaContactsCount = country._count?.mediaContacts || 0;
+  const mediaContactsCount = country._count?.media_contacts || 0;
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>

@@ -34,6 +34,10 @@ import {toast} from 'sonner';
 import {EnhancedPagination} from './enhanced-pagination';
 import {EnhancedBadgeList, BadgePresets} from './enhanced-badge-list';
 import {FastTableContact} from './types';
+import { EmptyState, ErrorState, TableLoadingSkeleton, FadeIn } from '@/components/ui/enhanced-states';
+import { Database, Search, UserPlus } from 'lucide-react';
+import { SortableHeader } from '@/components/ui/sortable-header';
+import { Badge } from '@/components/ui/badge';
 
 interface FastTableProps {
     searchTerm?: string;
@@ -46,12 +50,16 @@ interface FastTableProps {
     page?: number;
     pageSize?: number;
     refreshKey?: number; // Add refresh key to trigger data reload
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
     onEditContact: (contact: FastTableContact) => void;
     onDeleteContact: (contact: FastTableContact) => void;
     onViewContact: (contact: FastTableContact) => void;
     onDataChange?: (totalCount: number) => void;
     onPageChange?: (page: number) => void;
     onPageSizeChange?: (pageSize: number) => void;
+    onDataUpdate?: (data: FastTableContact[]) => void; // Add this new prop
+    onSortChange?: (sortBy: string | undefined, sortOrder: 'asc' | 'desc' | undefined) => void;
 }
 
 export function FastMediaContactsTable({
@@ -65,24 +73,24 @@ export function FastMediaContactsTable({
     page = 1,
     pageSize = 10,
     refreshKey = 0, // Add refreshKey parameter
+    sortBy,
+    sortOrder,
     onEditContact,
     onDeleteContact,
     onViewContact,
     onDataChange,
     onPageChange,
     onPageSizeChange,
+    onDataUpdate, // Add this missing destructuring
+    onSortChange,
 }: FastTableProps) {
     const [data, setData] = useState<FastTableContact[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [lastQueryTime, setLastQueryTime] = useState<number>(0);
 
     const fetchData = useCallback(async () => {
-        console.log('🚀 [FAST-TABLE] Starting single API call...');
-        const fetchStartTime = Date.now();
-
         setIsLoading(true);
         setError(null);
 
@@ -118,8 +126,22 @@ export function FastMediaContactsTable({
                 params.append('languageCodes', languageCodes.join(','));
             }
 
+            // Add sort parameters
+            if (sortBy) {
+                params.append('sortBy', sortBy);
+            }
+            
+            if (sortOrder) {
+                params.append('sortOrder', sortOrder);
+            }
+
+            // Include refreshKey to force fresh fetches when parent requests refresh
+            if (refreshKey) {
+                params.append('refreshKey', String(refreshKey));
+            }
+
             // SINGLE API CALL - No more multiple requests!
-            const response = await fetch(`/api/media-contacts?${params}`);
+            const response = await fetch(`/api/media-contacts?${params}` , { cache: 'no-store' });
 
             if (!response.ok) {
                 throw new Error(
@@ -128,18 +150,36 @@ export function FastMediaContactsTable({
             }
 
             const result = await response.json();
+            console.log('API Response:', result);
 
-            setData(result.contacts || []);
-            setTotalCount(result.totalCount || 0);
-            setTotalPages(result.totalPages || 1);
-            setLastQueryTime(result.performance?.totalTime || 0);
+            // Fix: API returns data in 'data' property, not 'contacts'
+            // Transform MediaContact objects to FastTableContact objects
+            const transformedData = (result.data || []).map((contact: any) => ({
+                id: contact.id,
+                name: contact.name,
+                email: contact.email,
+                title: contact.title,
+                email_verified_status: contact.email_verified_status,
+                updated_at: contact.updatedAt || contact.updated_at, // Fix date field mapping - use camelCase updatedAt from API
+                outlets: contact.outlets || [],
+                beats: contact.beats || [],
+                ai_beats: contact.ai_beats || [],
+                countries: contact.countries || [],
+                regions: contact.regions || [],
+                languages: contact.languages || [],
+                outletCount: contact._count?.outlets || contact.outletCount || 0,
+                beatCount: contact._count?.beats || contact.beatCount || 0,
+                countryCount: contact._count?.countries || contact.countryCount || 0,
+                regionCount: contact.regionCount || 0,
+                languageCount: contact.languageCount || 0
+            }));
+            console.log('Transformed data:', transformedData);
+            setData(transformedData);
+            onDataUpdate?.(transformedData);
+            setTotalCount(result.pagination?.totalCount || 0);
+            setTotalPages(result.pagination?.totalPages || 1);
 
-            onDataChange?.(result.totalCount || 0);
-
-            const fetchTime = Date.now() - fetchStartTime;
-            console.log(
-                `✅ [FAST-TABLE] Single API call completed in ${fetchTime}ms (DB: ${result.performance?.queryTime}ms)`,
-            );
+            onDataChange?.(result.pagination?.totalCount || 0);
         } catch (err) {
             console.error('❌ [FAST-TABLE] Fetch error:', err);
             setError(
@@ -150,8 +190,7 @@ export function FastMediaContactsTable({
         } finally {
             setIsLoading(false);
         }
-    }, [
-        searchTerm,
+    }, [searchTerm,
         countryIds,
         beatIds,
         outletIds,
@@ -160,7 +199,9 @@ export function FastMediaContactsTable({
         emailVerified,
         page,
         pageSize,
-        refreshKey, // Add refreshKey to dependencies
+        refreshKey,
+        sortBy,
+        sortOrder,
         onDataChange,
     ]);
 
@@ -175,32 +216,18 @@ export function FastMediaContactsTable({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className='w-[200px]'>
-                                    Name
-                                </TableHead>
-                                <TableHead className='w-[250px]'>
-                                    Email
-                                </TableHead>
-                                <TableHead className='w-[200px]'>
-                                    Outlets
-                                </TableHead>
-                                <TableHead className='w-[180px]'>
-                                    Beats
-                                </TableHead>
-                                <TableHead className='w-[180px]'>
-                                    Countries
-                                </TableHead>
-                                <TableHead className='w-[100px]'>
-                                    Updated
-                                </TableHead>
-                                <TableHead className='w-[50px] text-right'>
-                                    Actions
-                                </TableHead>
+                                <TableHead className="text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Name</TableHead>
+                                <TableHead className="text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Email</TableHead>
+                                <TableHead className="w-[200px] text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Outlets</TableHead>
+                                <TableHead className="w-[180px] text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Beats</TableHead>
+                                <TableHead className="w-[180px] text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Countries</TableHead>
+                                <TableHead className="text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Updated</TableHead>
+                                <TableHead className='w-[50px] text-right border-subtle border-b'>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {Array.from({length: pageSize}).map((_, index) => (
-                                <TableRow key={index} className='h-14'>
+                                <TableRow key={index} className='h-14 border-b border-subtle'>
                                     <TableCell className='py-2'>
                                         <div className='space-y-1'>
                                             <Skeleton className='h-4 w-32' />
@@ -254,101 +281,77 @@ export function FastMediaContactsTable({
 
     if (error) {
         return (
-            <div className='rounded-md border p-8 text-center space-y-4'>
-                <div className='flex flex-col items-center gap-2'>
-                    <XCircle className='h-12 w-12 text-destructive' />
-                    <h3 className='text-lg font-semibold text-destructive'>
-                        Failed to Load Contacts
-                    </h3>
-                </div>
-                <div className='space-y-2'>
-                    <p className='text-sm text-muted-foreground max-w-md mx-auto'>
-                        {error.includes('HTTP 500')
-                            ? 'There was a server error. Please try again in a moment.'
-                            : error.includes('HTTP 404')
-                            ? 'The requested data could not be found.'
-                            : error.includes('Failed to fetch')
-                            ? 'Unable to connect to the server. Please check your internet connection.'
-                            : error}
-                    </p>
-                    {lastQueryTime > 0 && (
-                        <p className='text-xs text-muted-foreground'>
-                            Last successful load: {Math.round(lastQueryTime)}ms
-                            ago
-                        </p>
-                    )}
-                </div>
-                <div className='flex gap-2 justify-center'>
-                    <Button onClick={fetchData} variant='outline' size='sm'>
-                        <RefreshCw className='mr-2 h-4 w-4' />
-                        Try Again
-                    </Button>
-                    <Button
-                        onClick={() => window.location.reload()}
-                        variant='ghost'
-                        size='sm'
-                    >
-                        Refresh Page
-                    </Button>
-                </div>
-            </div>
+            <ErrorState
+                title="Failed to Load Contacts"
+                description={error.includes('HTTP 500')
+                    ? 'There was a server error. Please try again in a moment.'
+                    : error.includes('HTTP 404')
+                    ? 'The requested data could not be found.'
+                    : error.includes('Failed to fetch')
+                    ? 'Unable to connect to the server. Please check your internet connection.'
+                    : error}
+                onRetry={fetchData}
+                retryLabel="Try Again"
+                className="py-12"
+            />
         );
     }
 
     return (
-        <div className='space-y-4'>
+        <FadeIn className='space-y-4'>
             <div className='rounded-md border'>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className='w-[200px]'>Name</TableHead>
-                            <TableHead className='w-[250px]'>Email</TableHead>
-                            <TableHead className='w-[200px]'>Outlets</TableHead>
-                            <TableHead className='w-[180px]'>Beats</TableHead>
-                            <TableHead className='w-[180px]'>
-                                Countries
-                            </TableHead>
-                            <TableHead className='w-[100px]'>Updated</TableHead>
-                            <TableHead className='w-[50px] text-right'>
-                                Actions
-                            </TableHead>
+                            <TableHead className="text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Name</TableHead>
+                            <TableHead className="text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Email</TableHead>
+                            <TableHead className="w-[200px] text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Outlets</TableHead>
+                            <TableHead className="w-[180px] text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Beats</TableHead>
+                            <TableHead className="w-[180px] text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Countries</TableHead>
+                            <TableHead className="text-muted uppercase tracking-wide text-[11px] border-subtle border-b">Updated</TableHead>
+                            <TableHead className='w-[50px] text-right border-subtle border-b'>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {data.length > 0 ? (
-                            data.map((contact) => (
+                            data.map((contact, index) => (
                                 <TableRow
                                     key={contact.id}
-                                    className='hover:bg-muted/50 cursor-pointer h-14 focus-within:bg-muted/50'
-                                    onClick={() => onViewContact(contact)}
+                                    className='hover:bg-muted/50 cursor-pointer h-14 focus-within:bg-muted/50 transition-colors border-b border-subtle'
+                                    onClick={() => {
+                                        console.log('Row clicked, contact:', contact);
+                                        onViewContact(contact);
+                                    }}
                                     onKeyDown={(e) => {
                                         if (
                                             e.key === 'Enter' ||
                                             e.key === ' '
                                         ) {
                                             e.preventDefault();
+                                            console.log('Row key pressed, contact:', contact);
                                             onViewContact(contact);
                                         }
                                     }}
                                     tabIndex={0}
                                     role='button'
                                     aria-label={`View details for ${contact.name}`}
+                                    style={{ animationDelay: `${index * 50}ms` }}
                                 >
                                     <TableCell className='py-2'>
                                         <div className='flex flex-col min-w-0'>
-                                            <span className='font-medium truncate'>
-                                                {contact.name}
-                                            </span>
-                                            <span className='text-xs text-muted-foreground truncate'>
-                                                {contact.title}
-                                            </span>
+                                            <span className="text-strong font-medium">{contact.name}</span>
+                                            <span className="text-muted text-xs">{contact.title}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className='py-2'>
                                         <div className='flex items-center space-x-2 min-w-0'>
-                                            <span className='text-sm truncate'>
+                                            <a 
+                                                href={`mailto:${contact.email}`} 
+                                                className="text-default hover:text-strong underline-offset-4 hover:underline"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
                                                 {contact.email}
-                                            </span>
+                                            </a>
                                             <div className='flex-shrink-0'>
                                                 {contact.email_verified_status ? (
                                                     <div className='flex items-center gap-1'>
@@ -369,35 +372,75 @@ export function FastMediaContactsTable({
                                         </div>
                                     </TableCell>
                                     <TableCell className='py-2'>
-                                        <EnhancedBadgeList
-                                            items={contact.outlets}
-                                            totalCount={contact.outletCount}
-                                            {...BadgePresets.outlets}
-                                        />
-                                    </TableCell>
-                                    <TableCell className='py-2'>
-                                        <EnhancedBadgeList
-                                            items={contact.beats}
-                                            totalCount={contact.beatCount}
-                                            {...BadgePresets.beats}
-                                        />
-                                    </TableCell>
-                                    <TableCell className='py-2'>
-                                        <EnhancedBadgeList
-                                            items={contact.countries}
-                                            totalCount={contact.countryCount}
-                                            {...BadgePresets.countries}
-                                        />
-                                    </TableCell>
-                                    <TableCell className='py-2'>
-                                        <div className='text-xs text-muted-foreground'>
-                                            {new Date(
-                                                contact.updated_at,
-                                            ).toLocaleDateString(undefined, {
-                                                month: 'short',
-                                                day: 'numeric',
-                                            })}
+                                        <div className="flex flex-wrap gap-1">
+                                            {contact.outlets.slice(0, 2).map(outlet => (
+                                                <Badge key={outlet.id} variant="quiet" className="mr-1">
+                                                    {outlet.name}
+                                                </Badge>
+                                            ))}
+                                            {contact.outletCount > 2 && (
+                                                <Badge variant="quiet" className="mr-1">
+                                                    +{contact.outletCount - 2}
+                                                </Badge>
+                                            )}
+                                            {contact.outlets.length === 0 && (
+                                                <span className="text-subtle text-xs">-</span>
+                                            )}
                                         </div>
+                                    </TableCell>
+                                    <TableCell className='py-2'>
+                                        <div className="flex flex-wrap gap-1">
+                                            {contact.beats.slice(0, 2).map(beat => (
+                                                <Badge key={beat.id} variant="quiet" className="mr-1">
+                                                    {beat.name}
+                                                </Badge>
+                                            ))}
+                                            {contact.beatCount > 2 && (
+                                                <Badge variant="quiet" className="mr-1">
+                                                    +{contact.beatCount - 2}
+                                                </Badge>
+                                            )}
+                                            {contact.beats.length === 0 && (
+                                                <span className="text-subtle text-xs">-</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className='py-2'>
+                                        <div className="flex flex-wrap gap-1">
+                                            {contact.countries.slice(0, 2).map(country => (
+                                                <Badge key={country.id} variant="quiet" className="mr-1">
+                                                    {country.name}
+                                                </Badge>
+                                            ))}
+                                            {contact.countryCount > 2 && (
+                                                <Badge variant="quiet" className="mr-1">
+                                                    +{contact.countryCount - 2}
+                                                </Badge>
+                                            )}
+                                            {contact.countries.length === 0 && (
+                                                <span className="text-subtle text-xs">-</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className='py-2'>
+                                        <time className="text-subtle text-xs">
+                                            {(() => {
+                                                // Handle potential invalid dates gracefully
+                                                const dateValue = contact.updated_at;
+                                                if (!dateValue) return 'N/A';
+                                                
+                                                const date = new Date(dateValue);
+                                                if (isNaN(date.getTime())) {
+                                                    console.warn('Invalid date value:', dateValue);
+                                                    return 'Invalid Date';
+                                                }
+                                                
+                                                return date.toLocaleDateString(undefined, {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                });
+                                            })()}
+                                        </time>
                                     </TableCell>
                                     <TableCell
                                         className='py-2 text-right'
@@ -407,7 +450,7 @@ export function FastMediaContactsTable({
                                             <DropdownMenuTrigger asChild>
                                                 <Button
                                                     variant='ghost'
-                                                    className='h-8 w-8 p-0'
+                                                    className='h-8 w-8 p-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
                                                 >
                                                     <span className='sr-only'>
                                                         Open menu
@@ -471,13 +514,15 @@ export function FastMediaContactsTable({
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell
-                                    colSpan={7}
-                                    className='h-24 text-center'
-                                >
-                                    <p className='text-muted-foreground'>
-                                        No contacts found
-                                    </p>
+                                <TableCell colSpan={7} className="p-0">
+                                    <EmptyState
+                                        icon={<Search className="h-8 w-8" />}
+                                        title="No contacts found"
+                                        description={searchTerm || countryIds.length > 0 || beatIds.length > 0 || outletIds.length > 0 || regionCodes.length > 0 || languageCodes.length > 0 || emailVerified !== 'all'
+                                            ? "Try adjusting your search criteria or filters to find what you're looking for."
+                                            : "Get started by adding your first media contact to the database."}
+                                        className="py-12"
+                                    />
                                 </TableCell>
                             </TableRow>
                         )}
@@ -499,21 +544,6 @@ export function FastMediaContactsTable({
                         isLoading={isLoading}
                     />
                 )}
-
-            {/* Performance indicator - only show in development or when explicitly enabled */}
-            {(process.env.NODE_ENV === 'development' ||
-                window.location.search.includes('debug=true')) &&
-                lastQueryTime > 0 && (
-                    <div className='text-xs text-muted-foreground text-center space-y-1'>
-                        <div>
-                            Loaded {data.length} of {totalCount} contacts in{' '}
-                            {lastQueryTime}ms
-                        </div>
-                        <div className='text-[10px] opacity-75'>
-                            Page {page} of {totalPages} • {pageSize} per page
-                        </div>
-                    </div>
-                )}
-        </div>
+        </FadeIn>
     );
 }

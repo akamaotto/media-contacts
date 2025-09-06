@@ -6,7 +6,6 @@ import { AddRegionSheet } from "./add-region-sheet";
 import { EditRegionSheet } from "./edit-region-sheet";
 import { DeleteRegionDialog } from "./delete-region-dialog";
 import { RegionDetailSheet } from "./region-detail-sheet";
-import { getAllRegions } from "@/backend/regions/actions";
 import type { Region } from "@/lib/types/geography";
 
 interface RegionsClientViewProps {
@@ -24,8 +23,21 @@ export function RegionsClientView({}: RegionsClientViewProps) {
   // Load available parent regions for dropdowns
   const loadParentRegions = async () => {
     try {
-      const regions = await getAllRegions();
-      const parentOptions = regions
+      const res = await fetch('/api/regions');
+      if (!res.ok) throw new Error('Failed to fetch regions');
+      const payload = await res.json();
+      
+      // Extract data from paginated result
+      const regionsData = payload && typeof payload === 'object' && 'data' in payload 
+        ? Array.isArray(payload.data) ? payload.data : [] 
+        : Array.isArray(payload) ? payload : [];
+      
+      // Validate that data is an array
+      if (!Array.isArray(regionsData)) {
+        throw new Error(`Expected array data but got ${typeof regionsData}`);
+      }
+      
+      const parentOptions = regionsData
         .filter(region => region.category === 'continent' || region.category === 'subregion')
         .map(region => ({ code: region.code, name: region.name }));
       setAvailableParentRegions(parentOptions);

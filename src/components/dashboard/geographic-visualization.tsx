@@ -28,30 +28,22 @@ export interface GeographicDataPoint {
 interface GeographicVisualizationProps {
   className?: string;
   height?: number;
-  showFilters?: boolean;
 }
 
-interface FilterOptions {
-  beats: string[];
-  categories: string[];
-  languages: string[];
-}
+
 
 export function GeographicVisualization({ 
   className, 
-  height = 400,
-  showFilters = true 
+  height = 400
 }: GeographicVisualizationProps) {
-  const [geoData, setGeoData] = useState<GeographicDataPoint[]>([]);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('list');
-  const [selectedFilters, setSelectedFilters] = useState<{
-    beats?: string[];
-    categories?: string[];
-    languages?: string[];
-  }>({});
+  // Holds geographic data points for visualization
+  const [geoData, setGeoData] = useState<GeographicDataPoint[]>([]);
+  
 
   const fetchGeographicData = async () => {
     try {

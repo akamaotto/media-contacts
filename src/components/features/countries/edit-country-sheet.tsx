@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CountryForm } from './country-form';
 import { toast } from 'sonner';
-import { type Country } from '@/backend/countries/actions';
+import type { Country } from './types';
 
 interface EditCountrySheetProps {
   isOpen: boolean;

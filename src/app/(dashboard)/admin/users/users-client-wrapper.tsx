@@ -18,7 +18,7 @@ export default function UsersClientWrapper({ users }: UsersClientWrapperProps) {
 
   // Store the ref globally so the dashboard layout can access it
   React.useEffect(() => {
-    (window as any).__userTableRef = userTableRef;
+    (window as unknown as { __userTableRef: React.RefObject<UserTableRef | null> }).__userTableRef = userTableRef;
   }, []);
 
   return (

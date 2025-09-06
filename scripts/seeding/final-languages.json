@@ -1,0 +1,919 @@
+[
+  {
+    "id": "92d83bf7-3424-4838-806f-65831117a315",
+    "name": "Afrikaans",
+    "code": "afr",
+    "updatedAt": "2025-09-03T22:30:34.657Z",
+    "countryCount": 0
+  },
+  {
+    "id": "da00fdf5-33f0-4568-85a9-c8715d194159",
+    "name": "Akan",
+    "code": "aka",
+    "updatedAt": "2025-09-03T22:30:37.369Z",
+    "countryCount": 0
+  },
+  {
+    "id": "20316892-d5a4-46fc-a03a-4c593c995e8e",
+    "name": "Albanian",
+    "code": "sqi",
+    "updatedAt": "2025-09-03T22:30:33.441Z",
+    "countryCount": 0
+  },
+  {
+    "id": "8e76637f-a118-456b-abe6-c62ac2917fba",
+    "name": "Amharic",
+    "code": "amh",
+    "updatedAt": "2025-09-03T22:30:20.670Z",
+    "countryCount": 0
+  },
+  {
+    "id": "003dbf35-921e-4d5b-8bad-bf8c06c371d2",
+    "name": "Arabic",
+    "code": "ara",
+    "updatedAt": "2025-09-03T22:30:14.537Z",
+    "countryCount": 0
+  },
+  {
+    "id": "4a1dc256-a633-4516-a954-382e831b43cd",
+    "name": "Armenian",
+    "code": "hye",
+    "updatedAt": "2025-09-03T22:30:21.006Z",
+    "countryCount": 0
+  },
+  {
+    "id": "b3fbe6e9-09ca-4a38-b1ee-e1dc06a7be09",
+    "name": "Asturian",
+    "code": "ast",
+    "updatedAt": "2025-09-03T22:43:39.795Z",
+    "countryCount": 0
+  },
+  {
+    "id": "35719991-9dde-4d65-8409-aca43ffd10cf",
+    "name": "Azerbaijani",
+    "code": "aze",
+    "updatedAt": "2025-09-03T22:30:30.217Z",
+    "countryCount": 0
+  },
+  {
+    "id": "47074370-269a-424c-a021-b0761fe04dd8",
+    "name": "Balochi",
+    "code": "bal",
+    "updatedAt": "2025-09-03T22:30:40.549Z",
+    "countryCount": 0
+  },
+  {
+    "id": "30c2f002-b503-4e08-b21c-c3f339769358",
+    "name": "Basque",
+    "code": "eus",
+    "updatedAt": "2025-09-03T22:30:24.094Z",
+    "countryCount": 0
+  },
+  {
+    "id": "188d5ac8-4e82-49a2-9a2b-c669cc210bb1",
+    "name": "Belarusian",
+    "code": "bel",
+    "updatedAt": "2025-09-03T22:30:30.509Z",
+    "countryCount": 0
+  },
+  {
+    "id": "f550f5ab-2550-4282-8bf0-3ca3d7339b37",
+    "name": "Bengali",
+    "code": "ben",
+    "updatedAt": "2025-09-03T22:30:18.065Z",
+    "countryCount": 0
+  },
+  {
+    "id": "4fbb22d5-9e0d-4a6d-8fd8-468aebe8a342",
+    "name": "Blin",
+    "code": "byn",
+    "updatedAt": "2025-09-03T22:43:36.867Z",
+    "countryCount": 0
+  },
+  {
+    "id": "9434c033-c232-463c-936c-7431357da855",
+    "name": "Breton",
+    "code": "bre",
+    "updatedAt": "2025-09-03T22:30:41.817Z",
+    "countryCount": 0
+  },
+  {
+    "id": "e16ec9fb-a5cc-4b57-9c62-1aeed3baa363",
+    "name": "Bulgarian",
+    "code": "bul",
+    "updatedAt": "2025-09-03T22:30:30.829Z",
+    "countryCount": 0
+  },
+  {
+    "id": "6c412031-6da7-416d-8250-72fa7400637e",
+    "name": "Burmese",
+    "code": "mya",
+    "updatedAt": "2025-09-03T22:30:27.773Z",
+    "countryCount": 0
+  },
+  {
+    "id": "be638867-356e-440e-b90e-e0c80fe2f5f9",
+    "name": "Catalan",
+    "code": "cat",
+    "updatedAt": "2025-09-03T22:30:23.770Z",
+    "countryCount": 0
+  },
+  {
+    "id": "6a0c990a-9337-46eb-a3f0-fa724d126ca4",
+    "name": "Chinese",
+    "code": "zho",
+    "updatedAt": "2025-09-03T22:30:13.330Z",
+    "countryCount": 0
+  },
+  {
+    "id": "dcf71a52-c493-49d0-b137-26716c212a0f",
+    "name": "Cornish",
+    "code": "cor",
+    "updatedAt": "2025-09-03T22:43:38.537Z",
+    "countryCount": 0
+  },
+  {
+    "id": "11a9314e-c494-4014-a978-d6561561efcb",
+    "name": "Corsican",
+    "code": "cos",
+    "updatedAt": "2025-09-03T22:30:42.117Z",
+    "countryCount": 0
+  },
+  {
+    "id": "933445c7-2a0d-46ee-acf9-7047c6dc27a3",
+    "name": "Croatian",
+    "code": "hrv",
+    "updatedAt": "2025-09-03T22:30:31.153Z",
+    "countryCount": 0
+  },
+  {
+    "id": "7be99a44-e803-4921-91e9-e74e8598a678",
+    "name": "Czech",
+    "code": "ces",
+    "updatedAt": "2025-09-03T22:30:21.306Z",
+    "countryCount": 0
+  },
+  {
+    "id": "e2723c96-5d84-4942-ac3a-d2f45b7c3be7",
+    "name": "Danish",
+    "code": "dan",
+    "updatedAt": "2025-09-03T22:30:16.485Z",
+    "countryCount": 0
+  },
+  {
+    "id": "194dd723-6dfa-43d0-9dd0-e8bb13ad2bd4",
+    "name": "Dari",
+    "code": "prs",
+    "updatedAt": "2025-09-03T22:30:39.613Z",
+    "countryCount": 0
+  },
+  {
+    "id": "24752759-6374-4636-b136-f65cbf5f2539",
+    "name": "Dhivehi",
+    "code": "div",
+    "updatedAt": "2025-09-03T22:30:40.873Z",
+    "countryCount": 0
+  },
+  {
+    "id": "be5fdc83-d849-4e62-8b77-a0481fc3f685",
+    "name": "Dutch",
+    "code": "nld",
+    "updatedAt": "2025-09-03T22:30:15.545Z",
+    "countryCount": 0
+  },
+  {
+    "id": "903071c7-b6f6-46c3-9bf3-afb9a50104b6",
+    "name": "Emilian-Romagnol",
+    "code": "eml",
+    "updatedAt": "2025-09-03T22:43:43.425Z",
+    "countryCount": 0
+  },
+  {
+    "id": "1ecb88e9-7578-4ac5-ad07-3bbf9add2b1d",
+    "name": "English",
+    "code": "eng",
+    "updatedAt": "2025-09-03T22:30:11.755Z",
+    "countryCount": 0
+  },
+  {
+    "id": "4d4b058d-06c3-47e3-9c5c-2338f5b5c8fd",
+    "name": "Esperanto",
+    "code": "epo",
+    "updatedAt": "2025-09-03T22:30:44.937Z",
+    "countryCount": 0
+  },
+  {
+    "id": "941e76a1-b78a-49f2-bb2f-999d35e11d3b",
+    "name": "Estonian",
+    "code": "est",
+    "updatedAt": "2025-09-03T22:30:31.573Z",
+    "countryCount": 0
+  },
+  {
+    "id": "adbfc007-7c4f-4420-9a4d-46e46af9cf17",
+    "name": "Farsi",
+    "code": "fas",
+    "updatedAt": "2025-09-03T22:30:25.466Z",
+    "countryCount": 0
+  },
+  {
+    "id": "1ab39e25-4528-4039-b26f-acfb7fbd0245",
+    "name": "Finnish",
+    "code": "fin",
+    "updatedAt": "2025-09-03T22:30:16.798Z",
+    "countryCount": 0
+  },
+  {
+    "id": "e202c3c3-6c7a-4369-aa73-bfad8accdf5d",
+    "name": "French",
+    "code": "fra",
+    "updatedAt": "2025-09-03T22:30:12.566Z",
+    "countryCount": 0
+  },
+  {
+    "id": "bc662cd6-fd58-45e0-a626-4ae1c5268576",
+    "name": "Frisian",
+    "code": "fry",
+    "updatedAt": "2025-09-03T22:30:42.429Z",
+    "countryCount": 0
+  },
+  {
+    "id": "6ab22c8a-c6d0-448b-9fa1-746d870b892d",
+    "name": "Friulian",
+    "code": "fur",
+    "updatedAt": "2025-09-03T22:43:42.429Z",
+    "countryCount": 0
+  },
+  {
+    "id": "cb1693da-0a29-42e7-92a6-484a0f11e15b",
+    "name": "Fulah",
+    "code": "ful",
+    "updatedAt": "2025-09-03T22:30:37.773Z",
+    "countryCount": 0
+  },
+  {
+    "id": "32c80698-a16b-44ef-b469-fbfdd2fb0c52",
+    "name": "Galician",
+    "code": "glg",
+    "updatedAt": "2025-09-03T22:30:42.761Z",
+    "countryCount": 0
+  },
+  {
+    "id": "07eb9fc8-859a-4c3a-916e-aedab090056f",
+    "name": "Georgian",
+    "code": "kat",
+    "updatedAt": "2025-09-03T22:30:33.745Z",
+    "countryCount": 0
+  },
+  {
+    "id": "93ad4da6-a495-4c79-b341-9383f43c771b",
+    "name": "German",
+    "code": "deu",
+    "updatedAt": "2025-09-03T22:30:13.027Z",
+    "countryCount": 0
+  },
+  {
+    "id": "08d83f9d-a70d-4fc6-82df-420133fdbd1f",
+    "name": "Greek",
+    "code": "ell",
+    "updatedAt": "2025-09-03T22:30:21.605Z",
+    "countryCount": 0
+  },
+  {
+    "id": "b29eb952-ecbe-4b47-b09a-7a9c160e47d9",
+    "name": "Gujarati",
+    "code": "guj",
+    "updatedAt": "2025-09-03T22:30:27.470Z",
+    "countryCount": 0
+  },
+  {
+    "id": "f9330cc4-b1ed-43d8-b5da-7dcf1809abfa",
+    "name": "Hausa",
+    "code": "hau",
+    "updatedAt": "2025-09-03T22:30:36.169Z",
+    "countryCount": 0
+  },
+  {
+    "id": "bcebafcf-46eb-4ab0-97be-59c3421bed4b",
+    "name": "Hawaiian",
+    "code": "haw",
+    "updatedAt": "2025-09-03T22:30:44.294Z",
+    "countryCount": 0
+  },
+  {
+    "id": "9889e607-193c-4c5d-b2a4-acc5bebbf6ca",
+    "name": "Hebrew",
+    "code": "heb",
+    "updatedAt": "2025-09-03T22:30:21.906Z",
+    "countryCount": 0
+  },
+  {
+    "id": "ad19e425-d056-4173-a9b8-f739497ea14b",
+    "name": "Hindi",
+    "code": "hin",
+    "updatedAt": "2025-09-03T22:30:17.758Z",
+    "countryCount": 0
+  },
+  {
+    "id": "8ba5ceb9-79dc-417f-91f3-8e99794a965b",
+    "name": "Hungarian",
+    "code": "hun",
+    "updatedAt": "2025-09-03T22:30:22.209Z",
+    "countryCount": 0
+  },
+  {
+    "id": "a6d9fb77-e111-44a9-b79b-b2ec364424ac",
+    "name": "Icelandic",
+    "code": "isl",
+    "updatedAt": "2025-09-03T22:30:22.523Z",
+    "countryCount": 0
+  },
+  {
+    "id": "1528d964-55ca-44bf-a51c-544811fe4e49",
+    "name": "Igbo",
+    "code": "ibo",
+    "updatedAt": "2025-09-03T22:30:35.857Z",
+    "countryCount": 0
+  },
+  {
+    "id": "4a430bae-bd6d-4179-8af9-7ad8cc7b634e",
+    "name": "Indonesian",
+    "code": "ind",
+    "updatedAt": "2025-09-03T22:30:19.426Z",
+    "countryCount": 0
+  },
+  {
+    "id": "76f84dd0-10c7-4758-8b1b-57fea2ecfb19",
+    "name": "Irish",
+    "code": "gle",
+    "updatedAt": "2025-09-03T22:30:24.818Z",
+    "countryCount": 0
+  },
+  {
+    "id": "7a5061d7-b4da-46a9-ac32-656f3c4e8723",
+    "name": "Italian",
+    "code": "ita",
+    "updatedAt": "2025-09-03T22:30:15.233Z",
+    "countryCount": 0
+  },
+  {
+    "id": "c785cbe3-35e2-4f49-b3e7-09eb03e7d92f",
+    "name": "Japanese",
+    "code": "jpn",
+    "updatedAt": "2025-09-03T22:30:13.630Z",
+    "countryCount": 0
+  },
+  {
+    "id": "9e7f645f-9e8b-471e-80b2-54f6a3c5a45f",
+    "name": "Kazakh",
+    "code": "kaz",
+    "updatedAt": "2025-09-03T22:30:34.057Z",
+    "countryCount": 0
+  },
+  {
+    "id": "b5b85804-fc73-40bf-9f2b-4792d8fb7ebe",
+    "name": "Khmer",
+    "code": "khm",
+    "updatedAt": "2025-09-03T22:30:28.313Z",
+    "countryCount": 0
+  },
+  {
+    "id": "ac4dda5a-ae33-462c-baa2-1ad8e7597334",
+    "name": "Kinyarwanda",
+    "code": "kin",
+    "updatedAt": "2025-09-03T22:30:36.774Z",
+    "countryCount": 0
+  },
+  {
+    "id": "ce168575-afc0-4676-92ec-96cc0e060380",
+    "name": "Kirundi",
+    "code": "run",
+    "updatedAt": "2025-09-03T22:43:35.707Z",
+    "countryCount": 0
+  },
+  {
+    "id": "21ff5bc9-4b5b-44a0-9230-c60f92aca629",
+    "name": "Korean",
+    "code": "kor",
+    "updatedAt": "2025-09-03T22:30:13.925Z",
+    "countryCount": 0
+  },
+  {
+    "id": "06b2f9ab-b455-4e4c-b0d5-63274a268809",
+    "name": "Kurdish",
+    "code": "kur",
+    "updatedAt": "2025-09-03T22:30:38.957Z",
+    "countryCount": 0
+  },
+  {
+    "id": "14517e0d-95ca-4014-a179-28693513b06b",
+    "name": "Kyrgyz",
+    "code": "kir",
+    "updatedAt": "2025-09-03T22:43:29.982Z",
+    "countryCount": 0
+  },
+  {
+    "id": "27869677-a25a-45b9-8d1f-66035180973a",
+    "name": "Lao",
+    "code": "lao",
+    "updatedAt": "2025-09-03T22:30:28.637Z",
+    "countryCount": 0
+  },
+  {
+    "id": "a3c85e59-c70f-49d0-b192-bd454876d741",
+    "name": "Latvian",
+    "code": "lav",
+    "updatedAt": "2025-09-03T22:30:31.877Z",
+    "countryCount": 0
+  },
+  {
+    "id": "821cd39f-d0d0-4360-a6dd-2206900abfc1",
+    "name": "Ligurian",
+    "code": "lij",
+    "updatedAt": "2025-09-03T22:43:42.776Z",
+    "countryCount": 0
+  },
+  {
+    "id": "90e0366d-bb20-4e78-b651-9a49b8873a4e",
+    "name": "Limburgish",
+    "code": "lim",
+    "updatedAt": "2025-09-03T22:43:39.222Z",
+    "countryCount": 0
+  },
+  {
+    "id": "02bc7337-112d-4e20-888a-f3099caee1c0",
+    "name": "Lithuanian",
+    "code": "lit",
+    "updatedAt": "2025-09-03T22:30:32.201Z",
+    "countryCount": 0
+  },
+  {
+    "id": "280bb6c1-9c09-484c-a9f5-5cad4994d3e6",
+    "name": "Luganda",
+    "code": "lug",
+    "updatedAt": "2025-09-03T22:30:37.077Z",
+    "countryCount": 0
+  },
+  {
+    "id": "a43a3965-b830-4884-85b5-015d4a7b2d5a",
+    "name": "Luxembourgish",
+    "code": "ltz",
+    "updatedAt": "2025-09-03T22:30:41.497Z",
+    "countryCount": 0
+  },
+  {
+    "id": "3c8c82cb-a7bb-4227-a957-6d21717d2e71",
+    "name": "Macedonian",
+    "code": "mkd",
+    "updatedAt": "2025-09-03T22:30:32.521Z",
+    "countryCount": 0
+  },
+  {
+    "id": "04ed313a-7ebf-47dd-b030-6ff6619955e3",
+    "name": "Malagasy",
+    "code": "mlg",
+    "updatedAt": "2025-09-03T22:43:31.235Z",
+    "countryCount": 0
+  },
+  {
+    "id": "4b5c5854-1704-43ec-9b67-d8ffce1d8a53",
+    "name": "Malay",
+    "code": "msa",
+    "updatedAt": "2025-09-03T22:30:19.729Z",
+    "countryCount": 0
+  },
+  {
+    "id": "0ee661d8-72bc-44cf-b552-0bdcfbbc1763",
+    "name": "Malayalam",
+    "code": "mal",
+    "updatedAt": "2025-09-03T22:30:25.782Z",
+    "countryCount": 0
+  },
+  {
+    "id": "703b5555-8c51-4a8b-bd55-2befc41966b2",
+    "name": "Maltese",
+    "code": "mlt",
+    "updatedAt": "2025-09-03T22:30:41.173Z",
+    "countryCount": 0
+  },
+  {
+    "id": "442e6fad-c941-4a55-a102-3320e63aaaaa",
+    "name": "Manx",
+    "code": "glv",
+    "updatedAt": "2025-09-03T22:30:43.078Z",
+    "countryCount": 0
+  },
+  {
+    "id": "30494ece-dba2-4ac7-afe1-852116d4354e",
+    "name": "Maori",
+    "code": "mri",
+    "updatedAt": "2025-09-03T22:30:44.616Z",
+    "countryCount": 0
+  },
+  {
+    "id": "653e4055-76bd-4970-8c94-90c273782a06",
+    "name": "Marathi",
+    "code": "mar",
+    "updatedAt": "2025-09-03T22:30:26.745Z",
+    "countryCount": 0
+  },
+  {
+    "id": "b4d0e60b-e84e-4d1b-abe7-92eada03dc06",
+    "name": "Mongolian",
+    "code": "mon",
+    "updatedAt": "2025-09-03T22:30:28.952Z",
+    "countryCount": 0
+  },
+  {
+    "id": "cbe8740c-5395-485e-b5bc-6f5b6ff13b81",
+    "name": "Neapolitan",
+    "code": "nap",
+    "updatedAt": "2025-09-03T22:43:41.721Z",
+    "countryCount": 0
+  },
+  {
+    "id": "cac109fd-46a8-40cd-80f2-92f9b0179a6d",
+    "name": "Nepali",
+    "code": "nep",
+    "updatedAt": "2025-09-03T22:30:29.284Z",
+    "countryCount": 0
+  },
+  {
+    "id": "9bb51322-1ea5-446e-83c3-438489f41b2e",
+    "name": "Northern Sotho",
+    "code": "nso",
+    "updatedAt": "2025-09-03T22:43:32.392Z",
+    "countryCount": 0
+  },
+  {
+    "id": "53067285-ec75-4835-a931-8eba5d303bea",
+    "name": "Norwegian",
+    "code": "nor",
+    "updatedAt": "2025-09-03T22:30:16.173Z",
+    "countryCount": 0
+  },
+  {
+    "id": "8693e747-aad8-40fd-89aa-b2a3ed2fd8ac",
+    "name": "Oromo",
+    "code": "orm",
+    "updatedAt": "2025-09-03T22:30:38.661Z",
+    "countryCount": 0
+  },
+  {
+    "id": "54b3590d-4f66-4728-afdc-14237521e01b",
+    "name": "Pashto",
+    "code": "pus",
+    "updatedAt": "2025-09-03T22:30:39.293Z",
+    "countryCount": 0
+  },
+  {
+    "id": "bec13d33-1c5f-4bb6-bf6a-70d2f2468bcf",
+    "name": "Piedmontese",
+    "code": "pms",
+    "updatedAt": "2025-09-03T22:43:43.102Z",
+    "countryCount": 0
+  },
+  {
+    "id": "c590b3e4-f96e-4ef3-9b63-02895a2c9333",
+    "name": "Polish",
+    "code": "pol",
+    "updatedAt": "2025-09-03T22:30:17.114Z",
+    "countryCount": 0
+  },
+  {
+    "id": "0b01ab22-f681-4c48-b2c2-22e51ddccf6c",
+    "name": "Portuguese",
+    "code": "por",
+    "updatedAt": "2025-09-03T22:30:14.906Z",
+    "countryCount": 0
+  },
+  {
+    "id": "6f918efb-b6a7-4ed0-93a9-60f2d1155b08",
+    "name": "Punjabi",
+    "code": "pan",
+    "updatedAt": "2025-09-03T22:30:27.153Z",
+    "countryCount": 0
+  },
+  {
+    "id": "4e3a1413-42e8-442f-8b01-72fa932f1a3b",
+    "name": "Romanian",
+    "code": "ron",
+    "updatedAt": "2025-09-03T22:30:22.829Z",
+    "countryCount": 0
+  },
+  {
+    "id": "3df31c28-101d-4c88-82e5-f65ce6180fb0",
+    "name": "Russian",
+    "code": "rus",
+    "updatedAt": "2025-09-03T22:30:14.234Z",
+    "countryCount": 0
+  },
+  {
+    "id": "215cea8c-b2de-43b5-8209-9f8ff8011698",
+    "name": "Samoan",
+    "code": "smo",
+    "updatedAt": "2025-09-03T22:30:43.545Z",
+    "countryCount": 0
+  },
+  {
+    "id": "b6496714-7ccd-4680-8d85-0c5a4291f58b",
+    "name": "Samosan",
+    "code": "roh",
+    "updatedAt": "2025-09-03T22:43:43.934Z",
+    "countryCount": 0
+  },
+  {
+    "id": "7006a4dc-993e-4f25-8713-31f4014c7ed8",
+    "name": "Sardinian",
+    "code": "srd",
+    "updatedAt": "2025-09-03T22:43:40.457Z",
+    "countryCount": 0
+  },
+  {
+    "id": "76f095e6-dd93-49cb-95a8-d432d5195a05",
+    "name": "Scottish Gaelic",
+    "code": "gla",
+    "updatedAt": "2025-09-03T22:30:25.134Z",
+    "countryCount": 0
+  },
+  {
+    "id": "5d77664b-1f66-4d20-a0da-e10328935939",
+    "name": "Serbian",
+    "code": "srp",
+    "updatedAt": "2025-09-03T22:30:32.817Z",
+    "countryCount": 0
+  },
+  {
+    "id": "2a6b851a-b99e-43d4-b118-8432fe977b5d",
+    "name": "Shona",
+    "code": "sna",
+    "updatedAt": "2025-09-03T22:43:31.850Z",
+    "countryCount": 0
+  },
+  {
+    "id": "00ac0cda-485c-4d96-bcab-fe62ce43fe5a",
+    "name": "Sicilian",
+    "code": "scn",
+    "updatedAt": "2025-09-03T22:43:41.169Z",
+    "countryCount": 0
+  },
+  {
+    "id": "5392af49-4a7e-4eb8-b848-b396c436dfbe",
+    "name": "Sidamo",
+    "code": "sid",
+    "updatedAt": "2025-09-03T22:43:37.396Z",
+    "countryCount": 0
+  },
+  {
+    "id": "68bf130f-6a94-4ffd-9f5e-abd9d6fa5273",
+    "name": "Sindhi",
+    "code": "snd",
+    "updatedAt": "2025-09-03T22:30:40.237Z",
+    "countryCount": 0
+  },
+  {
+    "id": "ba21076f-8b91-4bfc-9ac9-ebc393a96243",
+    "name": "Sinhala",
+    "code": "sin",
+    "updatedAt": "2025-09-03T22:30:29.595Z",
+    "countryCount": 0
+  },
+  {
+    "id": "b0a03f27-54fc-4fa0-957a-431a4db35352",
+    "name": "Slovak",
+    "code": "slk",
+    "updatedAt": "2025-09-03T22:30:23.146Z",
+    "countryCount": 0
+  },
+  {
+    "id": "9dd120ed-8491-4973-97b1-e04583ff914a",
+    "name": "Slovenian",
+    "code": "slv",
+    "updatedAt": "2025-09-03T22:30:33.133Z",
+    "countryCount": 0
+  },
+  {
+    "id": "8d95229b-6aea-475c-9ebd-ce9b46d1af5b",
+    "name": "Somali",
+    "code": "som",
+    "updatedAt": "2025-09-03T22:30:36.481Z",
+    "countryCount": 0
+  },
+  {
+    "id": "889d0413-a103-4173-90c4-1764a6cc009c",
+    "name": "Southern Sotho",
+    "code": "sot",
+    "updatedAt": "2025-09-03T22:43:33.491Z",
+    "countryCount": 0
+  },
+  {
+    "id": "41a7c30a-7d7a-4910-8c3a-cbdb6ce0f64e",
+    "name": "Spanish",
+    "code": "spa",
+    "updatedAt": "2025-09-03T22:30:12.246Z",
+    "countryCount": 0
+  },
+  {
+    "id": "dd11413c-26f3-4e33-99a2-1788a29828f3",
+    "name": "Swahili",
+    "code": "swa",
+    "updatedAt": "2025-09-03T22:30:20.361Z",
+    "countryCount": 0
+  },
+  {
+    "id": "324f7bcd-1ab2-42b3-aeb7-11f41e296ec6",
+    "name": "Swati",
+    "code": "ssw",
+    "updatedAt": "2025-09-03T22:43:34.591Z",
+    "countryCount": 0
+  },
+  {
+    "id": "73e4bef2-a1b8-40ee-93a7-e9585b062161",
+    "name": "Swedish",
+    "code": "swe",
+    "updatedAt": "2025-09-03T22:30:15.870Z",
+    "countryCount": 0
+  },
+  {
+    "id": "e8e58be6-a4ed-4def-9bf6-fb6dfc9befd0",
+    "name": "Tagalog",
+    "code": "tgl",
+    "updatedAt": "2025-09-03T22:30:20.050Z",
+    "countryCount": 0
+  },
+  {
+    "id": "c9efba30-cc60-4e42-9708-0ef1d60603f8",
+    "name": "Tajik",
+    "code": "tgk",
+    "updatedAt": "2025-09-03T22:43:29.154Z",
+    "countryCount": 0
+  },
+  {
+    "id": "dc948b7a-67bf-4b79-8bb0-d4fdca954c82",
+    "name": "Tamil",
+    "code": "tam",
+    "updatedAt": "2025-09-03T22:30:26.098Z",
+    "countryCount": 0
+  },
+  {
+    "id": "a927bde7-7eeb-4258-bf4e-875e5bad3256",
+    "name": "Telugu",
+    "code": "tel",
+    "updatedAt": "2025-09-03T22:30:26.426Z",
+    "countryCount": 0
+  },
+  {
+    "id": "5b6ad444-9a77-4ff5-af61-873ed96331ba",
+    "name": "Thai",
+    "code": "tha",
+    "updatedAt": "2025-09-03T22:30:18.813Z",
+    "countryCount": 0
+  },
+  {
+    "id": "7f5be4ef-b048-402c-8d5c-0fb70bcd79a7",
+    "name": "Tibetan",
+    "code": "bod",
+    "updatedAt": "2025-09-03T22:30:29.909Z",
+    "countryCount": 0
+  },
+  {
+    "id": "00c97aba-101a-4c1c-b12f-97cc3504cd2e",
+    "name": "Tigrinya",
+    "code": "tir",
+    "updatedAt": "2025-09-03T22:30:38.365Z",
+    "countryCount": 0
+  },
+  {
+    "id": "4ee74f17-42df-49b6-8057-92d1bb02c334",
+    "name": "Tigré",
+    "code": "tig",
+    "updatedAt": "2025-09-03T22:43:36.253Z",
+    "countryCount": 0
+  },
+  {
+    "id": "23a22931-ffc9-4c6d-9968-1afc162f6933",
+    "name": "Tongan",
+    "code": "ton",
+    "updatedAt": "2025-09-03T22:30:43.858Z",
+    "countryCount": 0
+  },
+  {
+    "id": "c0aa60b2-a9a3-402e-8acf-7e4906bb4dcf",
+    "name": "Tsonga",
+    "code": "tso",
+    "updatedAt": "2025-09-03T22:43:34.044Z",
+    "countryCount": 0
+  },
+  {
+    "id": "14c51c4e-bccf-48c4-b410-fc34dc0516a5",
+    "name": "Tswana",
+    "code": "tsn",
+    "updatedAt": "2025-09-03T22:43:32.937Z",
+    "countryCount": 0
+  },
+  {
+    "id": "1dcee312-a47e-4c68-9935-9620740286b3",
+    "name": "Turkish",
+    "code": "tur",
+    "updatedAt": "2025-09-03T22:30:17.433Z",
+    "countryCount": 0
+  },
+  {
+    "id": "c014cb15-8ca3-419f-8759-21767c7b27e7",
+    "name": "Turkmen",
+    "code": "tuk",
+    "updatedAt": "2025-09-03T22:43:30.621Z",
+    "countryCount": 0
+  },
+  {
+    "id": "ca7667ae-4405-4648-a2fc-0bc9e69a903b",
+    "name": "Ukrainian",
+    "code": "ukr",
+    "updatedAt": "2025-09-03T22:30:23.462Z",
+    "countryCount": 0
+  },
+  {
+    "id": "8711d955-9d42-4579-a0c3-4c94190eabed",
+    "name": "Urdu",
+    "code": "urd",
+    "updatedAt": "2025-09-03T22:30:18.510Z",
+    "countryCount": 0
+  },
+  {
+    "id": "e9d248e9-036e-421f-8fa5-7a98503dd7ba",
+    "name": "Uyghur",
+    "code": "uig",
+    "updatedAt": "2025-09-03T22:30:39.917Z",
+    "countryCount": 0
+  },
+  {
+    "id": "ae8f5678-85c4-49cf-828e-e4f8b5a479ed",
+    "name": "Uzbek",
+    "code": "uzb",
+    "updatedAt": "2025-09-03T22:30:34.353Z",
+    "countryCount": 0
+  },
+  {
+    "id": "9c004fdc-9aa1-41f9-9631-8e34c5afd195",
+    "name": "Venda",
+    "code": "ven",
+    "updatedAt": "2025-09-03T22:43:35.172Z",
+    "countryCount": 0
+  },
+  {
+    "id": "f11c8fb6-cdf2-4caf-a38e-dd48737ea001",
+    "name": "Venetian",
+    "code": "vec",
+    "updatedAt": "2025-09-03T22:43:42.087Z",
+    "countryCount": 0
+  },
+  {
+    "id": "72b64fd2-7b65-4789-a340-1a5cb4d54f5c",
+    "name": "Vietnamese",
+    "code": "vie",
+    "updatedAt": "2025-09-03T22:30:19.117Z",
+    "countryCount": 0
+  },
+  {
+    "id": "12cbfc4f-f144-424f-9b2e-6dd9bc884f8e",
+    "name": "Walloon",
+    "code": "wln",
+    "updatedAt": "2025-09-03T22:43:37.994Z",
+    "countryCount": 0
+  },
+  {
+    "id": "7457fb23-9c27-4462-b361-fa544b3aab7f",
+    "name": "Welsh",
+    "code": "cym",
+    "updatedAt": "2025-09-03T22:30:24.410Z",
+    "countryCount": 0
+  },
+  {
+    "id": "cc499ce0-bdc6-4fed-b2df-da94c7ed1b69",
+    "name": "Wolof",
+    "code": "wol",
+    "updatedAt": "2025-09-03T22:30:38.073Z",
+    "countryCount": 0
+  },
+  {
+    "id": "f6384176-1452-4f5e-b4a2-73cfa7faf0cf",
+    "name": "Xhosa",
+    "code": "xho",
+    "updatedAt": "2025-09-03T22:30:35.257Z",
+    "countryCount": 0
+  },
+  {
+    "id": "0ec50894-928a-4050-9136-bd07f4459b87",
+    "name": "Yoruba",
+    "code": "yor",
+    "updatedAt": "2025-09-03T22:30:35.553Z",
+    "countryCount": 0
+  },
+  {
+    "id": "b7086351-783f-4d1e-afb1-b23f4b33cf52",
+    "name": "Zulu",
+    "code": "zul",
+    "updatedAt": "2025-09-03T22:30:34.957Z",
+    "countryCount": 0
+  }
+]

@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generateMediaContactsTemplate, getTemplateFilename } from '@/lib/excel-template';
+import { NextResponse } from 'next/server';
+import { generateMediaContactsTemplate, getTemplateFilename } from '@/lib/templates/excel-template';
 import { auth } from '../../../../../auth';
 
 /**
  * GET handler for Excel template download
  * Provides a downloadable Excel template for media contacts upload
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Check authentication
     const session = await auth();

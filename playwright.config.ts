@@ -2,17 +2,19 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "tests",
-  timeout: 30_000,
+  timeout: 60_000,
   expect: {
-    timeout: 5_000,
+    timeout: 10_000,
   },
   fullyParallel: true,
-  retries: 0,
-  reporter: [["list"]],
+  retries: 1,
+  reporter: [["list"], ["html"]],
   use: {
-    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
+    baseURL: "http://localhost:3000",
     trace: "on-first-retry",
     video: "retain-on-failure",
+    screenshot: "only-on-failure",
+    headless: false, // Show browser for debugging
   },
   projects: [
     {

@@ -40,6 +40,7 @@ const outletSchema = z.object({
   website: z.string().url('Please enter a valid URL').or(z.literal('')).optional(),
   publisherId: z.string().optional(),
   categoryIds: z.array(z.string()).optional(),
+  countryIds: z.array(z.string()).optional(),
 });
 
 type OutletFormData = z.infer<typeof outletSchema>;
@@ -61,10 +62,18 @@ interface Category {
   color?: string | null;
 }
 
+interface Country {
+  id: string;
+  name: string;
+  code?: string | null;
+  flag_emoji?: string | null;
+}
+
 export function AddOutletSheet({ isOpen, onOpenChange, onSuccess }: AddOutletSheetProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [publishers, setPublishers] = useState<Publisher[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [countries, setCountries] = useState<Country[]>([]);
   const [loadingData, setLoadingData] = useState(false);
 
   const form = useForm<OutletFormData>({
@@ -75,10 +84,11 @@ export function AddOutletSheet({ isOpen, onOpenChange, onSuccess }: AddOutletShe
       website: '',
       publisherId: 'none',
       categoryIds: [],
+      countryIds: [],
     },
   });
 
-  // Fetch publishers and categories when sheet opens
+  // Fetch publishers, categories and countries when sheet opens
   useEffect(() => {
     if (isOpen) {
       fetchPublishersAndCategories();
@@ -89,13 +99,18 @@ export function AddOutletSheet({ isOpen, onOpenChange, onSuccess }: AddOutletShe
     try {
       setLoadingData(true);
       
-      const [publishersResponse, categoriesResponse] = await Promise.all([
+      const [publishersResponse, categoriesResponse, countriesResponse] = await Promise.all([
         fetch('/api/publishers'),
-        fetch('/api/categories')
+        fetch('/api/categories'),
+        fetch('/api/countries'),
       ]);
 
       if (publishersResponse.ok) {
-        const publishersData = await publishersResponse.json();
+        const publishersPayload = await publishersResponse.json();
+        // Extract data from paginated result
+        const publishersData = publishersPayload && typeof publishersPayload === 'object' && 'data' in publishersPayload 
+          ? Array.isArray(publishersPayload.data) ? publishersPayload.data : [] 
+          : Array.isArray(publishersPayload) ? publishersPayload : [];
         setPublishers(publishersData);
       }
 
@@ -103,9 +118,14 @@ export function AddOutletSheet({ isOpen, onOpenChange, onSuccess }: AddOutletShe
         const categoriesData = await categoriesResponse.json();
         setCategories(categoriesData);
       }
+
+      if (countriesResponse.ok) {
+        const countriesData = await countriesResponse.json();
+        setCountries(countriesData);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load publishers and categories');
+      toast.error('Failed to load publishers, categories, and countries');
     } finally {
       setLoadingData(false);
     }
@@ -126,6 +146,7 @@ export function AddOutletSheet({ isOpen, onOpenChange, onSuccess }: AddOutletShe
           website: data.website || undefined,
           publisherId: data.publisherId === 'none' ? undefined : data.publisherId || undefined,
           categoryIds: data.categoryIds || [],
+          countryIds: data.countryIds || [],
         }),
       });
 
@@ -162,6 +183,15 @@ export function AddOutletSheet({ isOpen, onOpenChange, onSuccess }: AddOutletShe
       form.setValue('categoryIds', [...currentCategories, categoryId]);
     } else {
       form.setValue('categoryIds', currentCategories.filter(id => id !== categoryId));
+    }
+  };
+
+  const handleCountryChange = (countryId: string, checked: boolean) => {
+    const current = form.getValues('countryIds') || [];
+    if (checked) {
+      form.setValue('countryIds', [...current, countryId]);
+    } else {
+      form.setValue('countryIds', current.filter(id => id !== countryId));
     }
   };
 
@@ -280,6 +310,38 @@ export function AddOutletSheet({ isOpen, onOpenChange, onSuccess }: AddOutletShe
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                           >
                             {category.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {countries.length > 0 && (
+              <FormField
+                control={form.control}
+                name="countryIds"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Countries</FormLabel>
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
+                      {countries.map((country) => (
+                        <div key={country.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`country-${country.id}`}
+                            checked={form.watch('countryIds')?.includes(country.id) || false}
+                            onCheckedChange={(checked) => handleCountryChange(country.id, checked as boolean)}
+                            disabled={isSubmitting}
+                          />
+                          <label
+                            htmlFor={`country-${country.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            <span className="mr-1">{country.flag_emoji || ''}</span>
+                            {country.name}
                           </label>
                         </div>
                       ))}

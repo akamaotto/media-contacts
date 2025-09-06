@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { OutletsTable } from "./outlets-table";
 import { AddOutletSheet } from "./add-outlet-sheet";
 import { EditOutletSheet } from "./edit-outlet-sheet";
 import { DeleteOutletDialog } from "./delete-outlet-dialog";
-import type { Outlet } from "@/backend/outlets/actions";
+import { OutletDetailSheet } from "./outlet-detail-sheet";
+import type { Outlet } from "@/features/outlets/lib/types";
 
 interface OutletsClientViewProps {
   // Future props if needed
@@ -14,8 +15,11 @@ interface OutletsClientViewProps {
 export function OutletsClientView({}: OutletsClientViewProps) {
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
   const [deletingOutlet, setDeletingOutlet] = useState<Outlet | null>(null);
+  const [viewingOutlet, setViewingOutlet] = useState<Outlet | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const refreshTableRef = useRef<{ refresh: () => void }>(null);
+  // Preserve the selected outlet id at the moment of selection, in case outlet prop mutates
+  const selectedIdRef = useRef<string | null>(null);
 
   // Global function to open Add Outlet modal (for breadcrumb button)
   if (typeof window !== 'undefined') {
@@ -25,11 +29,22 @@ export function OutletsClientView({}: OutletsClientViewProps) {
   }
 
   const handleEdit = (outlet: Outlet) => {
-    setEditingOutlet(outlet);
+    console.debug('[OutletsClientView] handleEdit selected outlet:', {
+      id: (outlet as any)?.id,
+      outlet,
+    });
+    selectedIdRef.current = (outlet as any)?.id ?? null;
+    console.debug('[OutletsClientView] captured selectedIdRef', { selectedId: selectedIdRef.current });
+    // Shallow clone to decouple from any upstream mutations
+    setEditingOutlet({ ...outlet });
   };
 
   const handleDelete = (outlet: Outlet) => {
     setDeletingOutlet(outlet);
+  };
+
+  const handleView = (outlet: Outlet) => {
+    setViewingOutlet(outlet);
   };
 
   const handleAddSuccess = () => {
@@ -42,6 +57,15 @@ export function OutletsClientView({}: OutletsClientViewProps) {
     setEditingOutlet(null);
   };
 
+  useEffect(() => {
+    if (editingOutlet) {
+      console.debug('[OutletsClientView] editingOutlet set:', {
+        id: (editingOutlet as any)?.id,
+        editingOutlet,
+      });
+    }
+  }, [editingOutlet]);
+
   const handleDeleteSuccess = () => {
     refreshTableRef.current?.refresh();
     setDeletingOutlet(null);
@@ -52,6 +76,7 @@ export function OutletsClientView({}: OutletsClientViewProps) {
       <OutletsTable 
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onView={handleView}
         ref={refreshTableRef}
       />
       
@@ -67,9 +92,11 @@ export function OutletsClientView({}: OutletsClientViewProps) {
         <EditOutletSheet
           outlet={editingOutlet}
           isOpen={!!editingOutlet}
+          selectedId={selectedIdRef.current}
           onOpenChange={(open: boolean) => {
             if (!open) {
               setEditingOutlet(null);
+              selectedIdRef.current = null;
             }
           }}
           onSuccess={handleEditSuccess}
@@ -83,6 +110,16 @@ export function OutletsClientView({}: OutletsClientViewProps) {
         onOpenChange={(open: boolean) => !open && setDeletingOutlet(null)}
         onSuccess={handleDeleteSuccess}
       />
+      
+      {/* Outlet Detail Sheet */}
+      {viewingOutlet && (
+        <OutletDetailSheet
+          isOpen={!!viewingOutlet}
+          onOpenChange={(open) => !open && setViewingOutlet(null)}
+          outlet={viewingOutlet}
+          onEdit={handleEdit}
+        />
+      )}
     </div>
   );
 }

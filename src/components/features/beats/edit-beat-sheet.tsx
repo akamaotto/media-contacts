@@ -40,9 +40,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-import { getAllCategories } from '@/backend/categories/actions';
-import type { Beat } from '@/backend/beats/actions';
-import type { Category } from '@/backend/categories/actions';
+// Minimal local types for this component
+type Category = { id: string; name: string; color?: string | null; description?: string | null };
+type Beat = {
+  id: string;
+  name: string;
+  description?: string | null;
+  categories?: Category[];
+};
 
 const beatFormSchema = z.object({
   name: z.string().min(1, 'Beat name is required').max(100, 'Beat name must be less than 100 characters'),
@@ -77,8 +82,18 @@ export function EditBeatSheet({ beat, isOpen, onOpenChange, onSuccess }: EditBea
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const data = await getAllCategories();
-        setCategories(data);
+        const res = await fetch('/api/categories');
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || 'Failed to load categories');
+        }
+        const response = await res.json();
+        
+        // Handle paginated response structure
+        const categoriesData = response.data || response; // Support both paginated and array responses
+        const categories = Array.isArray(categoriesData) ? categoriesData : [];
+        
+        setCategories(categories);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
       }
@@ -102,16 +117,18 @@ export function EditBeatSheet({ beat, isOpen, onOpenChange, onSuccess }: EditBea
     setIsSubmitting(true);
     
     try {
+      const payload = {
+        name: data.name.trim(),
+        description: data.description?.trim() || undefined,
+        categoryIds: data.categoryIds || [],
+      };
+      
       const response = await fetch(`/api/beats/${beat.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: data.name.trim(),
-          description: data.description?.trim() || undefined,
-          categoryIds: data.categoryIds || [],
-        }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();

@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, Save, X, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Language } from '@/lib/types/geography';
-import { getCountries } from '@/backend/countries/actions';
+import { getCountries } from '@/features/countries/lib/queries';
 import {
   Command,
   CommandEmpty,

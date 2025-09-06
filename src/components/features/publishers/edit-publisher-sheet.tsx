@@ -25,8 +25,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-
-import type { Publisher } from '@/backend/publishers/actions';
+// Local minimal Publisher type for this sheet
+type Publisher = {
+  id: string;
+  name: string;
+  description: string | null;
+  website: string | null;
+};
 
 const publisherSchema = z.object({
   name: z.string().min(1, 'Publisher name is required').max(100, 'Name must be less than 100 characters'),

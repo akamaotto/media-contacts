@@ -4,5 +4,5 @@
 export { 
   upsertUserAction as upsertUser,
   deleteUserAction as deleteUser,
-  getUsersAction,
+  getFilteredUsers as getUsersAction,
 } from '@/lib/actions/users';

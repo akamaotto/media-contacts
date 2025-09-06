@@ -5,7 +5,16 @@ import { BeatsTable } from "./beats-table";
 import { AddBeatSheet } from "./add-beat-sheet";
 import { EditBeatSheet } from "./edit-beat-sheet";
 import { DeleteBeatDialog } from "./delete-beat-dialog";
-import type { Beat } from "@/backend/beats/actions";
+import { BeatDetailSheet } from "./beat-detail-sheet";
+
+// Minimal Beat type used for local state and props
+type Beat = {
+  id: string;
+  name: string;
+  description?: string | null;
+  categories?: { id: string; name: string; color?: string | null; description?: string | null }[];
+  contactCount?: number;
+};
 
 interface BeatsClientViewProps {
   // Future props if needed
@@ -14,6 +23,7 @@ interface BeatsClientViewProps {
 export function BeatsClientView({}: BeatsClientViewProps) {
   const [editingBeat, setEditingBeat] = useState<Beat | null>(null);
   const [deletingBeat, setDeletingBeat] = useState<Beat | null>(null);
+  const [viewingBeatId, setViewingBeatId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const refreshTableRef = useRef<{ refresh: () => void }>(null);
 
@@ -30,6 +40,10 @@ export function BeatsClientView({}: BeatsClientViewProps) {
 
   const handleDelete = (beat: Beat) => {
     setDeletingBeat(beat);
+  };
+
+  const handleView = (beat: Beat) => {
+    setViewingBeatId(beat.id);
   };
 
   const handleAddSuccess = () => {
@@ -52,6 +66,7 @@ export function BeatsClientView({}: BeatsClientViewProps) {
       <BeatsTable 
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onView={handleView}
         ref={refreshTableRef}
       />
       
@@ -75,6 +90,25 @@ export function BeatsClientView({}: BeatsClientViewProps) {
           onSuccess={handleEditSuccess}
         />
       )}
+      
+      {/* Beat Detail Sheet */}
+      <BeatDetailSheet
+        beatId={viewingBeatId}
+        isOpen={!!viewingBeatId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingBeatId(null);
+          }
+        }}
+        onEdit={(beat) => {
+          setViewingBeatId(null);
+          setEditingBeat(beat);
+        }}
+        onDelete={(beat) => {
+          setViewingBeatId(null);
+          setDeletingBeat(beat);
+        }}
+      />
       
       {/* Delete Beat Dialog */}
       {deletingBeat && (

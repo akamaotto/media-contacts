@@ -71,7 +71,7 @@ export function MetricsSection({
 
   useEffect(() => {
     fetchMetrics();
-  }, [period]);
+  }, [period, fetchMetrics]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

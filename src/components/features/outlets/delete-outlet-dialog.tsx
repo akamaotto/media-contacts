@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import type { Outlet } from '@/backend/outlets/actions';
+import type { Outlet } from '@/features/outlets/lib/types';
 
 interface DeleteOutletDialogProps {
   outlet: Outlet | null;

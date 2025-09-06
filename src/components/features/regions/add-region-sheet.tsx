@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
-import { getAllRegions } from "@/backend/regions/actions";
 import { CountryAssignment } from "./country-assignment";
 import {
   Sheet,

@@ -1,255 +1,276 @@
 'use client';
 
 import * as React from 'react';
-import {useState, useEffect, useRef} from 'react';
-import {Check, ChevronsUpDown, Loader2, X} from 'lucide-react';
-import {cn} from '@/lib/utils';
-import {Button} from '@/components/ui/button';
+import { useState, useEffect, useRef } from 'react';
+import { Check, ChevronsUpDown, Loader2, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
 } from '@/components/ui/command';
-import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
-import {Badge} from '@/components/ui/badge';
-// import {searchBeats} from '@/lib/actions/media-contacts'; // Temporarily using API instead
-import {Beat} from './types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
+
+interface Beat {
+  id: string;
+  label: string;
+  description?: string;
+  count?: number;
+}
 
 interface BeatAutocompleteProps {
-    beats: string[];
-    onBeatsChange: (beats: string[]) => void;
-    placeholder?: string;
-    error?: string;
+  beats: string[];
+  onBeatsChange: (beats: string[]) => void;
+  placeholder?: string;
+  error?: string;
 }
 
 export function BeatAutocomplete({
-    beats,
-    onBeatsChange,
-    placeholder = 'Add beat...',
-    error,
+  beats,
+  onBeatsChange,
+  placeholder = 'Add beat...',
+  error,
 }: BeatAutocompleteProps) {
-    const [open, setOpen] = useState(false);
-    const [inputValue, setInputValue] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [suggestions, setSuggestions] = useState<Beat[]>([]);
-    const [debouncedValue, setDebouncedValue] = useState('');
-    const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<Beat[]>([]);
+  const [popularBeats, setPopularBeats] = useState<Beat[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-    // Track beats prop changes for debugging
-    useEffect(() => {
-        console.log('BeatAutocomplete: beats prop changed:', beats);
-    }, [beats]);
+  // Fetch popular beats on mount
+  useEffect(() => {
+    const fetchPopularBeats = async () => {
+      try {
+        const response = await fetch('/api/filters/beats?limit=5');
+        if (response.ok) {
+          const data = await response.json();
+          setPopularBeats(data.items || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch popular beats:', error);
+      }
+    };
+
+    fetchPopularBeats();
+  }, []);
+
+  // Search beats when input value changes (with debounce)
+  useEffect(() => {
+    const fetchBeats = async () => {
+      if (!inputValue) {
+        // Show popular beats
+        setSuggestions(popularBeats);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/filters/beats?s=${encodeURIComponent(inputValue)}&limit=20`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setSuggestions(data.items || []);
+      } catch (error) {
+        console.error('BeatAutocomplete: Error searching beats:', error);
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     // Debounce input value
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedValue(inputValue);
-        }, 300);
+    const timer = setTimeout(() => {
+      fetchBeats();
+    }, 300);
 
-        return () => clearTimeout(timer);
-    }, [inputValue]);
+    return () => clearTimeout(timer);
+  }, [inputValue, popularBeats]);
 
-    // Search beats when debounced value changes
-    useEffect(() => {
-        const fetchBeats = async () => {
-            if (debouncedValue.length < 2) {
-                setSuggestions([]);
-                return;
-            }
+  const handleSelect = (beat: Beat) => {
+    // Check if beat already exists in the list
+    if (!beats.includes(beat.label)) {
+      onBeatsChange([...beats, beat.label]);
+    }
+    setInputValue('');
+    setOpen(false);
+  };
 
-            setLoading(true);
-            try {
-                // Use API endpoint instead of server action for debugging
-                const response = await fetch(`/api/search/beats?q=${encodeURIComponent(debouncedValue)}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                const results = data.beats || [];
-                setSuggestions(results);
-            } catch (error) {
-                console.error('BeatAutocomplete: Error searching beats:', error);
-                setSuggestions([]);
-            } finally {
-                setLoading(false);
-            }
-        };
+  const handleRemove = (beatLabel: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
+    e.preventDefault(); // Also prevent default behavior
 
-        fetchBeats();
-    }, [debouncedValue]);
+    // Create a new array without the removed beat
+    const updatedBeats = beats.filter((b) => b !== beatLabel);
 
-    const handleSelect = (beatName: string) => {
-        // Check if beat already exists in the list
-        if (!beats.includes(beatName)) {
-            onBeatsChange([...beats, beatName]);
-        }
-        setInputValue('');
-        setOpen(false);
-    };
+    // Update the beats state
+    onBeatsChange(updatedBeats);
+  };
 
-    const handleRemove = (beatName: string, e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent event bubbling
-        e.preventDefault(); // Also prevent default behavior
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && inputValue.trim() && !loading) {
+      e.preventDefault();
+      // Add custom beat if not in suggestions
+      if (!beats.includes(inputValue.trim())) {
+        onBeatsChange([...beats, inputValue.trim()]);
+      }
+      setInputValue('');
+    } else if (e.key === ',' && inputValue.trim()) {
+      // Also allow comma to add a beat (common in tag inputs)
+      e.preventDefault();
+      if (!beats.includes(inputValue.trim())) {
+        onBeatsChange([...beats, inputValue.trim()]);
+      }
+      setInputValue('');
+    }
+  };
 
-        // Create a new array without the removed beat
-        const updatedBeats = beats.filter((b) => b !== beatName);
+  return (
+    <div className='space-y-2'>
+      <div className='flex flex-wrap gap-2 mb-2'>
+        {beats.map((beat) => (
+          <Badge
+            key={beat}
+            variant='secondary'
+            className='text-sm py-1 px-2 flex items-center'
+          >
+            <span>{beat}</span>
+            <button
+              type='button'
+              className='ml-1 h-4 w-4 rounded-full inline-flex items-center justify-center hover:bg-muted'
+              onClick={(e) => handleRemove(beat, e)}
+              aria-label={`Remove ${beat}`}
+            >
+              <X className='h-3 w-3' />
+            </button>
+          </Badge>
+        ))}
+      </div>
 
-        // Update the beats state
-        onBeatsChange(updatedBeats);
+      <div className='flex gap-2'>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant='outline'
+              role='combobox'
+              aria-expanded={open}
+              className='w-full justify-between'
+              onClick={() => inputRef.current?.focus()}
+            >
+              <input
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className='w-full bg-transparent border-none outline-none'
+                placeholder={placeholder}
+              />
+              {loading ? (
+                <Loader2 className='ml-2 h-4 w-4 shrink-0 animate-spin' />
+              ) : (
+                <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+              )}
+            </Button>
+          </PopoverTrigger>
 
-        // Log for debugging
-        console.log('Removing beat:', beatName, 'Updated beats:', updatedBeats);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && inputValue.trim() && !loading) {
-            e.preventDefault();
-            handleSelect(inputValue.trim());
-        } else if (e.key === ',' && inputValue.trim()) {
-            // Also allow comma to add a beat (common in tag inputs)
-            e.preventDefault();
-            handleSelect(inputValue.trim());
-        }
-    };
-
-    return (
-        <div className='space-y-2'>
-            <div className='flex flex-wrap gap-2 mb-2'>
-                {beats.map((beat) => (
-                    <Badge
-                        key={beat}
-                        variant='secondary'
-                        className='text-sm py-1 px-2 flex items-center'
-                    >
-                        <span>{beat}</span>
-                        <button
-                            type='button'
-                            className='ml-1 h-4 w-4 rounded-full inline-flex items-center justify-center hover:bg-muted'
-                            onClick={(e) => handleRemove(beat, e)}
-                            aria-label={`Remove ${beat}`}
-                        >
-                            <X className='h-3 w-3' />
-                        </button>
-                    </Badge>
-                ))}
-            </div>
-
-            <div className='flex gap-2'>
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
+          <PopoverContent className='w-[--radix-popover-trigger-width] p-0 bg-popover text-popover-foreground border border-border shadow-md z-50'>
+            <Command>
+              <CommandInput
+                placeholder={placeholder}
+                value={inputValue}
+                onValueChange={setInputValue}
+              />
+              <CommandList>
+                {loading ? (
+                  <div className='flex items-center justify-center py-2'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                    <span className='ml-2'>Searching...</span>
+                  </div>
+                ) : (
+                  <>
+                    <CommandEmpty>
+                      <div className='py-2 text-center'>
+                        <p>No beats found.</p>
+                        {inputValue.trim() && (
+                          <Button
                             variant='outline'
-                            role='combobox'
-                            aria-expanded={open}
-                            className='w-full justify-between'
-                            onClick={() => inputRef.current?.focus()}
+                            size='sm'
+                            className='mt-2'
+                            onClick={() => {
+                              if (inputValue.trim() && !beats.includes(inputValue.trim())) {
+                                onBeatsChange([...beats, inputValue.trim()]);
+                                setInputValue('');
+                                setOpen(false);
+                              }
+                            }}
+                          >
+                            Add &quot;{inputValue.trim()}&quot;
+                          </Button>
+                        )}
+                      </div>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {suggestions.map((beat) => (
+                        <CommandItem
+                          key={beat.id}
+                          value={beat.label}
+                          onSelect={() => handleSelect(beat)}
+                          className='flex items-center'
                         >
-                            <input
-                                ref={inputRef}
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                className='w-full bg-transparent border-none outline-none'
-                                placeholder={placeholder}
-                            />
-                            {loading ? (
-                                <Loader2 className='ml-2 h-4 w-4 shrink-0 animate-spin' />
-                            ) : (
-                                <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              beats.includes(beat.label)
+                                ? 'opacity-100'
+                                : 'opacity-0',
                             )}
-                        </Button>
-                    </PopoverTrigger>
-
-                    <PopoverContent className='w-[--radix-popover-trigger-width] p-0'>
-                        <Command>
-                            <CommandInput
-                                placeholder={placeholder}
-                                value={inputValue}
-                                onValueChange={setInputValue}
-                            />
-                            <CommandList>
-                                <CommandEmpty>
-                                    {loading ? (
-                                        <div className='flex items-center justify-center py-2'>
-                                            <Loader2 className='h-4 w-4 animate-spin' />
-                                            <span className='ml-2'>
-                                                Searching...
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <div className='py-2 text-center'>
-                                            <p>No beats found.</p>
-                                            <p className='text-sm text-muted-foreground'>
-                                                Press enter to add "{inputValue}
-                                                "
-                                            </p>
-                                            <Button
-                                                variant='outline'
-                                                size='sm'
-                                                className='mt-2'
-                                                onClick={() =>
-                                                    handleSelect(
-                                                        inputValue.trim(),
-                                                    )
-                                                }
-                                                disabled={!inputValue.trim()}
-                                            >
-                                                Add "{inputValue || 'beat'}"
-                                            </Button>
-                                        </div>
-                                    )}
-                                </CommandEmpty>
-                                <CommandGroup>
-                                    {suggestions.map((beat) => (
-                                        <CommandItem
-                                            key={beat.id}
-                                            value={beat.name}
-                                            onSelect={() =>
-                                                handleSelect(beat.name)
-                                            }
-                                            className='flex items-center'
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    'mr-2 h-4 w-4',
-                                                    beats.includes(beat.name)
-                                                        ? 'opacity-100'
-                                                        : 'opacity-0',
-                                                )}
-                                            />
-                                            <span>{beat.name}</span>
-                                            {beat.description && (
-                                                <span className='ml-2 text-sm text-muted-foreground'>
-                                                    {beat.description}
-                                                </span>
-                                            )}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
-
-                {/* Add button for direct entry */}
-                {inputValue.trim() && (
-                    <Button
-                        type='button'
-                        onClick={() => {
-                            if (inputValue.trim()) {
-                                handleSelect(inputValue.trim());
-                            }
-                        }}
-                    >
-                        Add
-                    </Button>
+                          />
+                          <div className='flex flex-col'>
+                            <span>{beat.label}</span>
+                            {beat.description && (
+                              <span className='text-sm text-muted-foreground'>
+                                {beat.description}
+                              </span>
+                            )}
+                          </div>
+                          {beat.count !== undefined && (
+                            <span className='ml-auto text-xs text-muted-foreground'>
+                              {beat.count}
+                            </span>
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </>
                 )}
-            </div>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
-            {error && <p className='text-sm text-destructive mt-1'>{error}</p>}
-        </div>
-    );
+        {/* Add button for direct entry */}
+        {inputValue.trim() && (
+          <Button
+            type='button'
+            onClick={() => {
+              if (inputValue.trim() && !beats.includes(inputValue.trim())) {
+                onBeatsChange([...beats, inputValue.trim()]);
+                setInputValue('');
+              }
+            }}
+          >
+            Add
+          </Button>
+        )}
+      </div>
+
+      {error && <p className='text-sm text-destructive mt-1'>{error}</p>}
+    </div>
+  );
 }

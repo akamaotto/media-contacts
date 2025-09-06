@@ -1,6 +1,136 @@
-# Media Contacts Management System
+# Media Contacts Application
 
-A modern web application for managing media contacts, built with Next.js 15, Prisma and PostgreSQL This internal tool allows users to efficiently manage a large database of journalists, bloggers, and media contacts with powerful search, filtering, and organization capabilities.
+## Filter Suggestions Architecture
+
+### Overview
+The Media Contacts application implements a robust filtering system with popularity-based suggestions and efficient search capabilities. Each filter dropdown shows popular items by default (ranked by usage count) and allows users to search for specific items.
+
+### API Endpoints
+
+#### Countries Filter
+- **Endpoint**: `GET /api/filters/countries`
+- **Parameters**: 
+  - `s` (optional): Search query string
+  - `limit` (optional): Maximum number of results (default: 5, max: 50)
+- **Response**: 
+  ```json
+  {
+    "items": [
+      {
+        "id": "country-id",
+        "label": "Country Name",
+        "code": "CC",
+        "count": 42
+      }
+    ]
+  }
+  ```
+
+#### Beats Filter
+- **Endpoint**: `GET /api/filters/beats`
+- **Parameters**: 
+  - `s` (optional): Search query string
+  - `limit` (optional): Maximum number of results (default: 5, max: 50)
+- **Response**: 
+  ```json
+  {
+    "items": [
+      {
+        "id": "beat-id",
+        "label": "Beat Name",
+        "description": "Beat description",
+        "count": 25
+      }
+    ]
+  }
+  ```
+
+#### Outlets Filter
+- **Endpoint**: `GET /api/filters/outlets`
+- **Parameters**: 
+  - `s` (optional): Search query string
+  - `limit` (optional): Maximum number of results (default: 5, max: 50)
+- **Response**: 
+  ```json
+  {
+    "items": [
+      {
+        "id": "outlet-id",
+        "label": "Outlet Name",
+        "description": "Outlet description",
+        "website": "https://example.com",
+        "count": 18
+      }
+    ]
+  }
+  ```
+
+#### Regions Filter
+- **Endpoint**: `GET /api/filters/regions`
+- **Parameters**: 
+  - `s` (optional): Search query string
+  - `limit` (optional): Maximum number of results (default: 5, max: 50)
+- **Response**: 
+  ```json
+  {
+    "items": [
+      {
+        "id": "region-id",
+        "label": "Region Name",
+        "code": "RC",
+        "category": "Region category",
+        "count": 33
+      }
+    ]
+  }
+  ```
+
+#### Languages Filter
+- **Endpoint**: `GET /api/filters/languages`
+- **Parameters**: 
+  - `s` (optional): Search query string
+  - `limit` (optional): Maximum number of results (default: 5, max: 50)
+- **Response**: 
+  ```json
+  {
+    "items": [
+      {
+        "id": "language-id",
+        "label": "Language Name",
+        "code": "LC",
+        "count": 55
+      }
+    ]
+  }
+  ```
+
+### Ranking Algorithm
+Popular items are ranked by:
+1. Count (descending) - primary sort
+2. Label (ascending) - tie-breaker
+
+For search results, items are ranked by:
+1. Exact match at start of name (highest priority)
+2. Partial match in name
+3. Count (descending)
+4. Label (ascending)
+
+### Caching Strategy
+- Popular items are cached for 10 minutes
+- Search results are cached for 10 minutes
+- Cache keys are generated based on query parameters
+- Cache is invalidated on data changes
+
+### UI Components
+- **CountryAutocomplete**: Multi-select dropdown for countries
+- **BeatAutocomplete**: Multi-select dropdown for beats
+- **OutletAutocomplete**: Multi-select dropdown for outlets
+- **ApiMediaContactsFilters**: Main filter component containing all dropdowns
+
+### Testing
+- Unit tests for API endpoints
+- Component tests for autocomplete functionality
+- Playwright e2e tests for filter workflow
 
 ## Features
 

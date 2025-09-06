@@ -160,7 +160,7 @@ export function useDashboardErrorHandler() {
 /**
  * Async error boundary wrapper for handling promise rejections
  */
-export function withAsyncErrorBoundary<T extends Record<string, any>>(
+export function withAsyncErrorBoundary<T extends Record<string, unknown>>(
   Component: React.ComponentType<T>
 ) {
   return function AsyncErrorBoundaryWrapper(props: T) {

@@ -1,13 +1,14 @@
 /** @type {import('jest').Config} */
 const config = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
+  setupFiles: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.json',
+      tsconfig: 'tsconfig.jest.json',
     }],
   },
   testMatch: [

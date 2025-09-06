@@ -23,7 +23,9 @@ export interface Language {
   name: string;       // English name of the language
   native?: string;    // Native name of the language
   rtl?: boolean;      // Right-to-left script
-  countries?: any[];  // Associated countries (for database version)
+  countries?: unknown[];  // Associated countries (for database version)
+  contactCount?: number;  // Number of media contacts using this language
+  outletCount?: number;   // Number of outlets using this language
 }
 
 /**
@@ -35,6 +37,7 @@ export type RegionCategory = 'continent' | 'subregion' | 'economic' | 'political
  * Region interface definition
  */
 export interface Region {
+  id?: string;        // Database ID (optional for compatibility)
   code: string;
   name: string;
   category: RegionCategory;

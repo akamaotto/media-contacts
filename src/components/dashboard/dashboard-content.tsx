@@ -33,9 +33,6 @@ export function DashboardContent() {
   const [globalTimeRange, setGlobalTimeRange] = useState<'7d' | '30d' | '3m'>('30d');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isMobile = useIsMobile();
-  
-  // Check if user has admin access
-  const isAdmin = session?.user?.role === 'ADMIN';
 
   const handleTimeRangeChange = (timeRange: '7d' | '30d' | '3m') => {
     setGlobalTimeRange(timeRange);

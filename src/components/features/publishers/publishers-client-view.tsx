@@ -5,7 +5,15 @@ import { PublishersTable } from "./publishers-table";
 import { AddPublisherSheet } from "./add-publisher-sheet";
 import { EditPublisherSheet } from "./edit-publisher-sheet";
 import { DeletePublisherDialog } from "./delete-publisher-dialog";
-import type { Publisher } from "@/backend/publishers/actions";
+import { PublisherDetailSheet } from "./publisher-detail-sheet";
+// Local minimal Publisher type for UI usage
+type Publisher = {
+  id: string;
+  name: string;
+  description: string | null;
+  website: string | null;
+  outletCount?: number;
+};
 
 interface PublishersClientViewProps {
   // Future props if needed
@@ -15,6 +23,7 @@ export function PublishersClientView({}: PublishersClientViewProps) {
   const [editingPublisher, setEditingPublisher] = useState<Publisher | null>(null);
   const [deletingPublisher, setDeletingPublisher] = useState<Publisher | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [viewingPublisher, setViewingPublisher] = useState<Publisher | null>(null);
   const refreshTableRef = useRef<{ refresh: () => void }>(null);
 
   // Global function to open Add Publisher modal (for breadcrumb button)
@@ -30,6 +39,10 @@ export function PublishersClientView({}: PublishersClientViewProps) {
 
   const handleDelete = (publisher: Publisher) => {
     setDeletingPublisher(publisher);
+  };
+
+  const handleView = (publisher: Publisher) => {
+    setViewingPublisher(publisher);
   };
 
   const handleAddSuccess = () => {
@@ -52,6 +65,7 @@ export function PublishersClientView({}: PublishersClientViewProps) {
       <PublishersTable 
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onView={handleView}
         ref={refreshTableRef}
       />
       
@@ -82,6 +96,14 @@ export function PublishersClientView({}: PublishersClientViewProps) {
         isOpen={!!deletingPublisher}
         onOpenChange={(open) => !open && setDeletingPublisher(null)}
         onSuccess={handleDeleteSuccess}
+      />
+      
+      {/* Publisher Detail Sheet */}
+      <PublisherDetailSheet
+        isOpen={!!viewingPublisher}
+        onOpenChange={(open) => !open && setViewingPublisher(null)}
+        publisher={viewingPublisher}
+        onEdit={handleEdit}
       />
     </div>
   );

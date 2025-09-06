@@ -10,7 +10,19 @@ import { Label } from '@/components/ui/label';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Loader2, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { getRegionsForCountryForm, getLanguagesForCountryForm, type Country } from '@/backend/countries/actions';
+import { getRegionsForForm, getLanguagesForForm } from '@/features/countries/lib/queries';
+
+// Minimal, relaxed Country shape for this form to accept optional fields
+interface CountryForForm {
+  id: string;
+  name?: string | null;
+  code?: string | null;
+  phone_code?: string | null;
+  capital?: string | null;
+  flag_emoji?: string | null;
+  regions?: Array<{ id: string; name: string; code?: string }>
+  languages?: Array<{ id: string; name: string; code?: string }>
+}
 
 // Form validation schema
 const countryFormSchema = z.object({
@@ -26,7 +38,7 @@ const countryFormSchema = z.object({
 type CountryFormData = z.infer<typeof countryFormSchema>;
 
 interface CountryFormProps {
-  country?: Country;
+  country?: CountryForForm;
   onSubmit: (data: CountryFormData) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
@@ -69,18 +81,18 @@ export function CountryForm({ country, onSubmit, onCancel, isSubmitting = false 
         setIsLoadingOptions(true);
         
         const [regionsData, languagesData] = await Promise.all([
-          getRegionsForCountryForm(),
-          getLanguagesForCountryForm()
+          getRegionsForForm(),
+          getLanguagesForForm()
         ]);
 
         setRegions(regionsData.map(region => ({
           value: region.id,
-          label: `${region.name} (${region.code})`
+          label: region.name
         })));
 
         setLanguages(languagesData.map(language => ({
           value: language.id,
-          label: `${language.name} (${language.code})`
+          label: language.name
         })));
       } catch (error) {
         console.error('Failed to load form options:', error);

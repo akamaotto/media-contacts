@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/dashboard/activity/route';
 import { auth } from '@/lib/auth';
@@ -8,7 +9,14 @@ jest.mock('@/lib/auth');
 const mockAuth = auth as jest.MockedFunction<typeof auth>;
 
 // Mock the activity tracking service
-jest.mock('@/backend/dashboard/activity');
+jest.mock('@/backend/dashboard/activity', () => ({
+  activityTrackingService: {
+    logActivity: jest.fn(),
+    getRecentActivities: jest.fn(),
+    getActivityStats: jest.fn(),
+    getActivitySummary: jest.fn(),
+  },
+}));
 const mockActivityService = activityTrackingService as jest.Mocked<typeof activityTrackingService>;
 
 describe('/api/dashboard/activity', () => {
@@ -19,7 +27,7 @@ describe('/api/dashboard/activity', () => {
   it('should return 401 if user is not authenticated', async () => {
     mockAuth.mockResolvedValue(null);
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/activity');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/activity', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 
@@ -59,7 +67,7 @@ describe('/api/dashboard/activity', () => {
 
     mockActivityService.getRecentActivities.mockResolvedValue(mockActivities);
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/activity?limit=20&offset=0');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/activity?limit=20&offset=0', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 
@@ -83,7 +91,7 @@ describe('/api/dashboard/activity', () => {
       hasMore: false,
     });
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/activity?limit=10&offset=5&type=create&entity=beat');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/activity?limit=10&offset=5&type=create&entity=beat', { headers: new Headers() });
     const response = await GET(request);
 
     expect(mockActivityService.getRecentActivities).toHaveBeenCalledWith(
@@ -101,7 +109,7 @@ describe('/api/dashboard/activity', () => {
       user: { id: 'user1', email: 'test@example.com' },
     } as any);
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/activity?type=invalid');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/activity?type=invalid', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 
@@ -114,7 +122,7 @@ describe('/api/dashboard/activity', () => {
       user: { id: 'user1', email: 'test@example.com' },
     } as any);
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/activity?entity=invalid');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/activity?entity=invalid', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 

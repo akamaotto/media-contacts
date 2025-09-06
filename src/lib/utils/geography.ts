@@ -16,8 +16,25 @@
  * and have access to a Prisma client instance.
  */
 
-import { PrismaClient } from '@prisma/client';
-import { CountryData, Language, Region } from '../types/geography';
+/* eslint-disable no-restricted-imports */
+import type { PrismaClient } from '@prisma/client';
+
+// Minimal row shapes for relation typing in maps to avoid implicit any
+type RegionRow = { code: string; category: string | null };
+type LanguageRow = { code: string };
+type CountryRow = {
+  id: string;
+  name: string;
+  code: string | null;
+  phone_code: string | null;
+  capital: string | null;
+  regions?: RegionRow[] | null;
+  languages?: LanguageRow[] | null;
+  flag_emoji?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+import type { CountryData } from '../types/geography';
 
 /**
  * Lookup a country by its ISO code (case insensitive)
@@ -29,7 +46,7 @@ export async function getCountryByCode(code: string, prisma: PrismaClient): Prom
   try {
     const normalizedCode = code.toUpperCase();
     
-    const country = await prisma.country.findFirst({
+    const country = await prisma.countries.findFirst({
       where: {
         code: {
           equals: normalizedCode,
@@ -50,9 +67,9 @@ export async function getCountryByCode(code: string, prisma: PrismaClient): Prom
       code: country.code || '',
       phone_code: country.phone_code || undefined,
       capital: country.capital || undefined,
-      region: country.regions?.map(r => r.code) || [],
-      continent_code: country.regions?.find(r => r.category === 'continent')?.code || undefined,
-      languages: country.languages?.map(l => l.code) || [],
+      region: country.regions?.map((r: RegionRow) => r.code) || [],
+      continent_code: country.regions?.find((r: RegionRow) => r.category === 'continent')?.code || undefined,
+      languages: country.languages?.map((l: LanguageRow) => l.code) || [],
       flag_emoji: country.flag_emoji || undefined,
       latitude: country.latitude || undefined,
       longitude: country.longitude || undefined
@@ -71,7 +88,7 @@ export async function getCountryByCode(code: string, prisma: PrismaClient): Prom
  */
 export async function getCountryByName(name: string, prisma: PrismaClient): Promise<CountryData | null> {
   try {
-    const country = await prisma.country.findFirst({
+    const country = await prisma.countries.findFirst({
       where: {
         name: {
           contains: name,
@@ -92,9 +109,9 @@ export async function getCountryByName(name: string, prisma: PrismaClient): Prom
       code: country.code || '',
       phone_code: country.phone_code || undefined,
       capital: country.capital || undefined,
-      region: country.regions?.map(r => r.code) || [],
-      continent_code: country.regions?.find(r => r.category === 'continent')?.code || undefined,
-      languages: country.languages?.map(l => l.code) || [],
+      region: country.regions?.map((r: RegionRow) => r.code) || [],
+      continent_code: country.regions?.find((r: RegionRow) => r.category === 'continent')?.code || undefined,
+      languages: country.languages?.map((l: LanguageRow) => l.code) || [],
       flag_emoji: country.flag_emoji || undefined,
       latitude: country.latitude || undefined,
       longitude: country.longitude || undefined
@@ -115,7 +132,7 @@ export async function getCountriesByRegion(regionCode: string, prisma: PrismaCli
   try {
     const normalizedRegion = regionCode.toUpperCase();
     
-    const countries = await prisma.country.findMany({
+    const countries = await prisma.countries.findMany({
       where: {
         regions: {
           some: {
@@ -132,15 +149,15 @@ export async function getCountriesByRegion(regionCode: string, prisma: PrismaCli
       }
     });
 
-    return countries.map(country => ({
+    return countries.map((country: CountryRow) => ({
       id: country.id,
       name: country.name,
       code: country.code || '',
       phone_code: country.phone_code || undefined,
       capital: country.capital || undefined,
-      region: country.regions?.map(r => r.code) || [],
-      continent_code: country.regions?.find(r => r.category === 'continent')?.code || undefined,
-      languages: country.languages?.map(l => l.code) || [],
+      region: country.regions?.map((r: RegionRow) => r.code) || [],
+      continent_code: country.regions?.find((r: RegionRow) => r.category === 'continent')?.code || undefined,
+      languages: country.languages?.map((l: LanguageRow) => l.code) || [],
       flag_emoji: country.flag_emoji || undefined,
       latitude: country.latitude || undefined,
       longitude: country.longitude || undefined
@@ -161,7 +178,7 @@ export async function getCountriesByLanguage(languageCode: string, prisma: Prism
   try {
     const normalizedLanguage = languageCode.toLowerCase();
     
-    const countries = await prisma.country.findMany({
+    const countries = await prisma.countries.findMany({
       where: {
         languages: {
           some: {
@@ -178,15 +195,15 @@ export async function getCountriesByLanguage(languageCode: string, prisma: Prism
       }
     });
 
-    return countries.map(country => ({
+    return countries.map((country: CountryRow) => ({
       id: country.id,
       name: country.name,
       code: country.code || '',
       phone_code: country.phone_code || undefined,
       capital: country.capital || undefined,
-      region: country.regions?.map(r => r.code) || [],
-      continent_code: country.regions?.find(r => r.category === 'continent')?.code || undefined,
-      languages: country.languages?.map(l => l.code) || [],
+      region: country.regions?.map((r: RegionRow) => r.code) || [],
+      continent_code: country.regions?.find((r: RegionRow) => r.category === 'continent')?.code || undefined,
+      languages: country.languages?.map((l: LanguageRow) => l.code) || [],
       flag_emoji: country.flag_emoji || undefined,
       latitude: country.latitude || undefined,
       longitude: country.longitude || undefined
@@ -204,22 +221,22 @@ export async function getCountriesByLanguage(languageCode: string, prisma: Prism
  */
 export async function getAllCountries(prisma: PrismaClient): Promise<CountryData[]> {
   try {
-    const countries = await prisma.country.findMany({
+    const countries = await prisma.countries.findMany({
       include: {
         regions: true,
         languages: true
       }
     });
 
-    return countries.map(country => ({
+    return countries.map((country: CountryRow) => ({
       id: country.id,
       name: country.name,
       code: country.code || '',
       phone_code: country.phone_code || undefined,
       capital: country.capital || undefined,
-      region: country.regions?.map(r => r.code) || [],
-      continent_code: country.regions?.find(r => r.category === 'continent')?.code || undefined,
-      languages: country.languages?.map(l => l.code) || [],
+      region: country.regions?.map((r: RegionRow) => r.code) || [],
+      continent_code: country.regions?.find((r: RegionRow) => r.category === 'continent')?.code || undefined,
+      languages: country.languages?.map((l: LanguageRow) => l.code) || [],
       flag_emoji: country.flag_emoji || undefined,
       latitude: country.latitude || undefined,
       longitude: country.longitude || undefined
@@ -249,25 +266,25 @@ export async function validateGeographyData(prisma: PrismaClient): Promise<{
 
   try {
     // Check countries
-    countriesCount = await prisma.country.count();
+    countriesCount = await prisma.countries.count();
     if (countriesCount === 0) {
       issues.push('No countries found in database');
     }
 
     // Check languages
-    languagesCount = await prisma.language.count();
+    languagesCount = await prisma.languages.count();
     if (languagesCount === 0) {
       issues.push('No languages found in database');
     }
 
     // Check regions
-    regionsCount = await prisma.region.count();
+    regionsCount = await prisma.regions.count();
     if (regionsCount === 0) {
       issues.push('No regions found in database');
     }
 
     // Check for countries without codes
-    const countriesWithoutCodes = await prisma.country.count({
+    const countriesWithoutCodes = await prisma.countries.count({
       where: {
         OR: [
           { code: null },

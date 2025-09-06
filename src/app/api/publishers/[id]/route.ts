@@ -1,106 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { updatePublisher, deletePublisher } from '@/backend/publishers/actions';
+/**
+ * Publishers [id] API Routes with Repository Pattern
+ * Enhanced version using the new repository architecture
+ */
 
+import { NextRequest } from 'next/server';
+import { getPublishersController } from '../factory';
+
+// Get controller instance
+const publishersController = getPublishersController();
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * GET /api/publishers/[id]
+ * Get a specific publisher by ID
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return publishersController.handleGetById(request, { params });
+}
+
+/**
+ * PUT /api/publishers/[id]
+ * Update a specific publisher
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // Check authentication
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { id } = await params;
-    const body = await request.json();
-    const { name, description, website } = body;
-
-    // Basic validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Publisher name is required' },
-        { status: 400 }
-      );
-    }
-
-    // Update publisher in database
-    const updatedPublisher = await updatePublisher(id, {
-      name: name.trim(),
-      description: description?.trim() || undefined,
-      website: website?.trim() || undefined,
-    });
-
-    return NextResponse.json({
-      message: 'Publisher updated successfully',
-      publisher: updatedPublisher
-    });
-  } catch (error) {
-    console.error('Error updating publisher:', error);
-    
-    // Handle specific error messages from backend
-    if (error instanceof Error) {
-      if (error.message.includes('already exists')) {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 409 } // Conflict
-        );
-      }
-      if (error.message.includes('not found')) {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 404 }
-        );
-      }
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to update publisher' },
-      { status: 500 }
-    );
-  }
+  return publishersController.handleUpdate(request, { params });
 }
 
+/**
+ * DELETE /api/publishers/[id]
+ * Delete a specific publisher
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // Check authentication
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { id } = await params;
-
-    // Delete publisher from database
-    const result = await deletePublisher(id);
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('Error deleting publisher:', error);
-    
-    // Handle specific error messages from backend
-    if (error instanceof Error) {
-      if (error.message.includes('not found')) {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 404 }
-        );
-      }
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to delete publisher' },
-      { status: 500 }
-    );
-  }
+  return publishersController.handleDelete(request, { params });
 }

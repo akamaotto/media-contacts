@@ -1,9 +1,10 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { DashboardLayout as DashboardShell } from '@/components/layout/dashboard-layout';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardLayout({
+export default async function DashboardRouteLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -15,7 +16,6 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  // The main layout.tsx already handles the DashboardLayout wrapper
-  // This just ensures authentication for dashboard routes
-  return <>{children}</>;
+  // Wrap all dashboard routes with the client dashboard shell (sidebar, header, etc.)
+  return <DashboardShell>{children}</DashboardShell>;
 }

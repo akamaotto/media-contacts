@@ -1,24 +1,26 @@
 import { adminDashboardService } from '@/backend/dashboard/admin';
 import { prisma } from '@/lib/prisma';
-import { mockDeep, mockReset } from 'jest-mock-extended';
+import { mockDeep, mockReset, type DeepMockProxy } from 'jest-mock-extended';
+import { PrismaClient } from '@prisma/client';
 
 // Mock Prisma
 jest.mock('@/lib/prisma', () => ({
-  prisma: mockDeep<typeof prisma>()
+  prisma: mockDeep<PrismaClient>()
 }));
 
 // Mock Redis
 jest.mock('@/lib/cache', () => ({
-  cache: {
+  cacheService: {
     get: jest.fn(),
     set: jest.fn(),
     del: jest.fn(),
-    exists: jest.fn(),
-    ping: jest.fn().mockResolvedValue('PONG')
-  }
+    isAvailable: jest.fn().mockReturnValue(true)
+  },
+  CacheKeys: {},
+  CacheExpiration: {}
 }));
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>;
+const mockPrisma = prisma as unknown as DeepMockProxy<PrismaClient>;
 
 describe('AdminDashboardService', () => {
   beforeEach(() => {
@@ -28,30 +30,30 @@ describe('AdminDashboardService', () => {
   describe('getAdminMetrics', () => {
     it('should return comprehensive admin metrics', async () => {
       // Mock system health data
-      mockPrisma.user.count.mockResolvedValueOnce(150); // total users
-      mockPrisma.user.count.mockResolvedValueOnce(25); // new users this month
-      mockPrisma.activityLog.count.mockResolvedValueOnce(45); // today's activities
-      mockPrisma.activityLog.count.mockResolvedValueOnce(320); // this week's activities
+      mockPrisma.users.count.mockResolvedValueOnce(150); // total users
+      mockPrisma.users.count.mockResolvedValueOnce(25); // new users this month
+      mockPrisma.activity_logs.count.mockResolvedValueOnce(45); // today's activities
+      mockPrisma.activity_logs.count.mockResolvedValueOnce(320); // this week's activities
 
       // Mock database metrics
-      mockPrisma.mediaContact.count.mockResolvedValue(1250);
-      mockPrisma.publisher.count.mockResolvedValue(85);
-      mockPrisma.outlet.count.mockResolvedValue(340);
+      mockPrisma.media_contacts.count.mockResolvedValue(1250);
+      mockPrisma.publishers.count.mockResolvedValue(85);
+      mockPrisma.outlets.count.mockResolvedValue(340);
 
       // Mock most active users
-      mockPrisma.activityLog.groupBy.mockResolvedValue([
+      mockPrisma.activity_logs.groupBy.mockResolvedValue([
         { userId: 'user1', _count: { id: 45 } },
         { userId: 'user2', _count: { id: 32 } },
         { userId: 'user3', _count: { id: 28 } }
       ] as any);
 
-      mockPrisma.user.findUnique
+      mockPrisma.users.findUnique
         .mockResolvedValueOnce({ id: 'user1', name: 'John Doe', email: 'john@example.com', updatedAt: new Date() } as any)
         .mockResolvedValueOnce({ id: 'user2', name: 'Jane Smith', email: 'jane@example.com', updatedAt: new Date() } as any)
         .mockResolvedValueOnce({ id: 'user3', name: 'Bob Johnson', email: 'bob@example.com', updatedAt: new Date() } as any);
 
       // Mock recent imports
-      mockPrisma.activityLog.findMany.mockResolvedValue([
+      mockPrisma.activity_logs.findMany.mockResolvedValue([
         {
           id: '1',
           type: 'import',
@@ -59,7 +61,7 @@ describe('AdminDashboardService', () => {
           timestamp: new Date(),
           userId: 'user1',
           details: { count: 50 },
-          user: { name: 'John Doe' }
+          users: { name: 'John Doe' }
         }
       ] as any);
 
@@ -97,7 +99,7 @@ describe('AdminDashboardService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      mockPrisma.user.count.mockRejectedValue(new Error('Database connection failed'));
+      mockPrisma.users.count.mockRejectedValue(new Error('Database connection failed'));
 
       await expect(adminDashboardService.getAdminMetrics()).rejects.toThrow('Database connection failed');
     });
@@ -105,7 +107,7 @@ describe('AdminDashboardService', () => {
 
   describe('isUserAdmin', () => {
     it('should return true for admin users', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockPrisma.users.findUnique.mockResolvedValue({
         id: 'admin-user',
         role: 'ADMIN'
       } as any);
@@ -115,7 +117,7 @@ describe('AdminDashboardService', () => {
     });
 
     it('should return false for non-admin users', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockPrisma.users.findUnique.mockResolvedValue({
         id: 'regular-user',
         role: 'USER'
       } as any);
@@ -125,14 +127,14 @@ describe('AdminDashboardService', () => {
     });
 
     it('should return false for non-existent users', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.users.findUnique.mockResolvedValue(null);
 
       const result = await adminDashboardService.isUserAdmin('non-existent');
       expect(result).toBe(false);
     });
 
     it('should handle database errors gracefully', async () => {
-      mockPrisma.user.findUnique.mockRejectedValue(new Error('Database error'));
+      mockPrisma.users.findUnique.mockRejectedValue(new Error('Database error'));
 
       const result = await adminDashboardService.isUserAdmin('user-id');
       expect(result).toBe(false);
@@ -142,13 +144,13 @@ describe('AdminDashboardService', () => {
   describe('system health metrics', () => {
     it('should calculate memory usage percentage correctly', async () => {
       // Mock basic data for the full metrics call
-      mockPrisma.user.count.mockResolvedValue(100);
-      mockPrisma.activityLog.count.mockResolvedValue(50);
-      mockPrisma.mediaContact.count.mockResolvedValue(1000);
-      mockPrisma.publisher.count.mockResolvedValue(50);
-      mockPrisma.outlet.count.mockResolvedValue(200);
-      mockPrisma.activityLog.groupBy.mockResolvedValue([]);
-      mockPrisma.activityLog.findMany.mockResolvedValue([]);
+      mockPrisma.users.count.mockResolvedValue(100);
+      mockPrisma.activity_logs.count.mockResolvedValue(50);
+      mockPrisma.media_contacts.count.mockResolvedValue(1000);
+      mockPrisma.publishers.count.mockResolvedValue(50);
+      mockPrisma.outlets.count.mockResolvedValue(200);
+      mockPrisma.activity_logs.groupBy.mockResolvedValue([]);
+      mockPrisma.activity_logs.findMany.mockResolvedValue([]);
 
       const metrics = await adminDashboardService.getAdminMetrics();
       
@@ -159,13 +161,13 @@ describe('AdminDashboardService', () => {
     });
 
     it('should provide database connection status', async () => {
-      mockPrisma.user.count.mockResolvedValue(100);
-      mockPrisma.activityLog.count.mockResolvedValue(50);
-      mockPrisma.mediaContact.count.mockResolvedValue(1000);
-      mockPrisma.publisher.count.mockResolvedValue(50);
-      mockPrisma.outlet.count.mockResolvedValue(200);
-      mockPrisma.activityLog.groupBy.mockResolvedValue([]);
-      mockPrisma.activityLog.findMany.mockResolvedValue([]);
+      mockPrisma.users.count.mockResolvedValue(100);
+      mockPrisma.activity_logs.count.mockResolvedValue(50);
+      mockPrisma.media_contacts.count.mockResolvedValue(1000);
+      mockPrisma.publishers.count.mockResolvedValue(50);
+      mockPrisma.outlets.count.mockResolvedValue(200);
+      mockPrisma.activity_logs.groupBy.mockResolvedValue([] as any);
+      mockPrisma.activity_logs.findMany.mockResolvedValue([] as any);
 
       const metrics = await adminDashboardService.getAdminMetrics();
       
@@ -174,13 +176,13 @@ describe('AdminDashboardService', () => {
     });
 
     it('should provide cache status information', async () => {
-      mockPrisma.user.count.mockResolvedValue(100);
-      mockPrisma.activityLog.count.mockResolvedValue(50);
-      mockPrisma.mediaContact.count.mockResolvedValue(1000);
-      mockPrisma.publisher.count.mockResolvedValue(50);
-      mockPrisma.outlet.count.mockResolvedValue(200);
-      mockPrisma.activityLog.groupBy.mockResolvedValue([]);
-      mockPrisma.activityLog.findMany.mockResolvedValue([]);
+      mockPrisma.users.count.mockResolvedValue(100);
+      mockPrisma.activity_logs.count.mockResolvedValue(50);
+      mockPrisma.media_contacts.count.mockResolvedValue(1000);
+      mockPrisma.publishers.count.mockResolvedValue(50);
+      mockPrisma.outlets.count.mockResolvedValue(200);
+      mockPrisma.activity_logs.groupBy.mockResolvedValue([] as any);
+      mockPrisma.activity_logs.findMany.mockResolvedValue([] as any);
 
       const metrics = await adminDashboardService.getAdminMetrics();
       
@@ -196,13 +198,13 @@ describe('AdminDashboardService', () => {
 
   describe('performance metrics', () => {
     it('should provide realistic performance data', async () => {
-      mockPrisma.user.count.mockResolvedValue(100);
-      mockPrisma.activityLog.count.mockResolvedValue(50);
-      mockPrisma.mediaContact.count.mockResolvedValue(1000);
-      mockPrisma.publisher.count.mockResolvedValue(50);
-      mockPrisma.outlet.count.mockResolvedValue(200);
-      mockPrisma.activityLog.groupBy.mockResolvedValue([]);
-      mockPrisma.activityLog.findMany.mockResolvedValue([]);
+      mockPrisma.users.count.mockResolvedValue(100);
+      mockPrisma.activity_logs.count.mockResolvedValue(50);
+      mockPrisma.media_contacts.count.mockResolvedValue(1000);
+      mockPrisma.publishers.count.mockResolvedValue(50);
+      mockPrisma.outlets.count.mockResolvedValue(200);
+      mockPrisma.activity_logs.groupBy.mockResolvedValue([] as any);
+      mockPrisma.activity_logs.findMany.mockResolvedValue([] as any);
 
       const metrics = await adminDashboardService.getAdminMetrics();
       
@@ -214,13 +216,13 @@ describe('AdminDashboardService', () => {
     });
 
     it('should include API endpoint statistics', async () => {
-      mockPrisma.user.count.mockResolvedValue(100);
-      mockPrisma.activityLog.count.mockResolvedValue(50);
-      mockPrisma.mediaContact.count.mockResolvedValue(1000);
-      mockPrisma.publisher.count.mockResolvedValue(50);
-      mockPrisma.outlet.count.mockResolvedValue(200);
-      mockPrisma.activityLog.groupBy.mockResolvedValue([]);
-      mockPrisma.activityLog.findMany.mockResolvedValue([]);
+      mockPrisma.users.count.mockResolvedValue(100);
+      mockPrisma.activity_logs.count.mockResolvedValue(50);
+      mockPrisma.media_contacts.count.mockResolvedValue(1000);
+      mockPrisma.publishers.count.mockResolvedValue(50);
+      mockPrisma.outlets.count.mockResolvedValue(200);
+      mockPrisma.activity_logs.groupBy.mockResolvedValue([] as any);
+      mockPrisma.activity_logs.findMany.mockResolvedValue([] as any);
 
       const metrics = await adminDashboardService.getAdminMetrics();
       

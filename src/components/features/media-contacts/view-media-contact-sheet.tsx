@@ -18,7 +18,8 @@ import { Separator } from "@/components/ui/separator";
 import { Pencil, Trash2, Mail, Link, Briefcase, Globe, User, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MediaContactTableItem } from './types';
-import { DeleteConfirmationModal } from "./delete-confirmation-modal";
+import { DeleteConfirmationModal } from './delete-confirmation-modal';
+// AI enrichment UI removed
 
 /**
  * Props interface for ViewMediaContactSheet component
@@ -31,6 +32,7 @@ interface ViewMediaContactSheetProps {
   isLoading?: boolean; // Added loading state prop
   onContactDelete?: (contactId: string) => void;  // Made optional since it's handled internally
   onContactEdit?: (contact: MediaContactTableItem) => void; // Made optional since it's handled internally
+    onEnrichmentComplete?: (contactId: string) => void; // Notify parent to refresh cache/UI // Notify parent to refresh cache/UI
 }
 
 /**
@@ -44,12 +46,26 @@ export function ViewMediaContactSheet({
   isLoading = false,
   onContactDelete = () => {},
   onContactEdit = () => {},
+  onEnrichmentComplete = () => {},
 }: ViewMediaContactSheetProps): React.ReactElement {
+  console.log('ViewMediaContactSheet rendered with isOpen:', isOpen, 'contact:', contact);
+  React.useEffect(() => {
+    console.log('ViewMediaContactSheet isOpen changed to:', isOpen);
+  }, [isOpen]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
-  // If no contact at all, don't render
+  // If no contact at all, still render the sheet but with empty content
   if (!contact) {
-    return <></>;
+    return (
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="sm:max-w-2xl flex flex-col p-0">
+          <SheetHeader className="p-6 border-b">
+            <SheetTitle>No Contact Selected</SheetTitle>
+            <SheetDescription>Please select a contact to view details.</SheetDescription>
+          </SheetHeader>
+        </SheetContent>
+      </Sheet>
+    );
   }
 
   /**
@@ -110,8 +126,8 @@ export function ViewMediaContactSheet({
   };
 
   // Determine if contact has social links or author links
-  const hasSocials = contact.socials && contact.socials.length > 0;
-  const hasAuthorLinks = contact.authorLinks && contact.authorLinks.length > 0;
+  const hasSocials = !!(contact.socials && contact.socials.length > 0);
+  const hasAuthorLinks = !!(contact.authorLinks && contact.authorLinks.length > 0);
 
   /**
    * Normalize URL to ensure it has a protocol
@@ -197,12 +213,16 @@ export function ViewMediaContactSheet({
                     </SheetDescription>
                   </div>
                 </div>
-                {(contact.email_verified_status || contact.emailVerified) && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Verified Contact</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-4">
+                  {(contact.email_verified_status || contact.emailVerified) && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Verified Contact</span>
+                    </div>
+                  )}
+                  
+                  {/* AI Enrichment UI removed */}
+                </div>
               </div>
             </div>
           </SheetHeader>
@@ -239,7 +259,7 @@ export function ViewMediaContactSheet({
                     )}
                     
                     {/* Outlets */}
-                    {contact.outlets && contact.outlets.length > 0 && (
+                    {!!(contact.outlets && contact.outlets.length > 0) && (
                       <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                         <div className="flex items-start gap-3">
                           <Briefcase className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
@@ -258,7 +278,7 @@ export function ViewMediaContactSheet({
                     )}
                     
                     {/* Beats */}
-                    {contact.beats && contact.beats.length > 0 && (
+                    {!!(contact.beats && contact.beats.length > 0) && (
                       <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                         <div className="flex items-start gap-3">
                           <FileText className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
@@ -275,9 +295,31 @@ export function ViewMediaContactSheet({
                         </div>
                       </div>
                     )}
+
+                    {/* AI Beats (read-only) */}
+                    {!!(contact.ai_beats && contact.ai_beats.length > 0) && (
+                      <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                        <div className="flex items-start gap-3">
+                          <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-medium text-slate-900 dark:text-white">AI Beats</span>
+                              <Badge variant="outline" className="text-[10px] uppercase tracking-wide">Read-only</Badge>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {contact.ai_beats.map((beat, idx) => (
+                                <Badge key={`${beat}-${idx}`} variant="secondary" className="text-xs">
+                                  {beat}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Countries */}
-                    {contact.countries && contact.countries.length > 0 && (
+                    {!!(contact.countries && contact.countries.length > 0) && (
                       <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                         <div className="flex items-start gap-3">
                           <Globe className="h-4 w-4 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
@@ -418,13 +460,15 @@ export function ViewMediaContactSheet({
                 <Trash2 className="h-4 w-4" />
                 Delete
               </Button>
-              <Button 
-                onClick={handleEditClick}
-                className="gap-2"
-              >
-                <Pencil className="h-4 w-4" />
-                Edit
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleEditClick}
+                  className="gap-2"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Button>
+              </div>
             </div>
           </SheetFooter>
         </SheetContent>

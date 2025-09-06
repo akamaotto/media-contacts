@@ -1,0 +1,52 @@
+[
+  {
+    "id": "8bacdf5a-0151-4f80-a958-5f6d0778f15c",
+    "name": "Africa",
+    "code": "AFR",
+    "category": "continent",
+    "parentCode": null,
+    "description": null,
+    "updatedAt": "2025-09-03T22:28:41.216Z",
+    "countryCount": 0
+  },
+  {
+    "id": "7cbff103-75b6-4675-8df1-acc055e22079",
+    "name": "Americas",
+    "code": "AME",
+    "category": "continent",
+    "parentCode": null,
+    "description": null,
+    "updatedAt": "2025-09-03T22:28:41.937Z",
+    "countryCount": 0
+  },
+  {
+    "id": "2790ad29-b106-43f7-a4aa-7bba97b4304c",
+    "name": "Asia",
+    "code": "ASI",
+    "category": "continent",
+    "parentCode": null,
+    "description": null,
+    "updatedAt": "2025-09-03T22:28:42.254Z",
+    "countryCount": 0
+  },
+  {
+    "id": "c19dc345-06a9-440b-b991-10478f719b86",
+    "name": "Europe",
+    "code": "EUR",
+    "category": "continent",
+    "parentCode": null,
+    "description": null,
+    "updatedAt": "2025-09-03T22:28:42.563Z",
+    "countryCount": 0
+  },
+  {
+    "id": "75ffff72-c1f8-4ae5-b7fe-d2dc3ba27052",
+    "name": "Oceania",
+    "code": "OCE",
+    "category": "continent",
+    "parentCode": null,
+    "description": null,
+    "updatedAt": "2025-09-03T22:28:42.894Z",
+    "countryCount": 0
+  }
+]

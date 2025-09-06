@@ -67,14 +67,14 @@ async function main() {
   // Note: Order is important. Start with models that are depended upon by others.
   // Or, if using relations with onDelete, Prisma can handle cascading deletes.
   // For explicit control, deleting in reverse order of dependency is safest.
-  await prisma.mediaContact.deleteMany({});
+  await prisma.media_contacts.deleteMany({});
   // Join tables for implicit M2M are handled by Prisma when related records are deleted.
   // Explicitly deleting from _CountryToRegion or _CountryToBeat might be needed if direct SQL was used or if issues persist.
-  await prisma.country.deleteMany({}); // This should disconnect relations to Region and Language
-  await prisma.region.deleteMany({});
-  await prisma.language.deleteMany({});
-  await prisma.outlet.deleteMany({});
-  await prisma.beat.deleteMany({});
+  await prisma.countries.deleteMany({}); // This should disconnect relations to Region and Language
+  await prisma.regions.deleteMany({});
+  await prisma.languages.deleteMany({});
+  await prisma.outlets.deleteMany({});
+  await prisma.beats.deleteMany({});
   
   // Reset sequences if needed (for auto-increment IDs)
   // Ensure these sequence names match your database. For PostgreSQL, they are typically TableName_id_seq.
@@ -112,30 +112,36 @@ async function seedMockData(prisma: PrismaClient) {
   
   // Seed mock outlets
   for (const outlet of mockOutlets) {
-    await prisma.outlet.upsert({
+    await prisma.outlets.upsert({
       where: { name: outlet.name },
       update: {
         description: outlet.description,
         website: outlet.website,
+        updated_at: new Date(),
       },
       create: {
+        id: outlet.id,
         name: outlet.name,
         description: outlet.description,
         website: outlet.website,
+        updated_at: new Date(),
       },
     });
   }
   
   // Seed mock beats
   for (const beat of mockBeats) {
-    await prisma.beat.upsert({
+    await prisma.beats.upsert({
       where: { name: beat.name },
       update: {
         description: beat.description,
+        updated_at: new Date(),
       },
       create: {
+        id: beat.id,
         name: beat.name,
         description: beat.description,
+        updated_at: new Date(),
       },
     });
   }
@@ -445,7 +451,7 @@ async function seedCountriesAndRelatedData(
         countryWhereCondition.name = countryData.name;
       }
       
-      const createdOrUpdatedCountry = await prisma.country.upsert({
+      const createdOrUpdatedCountry = await prisma.countries.upsert({
         where: countryWhereCondition,
         create: countryCreateData,
         update: countryUpdateData,
@@ -510,7 +516,7 @@ async function seedRemainingData(
   for (const outletData of mockOutlets) {
     try {
       // Assuming mockOutlets provides complete data including any relations if needed
-      const outlet = await prisma.outlet.upsert({
+      const outlet = await prisma.outlets.upsert({
         where: { id: outletData.id }, // Use ID for upserting, assuming mockOutlets have stable IDs
         update: { name: outletData.name, website: outletData.website, description: outletData.description }, // Specify fields to update
         create: outletData, // Full data for creation
@@ -525,7 +531,7 @@ async function seedRemainingData(
   console.log('\nSeeding beats...');
   for (const beatData of mockBeats) {
     try {
-      const beat = await prisma.beat.upsert({
+      const beat = await prisma.beats.upsert({
         where: { id: beatData.id }, // Assuming mockBeats have stable IDs
         update: { name: beatData.name },
         create: beatData,
@@ -578,8 +584,26 @@ async function seedRemainingData(
         delete prismaContactData.beats;
       }
 
-      const contact = await prisma.mediaContact.create({
-        data: prismaContactData,
+      const contact = await prisma.media_contacts.create({
+        data: {
+          ...prismaContactData,
+          updated_at: new Date(),
+        },
+        // Explicit select to avoid implicitly selecting columns that may not exist yet (e.g., dataDump)
+        select: {
+          id: true,
+          name: true,
+          title: true,
+          bio: true,
+          email: true,
+          authorLinks: true,
+          channels: true,
+          provenance: true,
+          lastVerified: true,
+          updated_at: true,
+          outletId: true,
+          score: true,
+        },
       });
       console.log(`Created media contact: ${contact.name} (ID: ${contact.id})`);
     } catch (e: any) {

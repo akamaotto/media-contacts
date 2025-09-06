@@ -48,7 +48,7 @@ export function ContactsMetricCard({ period, onPeriodChange }: ContactsMetricCar
     '7d': 'Last 7 days',
     '30d': 'Last 30 days',
     '3m': 'Last 3 months'
-  };
+  } as const;
 
   const verificationRate = data.totalContacts > 0 ? Math.round((data.verifiedContacts / data.totalContacts) * 100) : 0;
 
@@ -71,7 +71,7 @@ export function ContactsMetricCard({ period, onPeriodChange }: ContactsMetricCar
                 className="h-6 px-2 text-xs"
                 onClick={() => onPeriodChange(key as '7d' | '30d' | '3m')}
               >
-                {key}
+                {label}
               </Button>
             ))}
           </div>
@@ -88,7 +88,7 @@ export function ContactsMetricCard({ period, onPeriodChange }: ContactsMetricCar
         ) : (
           <div className="space-y-2">
             <div className="text-2xl font-bold mb-2">
-            {data.verifiedContacts} / {data.totalContacts} <span className="text-sm font-normal text-muted-foreground">({verificationRate}%) of contacts have verified emails</span>
+              {data.verifiedContacts} / {data.totalContacts} <span className="text-sm font-normal text-muted-foreground">({verificationRate}%) of contacts have verified emails</span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <div 

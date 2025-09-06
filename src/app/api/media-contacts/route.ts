@@ -1,331 +1,375 @@
+/**
+ * Media Contacts API Routes
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { ActivityTrackingService } from '@/backend/dashboard/activity';
-
-export const dynamic = 'force-dynamic';
+import { getMediaContactsService } from './factory';
+import { RequestContext, APIResponse } from '../shared/types';
+import { APIError } from '../shared/errors';
+import { MediaContact, CreateMediaContactData, UpdateMediaContactData, MediaContactsFilters } from './types';
 
 /**
- * OPTIMIZED: Single API endpoint for media contacts table
- * Handles everything in one request to minimize network overhead
+ * GET /api/media-contacts - Get all media contacts with filtering and pagination
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🚀 [MEDIA-CONTACTS-API] Starting optimized API call...');
-    const startTime = Date.now();
-
-    // Check authentication
-    const session = await auth();
-    console.log('Media contacts API: Session check:', { hasSession: !!session, userId: session?.user?.id });
+    const service = getMediaContactsService();
     
-    // TEMPORARY: Allow requests without auth for debugging
-    if (!session?.user) {
-      console.warn('Media contacts API: No session found, but allowing request for debugging');
-      // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Build request context
+    const session = await auth();
+    const context: RequestContext = {
+      userId: session?.user?.id || null,
+      userRole: session?.user?.role || null,
+      ip: request.headers.get('x-forwarded-for') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+      traceId: `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
 
-    // Get query parameters
+    // Parse query parameters
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get('pageSize') || '10')));
-    const searchTerm = searchParams.get('searchTerm') || '';
-    const countryIds = searchParams.get('countryIds')?.split(',').filter(Boolean) || [];
-    const beatIds = searchParams.get('beatIds')?.split(',').filter(Boolean) || [];
-    const outletIds = searchParams.get('outletIds')?.split(',').filter(Boolean) || [];
-    const regionCodes = searchParams.get('regionCodes')?.split(',').filter(Boolean) || [];
-    const languageCodes = searchParams.get('languageCodes')?.split(',').filter(Boolean) || [];
-    const emailVerified = searchParams.get('emailVerified') || 'all';
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '10')));
+    const searchTerm = searchParams.get('searchTerm') || undefined;
+    const countryIds = searchParams.get('countryIds')?.split(',').filter(Boolean) || undefined;
+    const beatIds = searchParams.get('beatIds')?.split(',').filter(Boolean) || undefined;
+    const outletIds = searchParams.get('outletIds')?.split(',').filter(Boolean) || undefined;
+    const regionCodes = searchParams.get('regionCodes')?.split(',').filter(Boolean) || undefined;
+    const languageCodes = searchParams.get('languageCodes')?.split(',').filter(Boolean) || undefined;
+    const emailVerified = searchParams.get('emailVerified') || undefined;
+    const sortBy = searchParams.get('sortBy') || undefined;
+    const sortOrder = searchParams.get('sortOrder') || undefined;
 
-    console.log(`📊 [MEDIA-CONTACTS-API] Query params: page=${page}, pageSize=${pageSize}, search="${searchTerm}", outlets=${outletIds.length}, regions=${regionCodes.length}, languages=${languageCodes.length}`);
-
-    // Build WHERE clause
-    const whereClause: any = {};
-    const conditions: any[] = [];
-
-    // Search filter
-    if (searchTerm.trim()) {
-      conditions.push({
-        OR: [
-          { name: { contains: searchTerm.trim(), mode: 'insensitive' } },
-          { email: { contains: searchTerm.trim(), mode: 'insensitive' } },
-          { title: { contains: searchTerm.trim(), mode: 'insensitive' } }
-        ]
-      });
-    }
-
-    // Country filter
-    if (countryIds.length > 0) {
-      conditions.push({
-        countries: { some: { id: { in: countryIds } } }
-      });
-    }
-
-    // Beat filter
-    if (beatIds.length > 0) {
-      conditions.push({
-        beats: { some: { id: { in: beatIds } } }
-      });
-    }
-
-    // Outlet filter
-    if (outletIds.length > 0) {
-      conditions.push({
-        outlets: { some: { id: { in: outletIds } } }
-      });
-    }
-
-    // Region filter (through countries)
-    if (regionCodes.length > 0) {
-      conditions.push({
-        countries: { 
-          some: { 
-            regions: { 
-              some: { 
-                code: { in: regionCodes } 
-              } 
-            } 
-          } 
-        }
-      });
-    }
-
-    // Language filter (through countries)
-    if (languageCodes.length > 0) {
-      conditions.push({
-        countries: { 
-          some: { 
-            languages: { 
-              some: { 
-                code: { in: languageCodes } 
-              } 
-            } 
-          } 
-        }
-      });
-    }
-
-    // Email verification filter
-    if (emailVerified !== 'all') {
-      conditions.push({
-        email_verified_status: emailVerified === 'verified'
-      });
-    }
-
-    if (conditions.length > 0) {
-      whereClause.AND = conditions;
-    }
-
-    // SINGLE OPTIMIZED QUERY: Get everything we need in one go
-    const queryStart = Date.now();
+    // Build filters - only include properties that have actual values
+    const filters: MediaContactsFilters = {
+      emailVerified: 'all' // Provide default value for required field
+    };
     
-    const [contacts, totalCount] = await Promise.all([
-      prisma.mediaContact.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          title: true,
-          email_verified_status: true,
-          updated_at: true,
-          // Get relationships efficiently - only what we need for display
-          outlets: {
-            select: { id: true, name: true },
-            take: 3 // Only get first 3 for display
-          },
-          beats: {
-            select: { id: true, name: true },
-            take: 3 // Only get first 3 for display
-          },
-          countries: {
-            select: { 
-              id: true, 
-              name: true,
-              regions: {
-                select: { id: true, name: true, code: true }
-              },
-              languages: {
-                select: { id: true, name: true, code: true }
-              }
-            },
-            take: 3 // Only get first 3 for display
-          },
-          // Get counts for "more" indicators
-          _count: {
-            select: {
-              outlets: true,
-              beats: true,
-              countries: true
-            }
-          }
-        },
-        orderBy: { updated_at: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      
-      prisma.mediaContact.count({ where: whereClause })
-    ]);
+    if (searchTerm) {
+      filters.search = searchTerm;
+    }
+    
+    if (countryIds && countryIds.length > 0) {
+      filters.countryIds = countryIds;
+    }
+    
+    if (beatIds && beatIds.length > 0) {
+      filters.beatIds = beatIds;
+    }
+    
+    if (outletIds && outletIds.length > 0) {
+      filters.outletIds = outletIds;
+    }
+    
+    if (regionCodes && regionCodes.length > 0) {
+      filters.regionCodes = regionCodes;
+    }
+    
+    if (languageCodes && languageCodes.length > 0) {
+      filters.languageCodes = languageCodes;
+    }
+    
+    if (emailVerified && emailVerified !== 'all') {
+      filters.emailVerified = emailVerified as 'verified' | 'unverified';
+    }
+    
+    if (sortBy) {
+      filters.sortBy = sortBy;
+    }
+    
+    if (sortOrder) {
+      filters.sortOrder = sortOrder as 'asc' | 'desc';
+    }
 
-    const queryTime = Date.now() - queryStart;
-    console.log(`⚡ [MEDIA-CONTACTS-API] Database query completed in ${queryTime}ms`);
+    // Get contacts
+    const result = await service.getAll(filters, { page, pageSize }, context);
 
-    // Transform data for frontend
-    const transformedContacts = contacts.map(contact => {
-      // Extract unique regions and languages from countries
-      const allRegions = contact.countries.flatMap(country => country.regions);
-      const allLanguages = contact.countries.flatMap(country => country.languages);
-      
-      // Remove duplicates based on code
-      const uniqueRegions = allRegions.filter((region, index, self) => 
-        index === self.findIndex(r => r.code === region.code)
-      );
-      const uniqueLanguages = allLanguages.filter((language, index, self) => 
-        index === self.findIndex(l => l.code === language.code)
-      );
-
-      return {
-        id: contact.id,
-        name: contact.name,
-        email: contact.email,
-        title: contact.title,
-        email_verified_status: contact.email_verified_status,
-        updated_at: contact.updated_at,
-        outlets: contact.outlets,
-        beats: contact.beats,
-        countries: contact.countries.map(c => ({ id: c.id, name: c.name })), // Clean up countries data
-        regions: uniqueRegions.slice(0, 3), // First 3 regions for display
-        languages: uniqueLanguages.slice(0, 3), // First 3 languages for display
-        // Add counts for "more" indicators
-        outletCount: contact._count.outlets,
-        beatCount: contact._count.beats,
-        countryCount: contact._count.countries,
-        regionCount: uniqueRegions.length,
-        languageCount: uniqueLanguages.length
-      };
-    });
-
-    const totalTime = Date.now() - startTime;
-    console.log(`✅ [MEDIA-CONTACTS-API] Total API time: ${totalTime}ms for ${transformedContacts.length} contacts`);
-
+    // Prepare response
     const response = NextResponse.json({
-      contacts: transformedContacts,
-      totalCount,
-      page,
-      pageSize,
-      totalPages: Math.ceil(totalCount / pageSize),
-      performance: {
-        queryTime,
-        totalTime,
-        contactsReturned: transformedContacts.length
+      success: true,
+      data: result.data,
+      pagination: {
+        totalCount: result.totalCount,
+        page: result.page,
+        pageSize: result.pageSize,
+        totalPages: result.totalPages
       }
     });
 
-    // Add performance headers
-    response.headers.set('X-Query-Time', queryTime.toString());
-    response.headers.set('X-Total-Time', totalTime.toString());
+    // Add caching headers
+    response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     
-    // Cache for 30 seconds to improve performance
-    response.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
-
     return response;
 
   } catch (error) {
-    console.error('❌ [MEDIA-CONTACTS-API] Error:', error);
+    console.error('Error fetching media contacts:', error);
+    
+    if (error instanceof APIError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: error.message,
+        },
+        { status: error.statusCode }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch media contacts' },
+      { 
+        success: false, 
+        error: 'Failed to fetch media contacts'
+      },
       { status: 500 }
     );
   }
 }
+
 /**
- * 
-POST /api/media-contacts - Create new contact
+ * POST /api/media-contacts - Create a new media contact
  */
 export async function POST(request: NextRequest) {
   try {
+    const service = getMediaContactsService();
+    
+    // Build request context
     const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Authentication required'
+        },
+        { status: 401 }
+      );
     }
+    
+    const context: RequestContext = {
+      userId: session.user.id,
+      userRole: session.user.role || null,
+      ip: request.headers.get('x-forwarded-for') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+      traceId: `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
 
+    // Parse request body
     const body = await request.json();
-    const { 
-      name, 
-      email, 
-      title, 
-      bio, 
-      socials, 
-      authorLinks, 
-      email_verified_status,
-      outletIds = [],
-      countryIds = [],
-      beatIds = []
-    } = body;
+    const createData: CreateMediaContactData = {
+      name: body.name,
+      email: body.email,
+      title: body.title,
+      bio: body.bio,
+      email_verified_status: body.email_verified_status,
+      socials: body.socials,
+      authorLinks: body.authorLinks,
+      outletIds: body.outletIds,
+      countryIds: body.countryIds,
+      beatIds: body.beatIds
+    };
 
-    // Basic validation
-    if (!name || !email) {
-      return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
-    }
+    // Create contact
+    const contact = await service.create(createData, context);
 
-    // Create contact with relationships
-    const newContact = await prisma.mediaContact.create({
-      data: {
-        name: name.trim(),
-        email: email.trim(),
-        title: title?.trim() || '',
-        bio: bio?.trim() || null,
-        socials: socials || [],
-        authorLinks: authorLinks || [],
-        email_verified_status: Boolean(email_verified_status),
-        outlets: {
-          connect: outletIds.map((id: string) => ({ id }))
-        },
-        countries: {
-          connect: countryIds.map((id: string) => ({ id }))
-        },
-        beats: {
-          connect: beatIds.map((id: string) => ({ id }))
-        }
+    // Prepare response
+    return NextResponse.json(
+      { 
+        success: true,
+        data: contact,
+        message: 'Media contact created successfully'
       },
-      include: {
-        outlets: { select: { id: true, name: true } },
-        countries: { select: { id: true, name: true, code: true } },
-        beats: { select: { id: true, name: true } }
-      }
-    });
-
-    // Log activity
-    if (session.user.id) {
-      const activityService = new ActivityTrackingService();
-      await activityService.logActivity({
-        type: 'create',
-        entity: 'media_contact',
-        entityId: newContact.id,
-        entityName: newContact.name,
-        userId: session.user.id,
-        details: {
-          email: newContact.email,
-          title: newContact.title,
-          outlets: newContact.outlets?.map(o => o.name) || [],
-          countries: newContact.countries?.map(c => c.name) || [],
-          beats: newContact.beats?.map(b => b.name) || []
-        }
-      });
-    }
-
-    return NextResponse.json({ 
-      message: 'Contact created successfully',
-      contact: newContact 
-    }, { status: 201 });
+      { status: 201 }
+    );
 
   } catch (error) {
-    console.error('Error creating contact:', error);
+    console.error('Error creating media contact:', error);
     
-    if (error instanceof Error && error.message.includes('Unique constraint')) {
-      return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
+    if (error instanceof APIError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: error.message,
+        },
+        { status: error.statusCode }
+      );
     }
     
-    return NextResponse.json({ error: 'Failed to create contact' }, { status: 500 });
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to create media contact'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/media-contacts/:id - Update an existing media contact
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const service = getMediaContactsService();
+    
+    // Build request context
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Authentication required'
+        },
+        { status: 401 }
+      );
+    }
+    
+    const context: RequestContext = {
+      userId: session.user.id,
+      userRole: session.user.role || null,
+      ip: request.headers.get('x-forwarded-for') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+      traceId: `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
+
+    // Parse request URL
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const contactId = pathParts[pathParts.length - 1];
+
+    // Validate contact ID
+    if (!contactId) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Contact ID is required'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Parse request body
+    const body = await request.json();
+    const updateData: UpdateMediaContactData = {
+      name: body.name,
+      email: body.email,
+      title: body.title,
+      bio: body.bio,
+      email_verified_status: body.email_verified_status,
+      socials: body.socials,
+      authorLinks: body.authorLinks,
+      outletIds: body.outletIds,
+      countryIds: body.countryIds,
+      beatIds: body.beatIds
+    };
+
+    // Update contact
+    const contact = await service.update(contactId, updateData, context);
+
+    // Prepare response
+    return NextResponse.json(
+      { 
+        success: true,
+        data: contact,
+        message: 'Media contact updated successfully'
+      },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error updating media contact:', error);
+    
+    if (error instanceof APIError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: error.message,
+        },
+        { status: error.statusCode }
+      );
+    }
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to update media contact'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/media-contacts/:id - Delete an existing media contact
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const service = getMediaContactsService();
+    
+    // Build request context
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Authentication required'
+        },
+        { status: 401 }
+      );
+    }
+    
+    const context: RequestContext = {
+      userId: session.user.id,
+      userRole: session.user.role || null,
+      ip: request.headers.get('x-forwarded-for') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+      traceId: `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
+
+    // Parse request URL
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const contactId = pathParts[pathParts.length - 1];
+
+    // Validate contact ID
+    if (!contactId) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Contact ID is required'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Delete contact
+    await service.delete(contactId, context);
+
+    // Prepare response
+    return NextResponse.json(
+      { 
+        success: true,
+        message: 'Media contact deleted successfully'
+      },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error deleting media contact:', error);
+    
+    if (error instanceof APIError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: error.message,
+        },
+        { status: error.statusCode }
+      );
+    }
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to delete media contact'
+      },
+      { status: 500 }
+    );
   }
 }

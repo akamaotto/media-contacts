@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/database/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ beats: [] });
     }
 
-    const beats = await prisma.beat.findMany({
+    const beats = await prisma.beats.findMany({
       where: {
         name: {
           contains: query,

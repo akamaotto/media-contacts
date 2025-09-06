@@ -5,7 +5,7 @@ import {
   getConnectionHistory, 
   getConnectionStats,
   performHealthCheck 
-} from '@/lib/prisma-monitoring';
+} from '@/lib/database/prisma-monitoring';
 
 /**
  * Connection monitoring API endpoint

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database/prisma";
 import { auth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import UsersClientWrapper from "./users-client-wrapper";
@@ -10,13 +10,13 @@ export const dynamic = 'force-dynamic';
 export default async function AdminUsersPage() {
   // Server-side admin check
   const session = await auth();
-  if (!session || (session.user as any).role !== "ADMIN") {
+  if (!session || !('role' in session.user) || session.user.role !== "ADMIN") {
     notFound();
   }
 
   // Fetch all users
   // Use type assertion to work around TypeScript errors
-  const users = await prisma.user.findMany({
+  const users = await prisma.users.findMany({
     orderBy: { name: "asc" },
     select: {
       id: true,

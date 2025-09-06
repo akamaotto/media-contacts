@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -151,7 +151,7 @@ export function ActivityFeed({
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
   const [selectedEntityFilter, setSelectedEntityFilter] = useState<string>('all');
 
-  const fetchActivities = async (offset: number = 0, append: boolean = false) => {
+  const fetchActivities = useCallback(async (offset: number = 0, append: boolean = false) => {
     try {
       setError(null);
       if (!append) setIsLoading(true);
@@ -168,8 +168,12 @@ export function ActivityFeed({
       if (selectedEntityFilter !== 'all') {
         params.append('entity', selectedEntityFilter);
       }
+      // cache-bust to avoid stale or cached 401s
+      params.append('_t', Date.now().toString());
       
-      const response = await fetch(`/api/dashboard/activity?${params}`);
+      const response = await fetch(`/api/dashboard/activity?${params}`, {
+        cache: 'no-store',
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch activities: ${response.statusText}`);
@@ -178,7 +182,7 @@ export function ActivityFeed({
       const data = await response.json();
       
       // Convert timestamp strings to Date objects
-      const processedActivities = data.activities.map((activity: any) => ({
+      const processedActivities = data.activities.map((activity: ActivityItem) => ({
         ...activity,
         timestamp: new Date(activity.timestamp)
       }));
@@ -199,11 +203,11 @@ export function ActivityFeed({
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  };
+  }, [limit, selectedTypeFilter, selectedEntityFilter]);
 
   useEffect(() => {
     fetchActivities();
-  }, [selectedTypeFilter, selectedEntityFilter]);
+  }, [fetchActivities]);
 
   const handleLoadMore = () => {
     setIsLoadingMore(true);

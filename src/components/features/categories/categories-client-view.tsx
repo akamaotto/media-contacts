@@ -5,7 +5,18 @@ import { CategoriesTable } from "./categories-table";
 import { AddCategorySheet } from "./add-category-sheet";
 import { EditCategorySheet } from "./edit-category-sheet";
 import { DeleteCategoryDialog } from "./delete-category-dialog";
-import type { Category } from "@/backend/categories/actions";
+import { CategoryDetailSheet } from "./category-detail-sheet";
+// Local minimal Category type for UI usage
+type Category = {
+  id: string;
+  name: string;
+  description?: string | null;
+  color?: string | null;
+  beatCount?: number;
+  outletCount?: number;
+  // Optional detail list used by edit sheet to preselect beats
+  beats?: Array<{ id: string; name: string; description?: string | null; contactCount?: number }>;
+};
 
 interface CategoriesClientViewProps {
   // Future props if needed
@@ -14,6 +25,7 @@ interface CategoriesClientViewProps {
 export function CategoriesClientView({}: CategoriesClientViewProps) {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [viewingCategoryId, setViewingCategoryId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const refreshTableRef = useRef<{ refresh: () => void }>(null);
 
@@ -30,6 +42,10 @@ export function CategoriesClientView({}: CategoriesClientViewProps) {
 
   const handleDelete = (category: Category) => {
     setDeletingCategory(category);
+  };
+
+  const handleView = (category: Category) => {
+    setViewingCategoryId(category.id);
   };
 
   const handleAddSuccess = () => {
@@ -52,7 +68,27 @@ export function CategoriesClientView({}: CategoriesClientViewProps) {
       <CategoriesTable 
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onView={handleView}
         ref={refreshTableRef}
+      />
+      
+      {/* Category Detail Sheet */}
+      <CategoryDetailSheet
+        categoryId={viewingCategoryId}
+        isOpen={!!viewingCategoryId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingCategoryId(null);
+          }
+        }}
+        onEdit={(category) => {
+          setViewingCategoryId(null);
+          setEditingCategory(category);
+        }}
+        onDelete={(category) => {
+          setViewingCategoryId(null);
+          setDeletingCategory(category);
+        }}
       />
       
       {/* Add Category Sheet */}

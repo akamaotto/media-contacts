@@ -62,6 +62,7 @@ export interface MediaContactTableItem {
   outlets: Outlet[];
   countries: Country[];
   beats: Beat[];
+  ai_beats?: string[]; // AI-derived beats (strings)
   languages?: Language[];
   regions?: Array<{ id: string; name: string; code: string }>;
   outletCount?: number;
@@ -73,7 +74,7 @@ export interface MediaContactTableItem {
   socials?: string[] | null;
   authorLinks?: string[] | null;
   // Add any other fields that might be used in the application
-  [key: string]: any; // For any additional dynamic properties
+  
 }
 
 export interface ApiContact {
@@ -85,6 +86,7 @@ export interface ApiContact {
   updated_at: string;
   outlets: Array<{ id: string; name: string }>;
   beats: Array<{ id: string; name: string }>;
+  ai_beats?: string[]; // AI-derived beats (strings)
   countries: Array<{ id: string; name: string }>;
   regions: Array<{ id: string; name: string; code: string }>;
   languages: Array<{ id: string; name: string; code: string }>;
@@ -182,9 +184,11 @@ export interface FastTableContact {
   email: string;
   title: string;
   email_verified_status: boolean;
+  // Note: This field is mapped from 'updatedAt' (camelCase) in the API response
   updated_at: string;
   outlets: Array<{ id: string; name: string }>;
   beats: Array<{ id: string; name: string }>;
+  ai_beats?: string[]; // AI-derived beats (strings)
   countries: Array<{ id: string; name: string }>;
   regions: Array<{ id: string; name: string; code: string }>;
   languages: Array<{ id: string; name: string; code: string }>;
@@ -277,9 +281,19 @@ export const isMediaContactTableItem = (contact: any): contact is MediaContactTa
   );
 };
 
-// Type adapter to convert ApiContact to MediaContactTableItem
-export const adaptApiContactToTableItem = (contact: ApiContact): MediaContactTableItem => ({
-  ...contact,
-  emailVerified: contact.email_verified_status,
-  updated_at: contact.updated_at
-});
+// Type adapter to convert ApiContact or FastTableContact to MediaContactTableItem
+export const adaptApiContactToTableItem = (contact: ApiContact | FastTableContact): MediaContactTableItem => {
+  console.log('adaptApiContactToTableItem called with:', contact);
+  console.log('adaptApiContactToTableItem result:', {
+    ...contact,
+    ai_beats: (contact as any).ai_beats ?? [],
+    emailVerified: (contact as any).email_verified_status ?? (contact as any).emailVerified,
+    updated_at: (contact as any).updatedAt || (contact as any).updated_at
+  });
+  return {
+    ...contact,
+    ai_beats: (contact as any).ai_beats ?? [],
+    emailVerified: (contact as any).email_verified_status ?? (contact as any).emailVerified,
+    updated_at: (contact as any).updatedAt || (contact as any).updated_at
+  };
+};

@@ -291,7 +291,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           isOpen={isAddContactOpen}
           onOpenChange={setIsAddContactOpen}
           contact={null} // null means we're adding a new contact
-          onContactUpdate={() => {
+          onSuccess={() => {
             setIsAddContactOpen(false)
             // Refresh data is handled by individual pages
           }}

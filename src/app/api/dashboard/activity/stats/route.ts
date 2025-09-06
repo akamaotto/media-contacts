@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { activityTrackingService } from '@/backend/dashboard/activity';
+import { activityTrackingService } from '@/services/activity';
 
 export const dynamic = 'force-dynamic';
 

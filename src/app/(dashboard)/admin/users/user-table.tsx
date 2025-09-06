@@ -7,8 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,11 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { Trash2, MoreHorizontal, Edit, Eye } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -41,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { UserDetailSheet } from "./user-detail-sheet";
 
 type User = {
   id: string;
@@ -48,6 +51,7 @@ type User = {
   email: string;
   role: string;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 interface UserTableProps {
@@ -61,6 +65,7 @@ export interface UserTableRef {
 const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [formState, formAction] = useActionState(upsertUser, { success: false });
   const [deleteFormState, deleteFormAction] = useActionState(deleteUser, { success: false });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -113,6 +118,10 @@ const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
     setIsOpen(true);
   };
   
+  const handleViewUser = (user: User) => {
+    setViewingUser(user);
+  };
+  
   const handleDeleteUser = (user: User) => {
     setUserToDelete(user);
     setDeleteDialogOpen(true);
@@ -149,7 +158,20 @@ const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
                 </TableRow>
               ) : (
                 users.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-gray-100">
+                  <TableRow 
+                    key={user.id} 
+                    className="hover:bg-gray-100 cursor-pointer transition-colors"
+                    onClick={() => handleViewUser(user)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleViewUser(user);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`View details for user ${user.name || user.email}`}
+                  >
                     <TableCell className="font-medium">
                       {user.name || "-"}
                     </TableCell>
@@ -165,25 +187,37 @@ const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
                         {user.role}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          Edit
-                        </Button>
-                        {user.email !== "akamaotto@gmail.com" && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user)}
-                          >
-                            <Trash2 className="h-4 w-4" />
+                    <TableCell 
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewUser(user)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          {user.email !== "akamaotto@gmail.com" && (
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -285,6 +319,14 @@ const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* User Detail Sheet */}
+      <UserDetailSheet
+        isOpen={!!viewingUser}
+        onOpenChange={(open) => !open && setViewingUser(null)}
+        user={viewingUser}
+        onEdit={handleEditUser}
+      />
     </div>
   );
 });

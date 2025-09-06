@@ -18,7 +18,12 @@ export function AppHeader({ onAddContactOpen }: AppHeaderProps) {
   return (
     <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-zinc-950 py-4 px-6">
       <div className="container mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <AppBrandHeader />
+        <AppBrandHeader 
+          title="Media Contacts"
+          subtitle="Manage and enrich your media relationships"
+          totalCount={0}
+          onAddContact={isHomePage && onAddContactOpen ? onAddContactOpen : () => (window.location.href = '/')} 
+        />
         <div className="flex justify-end w-full sm:w-auto">
           <HeaderActionButtons 
             onAddContactOpen={isHomePage && onAddContactOpen ? onAddContactOpen : () => window.location.href = '/'} 

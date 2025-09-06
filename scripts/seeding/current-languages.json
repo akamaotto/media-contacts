@@ -1,0 +1,72 @@
+[
+  {
+    "id": "92d83bf7-3424-4838-806f-65831117a315",
+    "name": "Afrikaans",
+    "code": "afr",
+    "updatedAt": "2025-09-03T22:30:34.657Z",
+    "countryCount": 0
+  },
+  {
+    "id": "da00fdf5-33f0-4568-85a9-c8715d194159",
+    "name": "Akan",
+    "code": "aka",
+    "updatedAt": "2025-09-03T22:30:37.369Z",
+    "countryCount": 0
+  },
+  {
+    "id": "20316892-d5a4-46fc-a03a-4c593c995e8e",
+    "name": "Albanian",
+    "code": "sqi",
+    "updatedAt": "2025-09-03T22:30:33.441Z",
+    "countryCount": 0
+  },
+  {
+    "id": "8e76637f-a118-456b-abe6-c62ac2917fba",
+    "name": "Amharic",
+    "code": "amh",
+    "updatedAt": "2025-09-03T22:30:20.670Z",
+    "countryCount": 0
+  },
+  {
+    "id": "003dbf35-921e-4d5b-8bad-bf8c06c371d2",
+    "name": "Arabic",
+    "code": "ara",
+    "updatedAt": "2025-09-03T22:30:14.537Z",
+    "countryCount": 0
+  },
+  {
+    "id": "4a1dc256-a633-4516-a954-382e831b43cd",
+    "name": "Armenian",
+    "code": "hye",
+    "updatedAt": "2025-09-03T22:30:21.006Z",
+    "countryCount": 0
+  },
+  {
+    "id": "b3fbe6e9-09ca-4a38-b1ee-e1dc06a7be09",
+    "name": "Asturian",
+    "code": "ast",
+    "updatedAt": "2025-09-03T22:43:39.795Z",
+    "countryCount": 0
+  },
+  {
+    "id": "35719991-9dde-4d65-8409-aca43ffd10cf",
+    "name": "Azerbaijani",
+    "code": "aze",
+    "updatedAt": "2025-09-03T22:30:30.217Z",
+    "countryCount": 0
+  },
+  {
+    "id": "47074370-269a-424c-a021-b0761fe04dd8",
+    "name": "Balochi",
+    "code": "bal",
+    "updatedAt": "2025-09-03T22:30:40.549Z",
+    "countryCount": 0
+  },
+  {
+    "id": "30c2f002-b503-4e08-b21c-c3f339769358",
+    "name": "Basque",
+    "code": "eus",
+    "updatedAt": "2025-09-03T22:30:24.094Z",
+    "countryCount": 0
+  }
+]

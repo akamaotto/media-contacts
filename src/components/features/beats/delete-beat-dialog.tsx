@@ -14,7 +14,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-import type { Beat } from '@/backend/beats/actions';
+// Minimal Beat type for this dialog
+type Beat = { id: string; name: string; contactCount?: number };
 
 interface DeleteBeatDialogProps {
   beat: Beat | null;

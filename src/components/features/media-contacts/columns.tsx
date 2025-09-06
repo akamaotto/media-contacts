@@ -30,9 +30,6 @@ import {Badge} from '@/components/ui/badge'; // For displaying outlets, beats, c
 import type {
     MediaContactTableItem,
     ColumnActions,
-    Country,
-    Beat,
-    Outlet,
 } from './types';
 
 // Educational Comment:

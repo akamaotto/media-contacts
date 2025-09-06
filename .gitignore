@@ -49,3 +49,56 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright storage states
+/tests/storage-state/*.json
+!/tests/storage-state/.gitkeep
+
+# Sensitive research data and contact information
+algeria-research/*.json
+rwanda-research/*.json
+senegal-*.json
+*research-log.json
+*enrichment-log.json
+*deduplication-log.json
+*transform-log.json
+*verification-report.md
+*import-summary.md
+*authors*.json
+*outlets*.json
+*publishers*.json
+*contacts*.json
+existing_contacts*.json
+testing_contacts*.csv
+sample-media-contacts.csv
+senegal-media-contacts-summary.md
+research-logs/
+backups/
+
+# Reports and documentation containing sensitive information
+*verification-report.md
+*research-log.md
+senegal-research-log.md
+senegal-media-contacts-summary.md
+
+# Script reports and logs
+scripts/seeding/reports/
+scripts/seeding/data/
+seed-*.json
+*seed-log.json
+*seeding-errors.json
+*completion-report.md
+
+# IDE and system files
+.idea/
+.kiro/
+.vscode/
+*.session.sql
+*.png
+search-results.png
+page-debug.html
+page-debug.png
+
+# Playwright reports
+playwright-report/
+test-results/

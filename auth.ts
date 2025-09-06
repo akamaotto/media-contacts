@@ -1,7 +1,7 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 import bcrypt from "bcryptjs"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -61,6 +61,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   providers: [
+    // Test environment bypass provider (also enable for development when testing)
+    ...((process.env.NODE_ENV === 'test' || process.env.ENABLE_TEST_AUTH === 'true') ? [
+      Credentials({
+        id: 'test-bypass',
+        name: 'Test Bypass',
+        credentials: {
+          testUser: { label: "Test User", type: "text", placeholder: "admin, user, or custom-id" }
+        },
+        async authorize(credentials) {
+          console.log("[NextAuth] Test bypass authorize called with:", credentials?.testUser)
+          
+          if (!credentials?.testUser) return null;
+          
+          // Predefined test users
+          const testUsers = {
+            admin: {
+              id: 'test-admin-id',
+              email: 'test@test.com',
+              name: 'Test Admin',
+              role: 'ADMIN'
+            },
+            user: {
+              id: 'test-user-id',
+              email: 'testuser@test.com', 
+              name: 'Test User',
+              role: 'USER'
+            }
+          };
+          
+          const user = testUsers[credentials.testUser as keyof typeof testUsers];
+          if (user) {
+            console.log("[NextAuth] Test bypass successful for:", user.email)
+            return user;
+          }
+          
+          // Custom test user ID
+          return {
+            id: String(credentials.testUser),
+            email: `${credentials.testUser}@test.com`,
+            name: `Test ${credentials.testUser}`,
+            role: 'USER'
+          };
+        }
+      })
+    ] : []),
+    // Production credentials provider
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
@@ -78,7 +124,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         
         try {
-          const user = await prisma.user.findUnique({
+          const user = await prisma.users.findUnique({
             where: { email: credentials.email as string },
           })
           

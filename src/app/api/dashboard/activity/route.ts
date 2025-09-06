@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get('offset') || '0'), 0);
 
     // Parse filter parameters
-    const type = searchParams.get('type') as any;
-    const entity = searchParams.get('entity') as any;
+    const type = searchParams.get('type') as 'create' | 'update' | 'delete' | 'import' | 'export' | null;
+    const entity = searchParams.get('entity') as 'media_contact' | 'outlet' | 'publisher' | 'beat' | 'category' | 'country' | 'language' | 'region' | null;
     const userId = searchParams.get('userId') || undefined;
     const startDateStr = searchParams.get('startDate');
     const endDateStr = searchParams.get('endDate');

@@ -1,33 +1,39 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { UploadCloudIcon, DownloadCloudIcon, PlusCircleIcon } from "lucide-react";
+import { UploadCloudIcon, DownloadCloudIcon, PlusCircleIcon, Sparkles } from "lucide-react";
 import { UserAvatarMenu } from "@/components/features/auth/user-avatar-menu";
+import type { MediaContactTableItem } from './types';
 
 export interface HeaderActionButtonsProps {
   onAddContactOpen: () => void;
+  onContactsFound?: (contacts: MediaContactTableItem[]) => void;
 }
 
-export function HeaderActionButtons({ onAddContactOpen }: HeaderActionButtonsProps) {
+export function HeaderActionButtons({ onAddContactOpen, onContactsFound }: HeaderActionButtonsProps) {
+  // AI research features removed
+
   return (
-    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-      <Button variant="outline" className="w-full sm:w-auto">
-        <UploadCloudIcon className="mr-2 h-4 w-4" />
-        Import CSV
-      </Button>
-      <Button variant="outline" className="w-full sm:w-auto">
-        <DownloadCloudIcon className="mr-2 h-4 w-4" />
-        Export CSV
-      </Button>
-      <Button onClick={onAddContactOpen} className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white">
-        <PlusCircleIcon className="mr-2 h-4 w-4" />
-        Add Contact
-      </Button>
-      <div className="ml-2">
-        <UserAvatarMenu />
+    <>
+      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <Button variant="outline" className="w-full sm:w-auto">
+          <UploadCloudIcon className="mr-2 h-4 w-4" />
+          Import CSV
+        </Button>
+        <Button variant="outline" className="w-full sm:w-auto">
+          <DownloadCloudIcon className="mr-2 h-4 w-4" />
+          Export CSV
+        </Button>
+        <Button onClick={onAddContactOpen} className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white">
+          <PlusCircleIcon className="mr-2 h-4 w-4" />
+          Add Contact
+        </Button>
+        <div className="ml-2">
+          <UserAvatarMenu />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

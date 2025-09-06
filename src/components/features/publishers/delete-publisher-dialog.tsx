@@ -15,8 +15,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-
-import type { Publisher } from '@/backend/publishers/actions';
+// Local minimal Publisher type for this dialog
+type Publisher = {
+  id: string;
+  name: string;
+  outletCount?: number;
+};
 
 interface DeletePublisherDialogProps {
   publisher: Publisher | null;

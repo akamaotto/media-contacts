@@ -1,10 +1,82 @@
 import { test, expect } from "@playwright/test";
 import { loginViaApi } from "./utils";
+import { isAuthenticated, logoutUser } from "./auth-test-utils";
 
 const randomEmail = () => `user_${Date.now()}@example.com`;
 
-// Happy-path registration → logout → login
+// Test for unauthenticated users
+test.describe("Unauthenticated Access", () => {
+  test("redirects unauthenticated users to login", async ({ page, baseURL }) => {
+    // Try to access protected page
+    await page.goto(`${baseURL}/`);
+    
+    // Should be redirected to login
+    await expect(page).toHaveURL(/.*login/);
+  });
+});
 
+// Tests using pre-authenticated admin user
+test.describe("Authenticated Admin User", () => {
+  test.use({ storageState: 'tests/storage-state/admin.json' });
+  
+  test("can access protected pages", async ({ page, baseURL }) => {
+    // Navigate to home page
+    await page.goto(`${baseURL}/`);
+    
+    // Should be on home page (not redirected to login)
+    await expect(page).toHaveURL(`${baseURL}/`);
+    
+    // Verify user is authenticated
+    const auth = await isAuthenticated(page);
+    expect(auth).toBe(true);
+  });
+  
+  test("can navigate to media contacts", async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/media-contacts`);
+    await expect(page).toHaveURL(`${baseURL}/media-contacts`);
+    
+    // Verify page content
+    await expect(page.locator('h1')).toContainText(/Media Contacts/i);
+  });
+  
+  test("can logout", async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/`);
+    
+    // Perform logout
+    await logoutUser(page);
+    
+    // Should be redirected to login
+    await expect(page).toHaveURL(/.*login/);
+    
+    // Verify user is no longer authenticated
+    const auth = await isAuthenticated(page);
+    expect(auth).toBe(false);
+  });
+});
+
+// Tests using pre-authenticated regular user
+test.describe("Authenticated Regular User", () => {
+  test.use({ storageState: 'tests/storage-state/user.json' });
+  
+  test("can access protected pages", async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/`);
+    await expect(page).toHaveURL(`${baseURL}/`);
+    
+    // Verify user is authenticated
+    const auth = await isAuthenticated(page);
+    expect(auth).toBe(true);
+  });
+  
+  test("can navigate to media contacts", async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/media-contacts`);
+    await expect(page).toHaveURL(`${baseURL}/media-contacts`);
+    
+    // Verify page content
+    await expect(page.locator('h1')).toContainText(/Media Contacts/i);
+  });
+});
+
+// Happy-path registration → logout → login
 test("register, login, access protected page", async ({ page, baseURL }) => {
   const email = randomEmail();
   const password = "Test1234!";

@@ -1,22 +1,22 @@
 // Consolidated media contacts actions - single source of truth from backend
 
 // Main media contacts operations (including delete)
-export { 
-  getMediaContactsAction, 
+export {
+  getMediaContactsAction,
   upsertMediaContactAction,
-  updateMediaContact,
-  deleteMediaContact,
-  type PaginatedMediaContactsActionResult, 
-  type GetMediaContactsParams,
-  type UpsertMediaContactActionState,
-  type UpsertMediaContactData,
-  type UpdateMediaContactReturnType,
-  type DeleteMediaContactResult
-} from '../../backend/media-contacts/actions'
+  deleteMediaContactAction,
+} from '@/features/media-contacts/lib/actions'
 
-// Related entity operations
-export * from '../../backend/beats/actions'
-export * from '../../backend/countries/actions'
-export * from '../../backend/languages/actions'
-export * from '../../backend/outlets/actions'
-export * from '../../backend/regions/actions'
+// Backwards-compatible alias for legacy imports
+export { deleteMediaContactAction as deleteMediaContact } from '@/features/media-contacts/lib/actions'
+
+// Re-export related entity operations from features
+export * from '@/features/beats/lib/actions'
+export * from '@/features/countries/lib/actions'
+export * from '@/features/languages/lib/actions'
+export * from '@/features/outlets/lib/actions'
+export * from '@/features/regions/lib/actions'
+
+// Also re-export commonly used read-only queries so UI can import from one place
+export * from '@/features/countries/lib/queries'
+export * from '@/features/outlets/lib/queries'

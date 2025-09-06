@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/dashboard/charts/route';
 import { auth } from '@/lib/auth';
@@ -24,7 +25,7 @@ describe('/api/dashboard/charts', () => {
   it('should return 401 if user is not authenticated', async () => {
     mockAuth.mockResolvedValue(null);
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/charts?type=category');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/charts?type=category', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 
@@ -37,7 +38,7 @@ describe('/api/dashboard/charts', () => {
       user: { id: 'user1', email: 'test@example.com' },
     } as any);
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/charts');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/charts', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 
@@ -77,7 +78,7 @@ describe('/api/dashboard/charts', () => {
 
     (prisma.mediaContact.findMany as jest.Mock).mockResolvedValue(mockContacts);
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/charts?type=category&timeRange=30d');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/charts?type=category&timeRange=30d', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 
@@ -115,7 +116,7 @@ describe('/api/dashboard/charts', () => {
 
     (prisma.mediaContact.findMany as jest.Mock).mockResolvedValue(mockContacts);
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/charts?type=country&timeRange=7d');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/charts?type=country&timeRange=7d', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 
@@ -136,7 +137,7 @@ describe('/api/dashboard/charts', () => {
 
     (prisma.mediaContact.findMany as jest.Mock).mockRejectedValue(new Error('Database error'));
 
-    const request = new NextRequest('http://localhost:3000/api/dashboard/charts?type=category');
+    const request = new NextRequest('http://localhost:3000/api/dashboard/charts?type=category', { headers: new Headers() });
     const response = await GET(request);
     const data = await response.json();
 

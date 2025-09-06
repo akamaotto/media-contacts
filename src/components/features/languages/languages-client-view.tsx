@@ -5,13 +5,16 @@ import { LanguagesTable } from './languages-table';
 import { AddLanguageSheet } from './add-language-sheet';
 import { EditLanguageSheet } from './edit-language-sheet';
 import { DeleteLanguageDialog } from './delete-language-dialog';
+import { LanguageDetailSheet } from './language-detail-sheet';
 import { Language } from '@/lib/types/geography';
+import { LanguagesTableErrorBoundary } from './error-boundary';
 
 export function LanguagesClientView() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLanguage, setEditingLanguage] = useState<Language | null>(null);
   const [deletingLanguage, setDeletingLanguage] = useState<Language | null>(null);
+  const [viewingLanguage, setViewingLanguage] = useState<Language | null>(null);
 
   const handleAddSuccess = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -38,6 +41,10 @@ export function LanguagesClientView() {
     setDeletingLanguage(language);
   };
 
+  const handleView = (language: Language) => {
+    setViewingLanguage(language);
+  };
+
   // Expose the openAddLanguageModal function to the global scope for breadcrumb button access
   useEffect(() => {
     const ref = {
@@ -52,12 +59,15 @@ export function LanguagesClientView() {
 
   return (
     <div className="space-y-6">
-      {/* Languages Table */}
-      <LanguagesTable 
-        key={refreshTrigger} 
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+      {/* Languages Table with Error Boundary */}
+      <LanguagesTableErrorBoundary>
+        <LanguagesTable 
+          key={refreshTrigger} 
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onView={handleView}
+        />
+      </LanguagesTableErrorBoundary>
       
       {/* Add Language Sheet */}
       <AddLanguageSheet
@@ -83,6 +93,16 @@ export function LanguagesClientView() {
           onClose={() => setDeletingLanguage(null)}
           onSuccess={handleDeleteSuccess}
           language={deletingLanguage}
+        />
+      )}
+      
+      {/* Language Detail Sheet */}
+      {viewingLanguage && (
+        <LanguageDetailSheet
+          isOpen={!!viewingLanguage}
+          onOpenChange={(open) => !open && setViewingLanguage(null)}
+          language={viewingLanguage}
+          onEdit={handleEdit}
         />
       )}
     </div>

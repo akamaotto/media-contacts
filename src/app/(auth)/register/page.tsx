@@ -16,12 +16,10 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg(null);
 
     try {
       const res = await fetch("/api/register", {
@@ -48,7 +46,6 @@ export default function RegisterPage() {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unexpected error";
-      setErrorMsg(message);
       toast.error(message);
     } finally {
       setLoading(false);

@@ -18,8 +18,8 @@ export function UserAvatarMenu() {
   const { data: session } = useSession();
   // Check for both ADMIN and admin (case insensitive)
   const isAdmin = session?.user && 
-    ((session.user as any)?.role === "ADMIN" || 
-     (session.user as any)?.role === "admin");
+    (session.user.role === "ADMIN" || 
+     session.user.role === "admin");
   
   // Get initials from name or email
   const getInitials = () => {

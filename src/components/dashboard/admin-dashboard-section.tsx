@@ -19,7 +19,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AdminMetrics } from '@/backend/dashboard/admin';
+
+// Local AdminMetrics type to avoid missing import from non-existent backend module
+type AdminMetrics = {
+  systemHealth: {
+    uptime: number;
+    memoryUsage: { percentage: number };
+    databaseConnections: { active: number; total: number };
+    cacheStatus: { isAvailable: boolean; hitRate?: number };
+  };
+  userActivity: {
+    totalUsers: number;
+    newUsersThisMonth: number;
+    activeUsers: { today: number; thisWeek: number };
+    mostActiveUsers: Array<{ id: string; name: string; email: string; activityCount: number; lastActive: string | Date }>;
+  };
+  databaseMetrics: {
+    totalRecords: { mediaContacts: number; publishers: number; outlets: number };
+    databaseSize: { total: string; tables: Array<{ name: string; size: string; rowCount: number }> };
+    recentImports: Array<{ type: string; userName: string; count: number; timestamp: string | Date }>;
+  };
+  performanceMetrics: {
+    averageResponseTime: number;
+    errorRate: { percentage: number; count: number; period: string };
+    slowQueries: Array<{ duration: number; timestamp: string | Date; query: string }>;
+    apiEndpointStats: Array<{ endpoint: string; requestCount: number; averageResponseTime: number; errorCount: number }>;
+  };
+};
 
 interface AdminDashboardSectionProps {
   userId: string;
@@ -388,11 +414,7 @@ function SystemHealthCard({
   progress?: number;
   subtitle?: string;
 }) {
-  const statusColors = {
-    healthy: 'text-green-600',
-    warning: 'text-yellow-600',
-    error: 'text-red-600'
-  };
+  
 
   const statusIcons = {
     healthy: <CheckCircle className="h-4 w-4 text-green-600" />,

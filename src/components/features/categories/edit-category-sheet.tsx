@@ -40,9 +40,15 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-import { getAllBeats, searchBeats } from '@/backend/beats/actions';
-import type { Category } from '@/backend/categories/actions';
-import type { Beat } from '@/backend/beats/actions';
+// Minimal types used locally to avoid importing backend types
+interface Beat { id: string; name: string; description?: string | null }
+interface Category {
+  id: string;
+  name: string;
+  description?: string | null;
+  color?: string | null;
+  beats?: Array<{ id: string; name: string; description?: string | null }>;
+}
 
 const categoryFormSchema = z.object({
   name: z.string().min(1, 'Category name is required').max(100, 'Category name must be less than 100 characters'),
@@ -79,9 +85,18 @@ export function EditCategorySheet({ category, isOpen, onOpenChange, onSuccess }:
   useEffect(() => {
     const fetchBeats = async () => {
       try {
-        const data = await getAllBeats();
-        setBeats(data);
-        setSearchResults(data); // Initialize search results with all beats
+        const res = await fetch('/api/beats');
+        if (!res.ok) {
+          throw new Error('Failed to fetch beats');
+        }
+        const response = await res.json();
+        
+        // Handle paginated response structure
+        const beatsData = response.data || response;
+        const beats = Array.isArray(beatsData) ? beatsData : [];
+        
+        setBeats(beats);
+        setSearchResults(beats); // Initialize search results with all beats
       } catch (error) {
         console.error('Failed to fetch beats:', error);
       }
@@ -101,8 +116,13 @@ export function EditCategorySheet({ category, isOpen, onOpenChange, onSuccess }:
       }
 
       try {
-        const results = await searchBeats(beatSearchQuery);
-        setSearchResults(results);
+        const res = await fetch(`/api/beats/search?q=${encodeURIComponent(beatSearchQuery)}&limit=20`);
+        if (!res.ok) {
+          throw new Error('Failed to search beats');
+        }
+        const response = await res.json();
+        const results = response.data || [];
+        setSearchResults(Array.isArray(results) ? results : []);
       } catch (error) {
         console.error('Failed to search beats:', error);
         setSearchResults([]);
@@ -136,7 +156,6 @@ export function EditCategorySheet({ category, isOpen, onOpenChange, onSuccess }:
           name: data.name.trim(),
           description: data.description?.trim() || undefined,
           color: data.color?.trim() || undefined,
-          beatIds: data.beatIds || [],
         }),
       });
 

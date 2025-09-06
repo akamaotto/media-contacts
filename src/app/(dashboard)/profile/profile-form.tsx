@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { updateProfile, type UpdateProfileActionState } from "./actions";
+import { updateProfile } from "./actions";
 import { useActionState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useSession } from "next-auth/react";

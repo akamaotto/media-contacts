@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { startDbKeepAlive, stopDbKeepAlive } from '@/lib/db-keepalive';
+import { startDbKeepAlive, stopDbKeepAlive } from '@/lib/database/db-keepalive';
 
 /**
  * Client component that initializes the database keep-alive mechanism

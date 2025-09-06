@@ -13,8 +13,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-import type { Category } from '@/backend/categories/actions';
+// Local minimal Category type for this dialog
+type Category = {
+  id: string;
+  name: string;
+  beatCount?: number;
+  outletCount?: number;
+};
 
 interface DeleteCategoryDialogProps {
   category: Category | null;

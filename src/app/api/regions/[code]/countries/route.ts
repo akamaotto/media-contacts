@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { 
-  getCountriesForRegion, 
-  addCountriesToRegion, 
-  removeCountriesFromRegion,
-  setCountriesForRegion 
-} from "@/backend/regions/actions";
+import { prisma } from "@/lib/database/prisma";
+
+export const dynamic = 'force-dynamic';
 
 // GET /api/regions/[code]/countries - Get countries for a region
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: { code: string } }
 ) {
   try {
     const session = await auth();
@@ -18,8 +15,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { code } = await params;
-    const countries = await getCountriesForRegion(code);
+    const { code } = params;
+    const region = await prisma.regions.findUnique({
+      where: { code },
+      include: { countries: true },
+    });
+    const countries = region?.countries ?? [];
     
     return NextResponse.json(countries);
   } catch (error) {
@@ -34,10 +35,10 @@ export async function GET(
 // POST /api/regions/[code]/countries - Add countries to a region
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: { code: string } }
 ) {
   let regionCode: string = '';
-  let requestData: any = null;
+  let requestData: { countryIds?: string[] } | null = null;
   
   try {
     const session = await auth();
@@ -45,10 +46,10 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { code } = await params;
+    const { code } = params;
     regionCode = code;
     requestData = await request.json();
-    const { countryIds } = requestData;
+    const countryIds = requestData?.countryIds;
 
     if (!countryIds || !Array.isArray(countryIds)) {
       return NextResponse.json(
@@ -57,8 +58,14 @@ export async function POST(
       );
     }
 
-    console.log('Adding countries to region:', { regionCode: code, countryIds });
-    await addCountriesToRegion(code, countryIds);
+    await prisma.regions.update({
+      where: { code },
+      data: {
+        countries: {
+          connect: countryIds.map((id: string) => ({ id })),
+        },
+      },
+    });
     
     return NextResponse.json(
       { message: "Countries added to region successfully" },
@@ -82,7 +89,7 @@ export async function POST(
 // PUT /api/regions/[code]/countries - Set countries for a region (replace all)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: { code: string } }
 ) {
   try {
     const session = await auth();
@@ -90,7 +97,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { code } = await params;
+    const { code } = params;
     const { countryIds } = await request.json();
 
     if (!countryIds || !Array.isArray(countryIds)) {
@@ -100,7 +107,14 @@ export async function PUT(
       );
     }
 
-    await setCountriesForRegion(code, countryIds);
+    await prisma.regions.update({
+      where: { code },
+      data: {
+        countries: {
+          set: countryIds.map((id: string) => ({ id })),
+        },
+      },
+    });
     
     return NextResponse.json(
       { message: "Countries set for region successfully" },
@@ -118,7 +132,7 @@ export async function PUT(
 // DELETE /api/regions/[code]/countries - Remove countries from a region
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: { code: string } }
 ) {
   try {
     const session = await auth();
@@ -126,7 +140,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { code } = await params;
+    const { code } = params;
     const { countryIds } = await request.json();
 
     if (!countryIds || !Array.isArray(countryIds)) {
@@ -136,7 +150,14 @@ export async function DELETE(
       );
     }
 
-    await removeCountriesFromRegion(code, countryIds);
+    await prisma.regions.update({
+      where: { code },
+      data: {
+        countries: {
+          disconnect: countryIds.map((id: string) => ({ id })),
+        },
+      },
+    });
     
     return NextResponse.json(
       { message: "Countries removed from region successfully" },

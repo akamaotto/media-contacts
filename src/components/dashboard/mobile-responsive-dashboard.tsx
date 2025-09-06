@@ -343,7 +343,7 @@ export function MobileActivityFeed({
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const handleLoadMore = async () => {
+  const handleLoadMore = React.useCallback(async () => {
     if (loadingMore || !hasMore) return;
     
     setLoadingMore(true);
@@ -352,7 +352,7 @@ export function MobileActivityFeed({
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [loadingMore, hasMore, onLoadMore]);
 
   // Intersection observer for infinite scroll
   const observerRef = React.useRef<IntersectionObserver | null>(null);

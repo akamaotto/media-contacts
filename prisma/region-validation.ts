@@ -8,7 +8,7 @@
  * - Fail-fast validation approach
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 
 /**
  * RegionValidationResult represents the output of a validation operation

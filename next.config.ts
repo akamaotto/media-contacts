@@ -13,8 +13,7 @@ const nextConfig: NextConfig = {
   },
   // Fix for Vercel deployment issue with Next.js 15
   serverExternalPackages: ['@prisma/client'],
-  // Use standalone output to avoid Vercel deployment issues
-  output: 'standalone',
+  // Removed standalone output mode due to Vercel compatibility issues
   // Disable image optimization to avoid issues
   images: {
     unoptimized: true,

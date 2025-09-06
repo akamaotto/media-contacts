@@ -5,8 +5,8 @@ import { DashboardContent } from '@/components/dashboard/dashboard-content';
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 
-// Use force-static to avoid Vercel deployment issues with server components
-export const dynamic = 'force-static';
+// Use force-dynamic to avoid Vercel deployment issues with server components
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   // Check authentication

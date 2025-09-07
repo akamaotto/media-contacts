@@ -11,12 +11,28 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
-  // Fix for Vercel deployment issue with Next.js 15
-  serverExternalPackages: ['@prisma/client'],
-  // Removed standalone output mode due to Vercel compatibility issues
+  // Transpile packages for better compatibility
+  transpilePackages: ['@prisma/client'],
+  // Experimental features to fix client reference manifest issues
+  experimental: {
+    // Fix for missing client reference manifest
+    optimizePackageImports: ['@prisma/client'],
+  },
   // Disable image optimization to avoid issues
   images: {
     unoptimized: true,
+  },
+  // Ensure proper webpack configuration for Vercel
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
   },
 };
 

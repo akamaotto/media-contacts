@@ -107,7 +107,7 @@ export default function RegisterPage() {
           {loading ? "Registering..." : "Register"}
         </Button>
         <p className="text-sm text-center">
-          Already have an account? <a href="/login" className="underline">Login</a>
+          Already have an account? <a href="/auth/login" className="underline">Login</a>
         </p>
       </form>
     </div>

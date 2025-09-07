@@ -8,7 +8,7 @@ export default async function BeatsPage() {
   const session = await auth();
   
   if (!session) {
-    redirect('/login');
+    redirect('/auth/login');
   }
 
   return <BeatsClientView />;

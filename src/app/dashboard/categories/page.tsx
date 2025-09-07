@@ -8,7 +8,7 @@ export default async function CategoriesPage() {
   const session = await auth();
   
   if (!session) {
-    redirect('/login');
+    redirect('/auth/login');
   }
 
   return <CategoriesClientView />;

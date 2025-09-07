@@ -15,7 +15,7 @@ export default async function HomePage() {
   // Check authentication
   const session = await auth();
   if (!session?.user) {
-    redirect('/login');
+    redirect('/auth/login');
   }
 
   return (

@@ -207,7 +207,7 @@ export class AuthenticationError extends AppError {
       context,
       originalError,
       retryable: false,
-      helpUrl: '/login',
+      helpUrl: '/auth/login',
       ...options
     });
   }

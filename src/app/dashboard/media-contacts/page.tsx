@@ -65,7 +65,7 @@ export default async function MediaContactsPage() {
   // Check authentication
   const session = await auth();
   if (!session?.user) {
-    redirect('/login');
+    redirect('/auth/login');
   }
 
   return (

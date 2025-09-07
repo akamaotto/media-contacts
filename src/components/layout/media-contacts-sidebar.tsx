@@ -131,7 +131,7 @@ export function MediaContactsSidebar({ ...props }: React.ComponentProps<typeof S
   }
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/login" })
+    await signOut({ callbackUrl: "/auth/login" })
   }
 
   return (

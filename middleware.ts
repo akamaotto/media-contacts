@@ -9,14 +9,14 @@ export default auth((req: NextRequest & { auth: any }) => {
   // Protect admin routes
   if (pathname.startsWith('/admin')) {
     if (!isLoggedIn || req.auth?.user?.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/login', req.url))
+      return NextResponse.redirect(new URL('/auth/login', req.url))
     }
   }
   
   // Protect dashboard routes
   if (pathname.startsWith('/dashboard') || pathname === '/') {
     if (!isLoggedIn) {
-      return NextResponse.redirect(new URL('/login', req.url))
+      return NextResponse.redirect(new URL('/auth/login', req.url))
     }
   }
   
@@ -26,6 +26,6 @@ export default auth((req: NextRequest & { auth: any }) => {
 export const config = {
   matcher: [
     "/",
-    "/((?!api|_next|login|register).*)",
+    "/((?!api|_next|auth).*)",
   ],
 };

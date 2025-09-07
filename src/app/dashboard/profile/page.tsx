@@ -9,7 +9,7 @@ export default async function ProfilePage() {
   // Server-side session check
   const session = await auth();
   if (!session) {
-    redirect("/login");
+    redirect("/auth/login");
   }
 
   return (

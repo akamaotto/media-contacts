@@ -67,7 +67,7 @@ export function UserAvatarMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           className="flex items-center gap-2 cursor-pointer"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => signOut({ callbackUrl: "/auth/login" })}
         >
           <LogOut className="h-4 w-4" />
           <span>Logout</span>

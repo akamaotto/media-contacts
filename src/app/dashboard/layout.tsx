@@ -13,7 +13,7 @@ export default async function DashboardRouteLayout({
   const session = await auth();
   
   if (!session?.user) {
-    redirect('/login');
+    redirect('/auth/login');
   }
 
   // Wrap all dashboard routes with the client dashboard shell (sidebar, header, etc.)

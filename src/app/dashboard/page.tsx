@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   // Check authentication
   const session = await auth();
   if (!session?.user) {
-    redirect('/login');
+    redirect('/auth/login');
   }
 
   return (

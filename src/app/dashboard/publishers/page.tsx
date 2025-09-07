@@ -8,7 +8,7 @@ export default async function PublishersPage() {
   const session = await auth();
   
   if (!session) {
-    redirect('/login');
+    redirect('/auth/login');
   }
 
   return <PublishersClientView />;

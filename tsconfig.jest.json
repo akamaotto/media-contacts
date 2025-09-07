@@ -2,16 +2,13 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "module": "commonjs",
     "esModuleInterop": true,
-    "allowJs": true,
-    "isolatedModules": false,
-    "types": ["jest", "node", "@testing-library/jest-dom"]
+    "allowSyntheticDefaultImports": true,
+    "types": ["jest", "@testing-library/jest-dom"]
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*",
     "__tests__/**/*",
-    "src/**/*"
+    "jest.setup.ts"
   ]
 }

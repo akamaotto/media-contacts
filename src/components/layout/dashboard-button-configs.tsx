@@ -1,6 +1,6 @@
 import { Upload, Download, Plus, UserPlus, FileSpreadsheet } from "lucide-react";
 import { type DashboardActionButton } from "./dashboard-action-buttons";
-import { type UserTableRef } from "@/app/(dashboard)/admin/users/user-table";
+import { type UserTableRef } from "@/app/dashboard/admin/users/user-table";
 import { toast } from "sonner";
 import { CSVImportModal, CSVExportDialog, useCsvModals } from "@/components/features/csv";
 

@@ -9,6 +9,8 @@ import {
     type MediaContactActionResult,
 } from './types';
 import { apiClient } from '@/lib/api-client';
+import { revalidatePath } from "next/cache"
+import { PATHS } from "@/lib/constants"
 import type { MediaContactTableItem } from '@/components/features/media-contacts/types';
 
 export async function getMediaContactsAction(filters?: z.infer<typeof MediaContactFiltersSchema>) {
@@ -30,6 +32,7 @@ export async function getMediaContactsAction(filters?: z.infer<typeof MediaConta
         if (validation.data.pageSize) apiFilters.pageSize = validation.data.pageSize;
         
         const response = await apiClient.get('/api/media-contacts', { params: apiFilters });
+        await revalidatePath(PATHS.DASHBOARD_MEDIA_CONTACTS);
         
         if (response.success) {
             return {

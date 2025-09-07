@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/database/prisma"
 import bcrypt from "bcryptjs"
+import { PATHS } from "@/lib/constants"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -208,7 +209,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   pages: {
-    signIn: "/auth/login",
-    newUser: "/auth/register",
+    signIn: PATHS.LOGIN,
+    newUser: PATHS.REGISTER,
   },
 })

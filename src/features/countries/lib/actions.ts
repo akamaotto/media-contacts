@@ -31,7 +31,7 @@ export async function createCountry(data: any) {
         }
     });
     await logActivity('create', newCountry.id, newCountry.name);
-    revalidatePath('/countries');
+    revalidatePath('/dashboard/countries');
     return newCountry;
 }
 
@@ -50,7 +50,7 @@ export async function updateCountry(id: string, data: any) {
         }
     });
     await logActivity('update', updatedCountry.id, updatedCountry.name);
-    revalidatePath('/countries');
+    revalidatePath('/dashboard/countries');
     return updatedCountry;
 }
 
@@ -61,5 +61,5 @@ export async function deleteCountry(id: string) {
 
     await prisma.countries.delete({ where: { id } });
     await logActivity('delete', id, country.name);
-    revalidatePath('/countries');
+    revalidatePath('/dashboard/countries');
 }

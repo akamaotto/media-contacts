@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import type { Session } from 'next-auth';
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+import { PATHS } from "@/lib/constants";
+import type { Session } from "next-auth";
 
 interface DashboardHeaderProps {
   session: Session;
@@ -16,7 +17,7 @@ export function DashboardHeader({ session }: DashboardHeaderProps) {
 
   const handleAddContact = () => {
     setIsLoading(true);
-    router.push('/media-contacts');
+    router.push(PATHS.DASHBOARD_MEDIA_CONTACTS);
   };
 
   return (

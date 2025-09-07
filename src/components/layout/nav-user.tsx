@@ -1,5 +1,9 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
+import { PATHS } from "@/lib/constants"
+
 import {
   IconDotsVertical,
   IconLogout,
@@ -39,6 +43,8 @@ export function NavUser({
   onSignOut?: () => void
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+  const { data: session } = useSession()
 
   return (
     <SidebarMenu>
@@ -85,7 +91,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <a href="/profile">
+                <a onClick={() => router.push(PATHS.DASHBOARD_PROFILE)}>
                   <IconUserCircle />
                   Profile
                 </a>

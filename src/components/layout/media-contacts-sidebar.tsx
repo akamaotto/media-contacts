@@ -22,6 +22,7 @@ import {
 } from "@tabler/icons-react"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
+import { PATHS } from "@/lib/constants"
 
 import { NavMain } from "@/components/layout/nav-main"
 import { NavSecondary } from "@/components/layout/nav-secondary"
@@ -51,63 +52,63 @@ export function MediaContactsSidebar({ ...props }: React.ComponentProps<typeof S
     navMain: [
       {
         title: "Dashboard",
-        url: "/",
+        url: PATHS.HOME,
         icon: IconDashboard,
-        isActive: pathname === "/"
+        isActive: pathname === PATHS.HOME
       },
       {
         title: "Media Contacts",
-        url: "/media-contacts",
+        url: PATHS.DASHBOARD_MEDIA_CONTACTS,
         icon: IconDatabase,
-        isActive: pathname === "/media-contacts"
+        isActive: pathname === PATHS.DASHBOARD_MEDIA_CONTACTS
       },
       {
         title: "Publishers",
-        url: "/publishers",
+        url: PATHS.DASHBOARD_PUBLISHERS,
         icon: IconBuilding,
-        isActive: pathname === "/publishers"
+        isActive: pathname === PATHS.DASHBOARD_PUBLISHERS
       },
       {
         title: "Outlets",
-        url: "/outlets",
+        url: PATHS.DASHBOARD_OUTLETS,
         icon: IconBuildingStore,
-        isActive: pathname === "/outlets"
+        isActive: pathname === PATHS.DASHBOARD_OUTLETS
       },
       {
         title: "Beats",
-        url: "/beats",
+        url: PATHS.DASHBOARD_BEATS,
         icon: IconTag,
-        isActive: pathname === "/beats"
+        isActive: pathname === PATHS.DASHBOARD_BEATS
       },
       {
         title: "Categories",
-        url: "/categories",
+        url: PATHS.DASHBOARD_CATEGORIES,
         icon: IconTags,
-        isActive: pathname === "/categories"
+        isActive: pathname === PATHS.DASHBOARD_CATEGORIES
       },
       {
         title: "Countries",
-        url: "/countries",
+        url: PATHS.DASHBOARD_COUNTRIES,
         icon: IconWorld,
-        isActive: pathname === "/countries"
+        isActive: pathname === PATHS.DASHBOARD_COUNTRIES
       },
       {
         title: "Languages",
-        url: "/languages",
+        url: PATHS.DASHBOARD_LANGUAGES,
         icon: IconLanguage,
-        isActive: pathname === "/languages"
+        isActive: pathname === PATHS.DASHBOARD_LANGUAGES
       },
       {
         title: "Regions",
-        url: "/regions",
+        url: PATHS.DASHBOARD_REGIONS,
         icon: IconMap2,
-        isActive: pathname === "/regions"
+        isActive: pathname === PATHS.DASHBOARD_REGIONS
       },
       {
         title: "Users",
-        url: "/admin/users",
+        url: PATHS.DASHBOARD_ADMIN_USERS,
         icon: IconUsers,
-        isActive: pathname === "/admin/users"
+        isActive: pathname === PATHS.DASHBOARD_ADMIN_USERS
       }
     ],
     navSecondary: [] as Array<{
@@ -131,7 +132,7 @@ export function MediaContactsSidebar({ ...props }: React.ComponentProps<typeof S
   }
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/auth/login" })
+    await signOut({ callbackUrl: PATHS.LOGIN })
   }
 
   return (

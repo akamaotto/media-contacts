@@ -8,7 +8,7 @@ export async function createCategory(name: string, description?: string, color?:
     const newCategory = await prisma.categories.create({
         data: { id: randomUUID(), name, description, color, updated_at: new Date() },
     });
-    revalidatePath('/categories');
+    revalidatePath('/dashboard/categories');
     return newCategory;
 }
 
@@ -17,11 +17,11 @@ export async function updateCategory(id: string, name: string, description?: str
         where: { id },
         data: { name, description, color, updated_at: new Date() },
     });
-    revalidatePath('/categories');
+    revalidatePath('/dashboard/categories');
     return updatedCategory;
 }
 
 export async function deleteCategory(id: string) {
     await prisma.categories.delete({ where: { id } });
-    revalidatePath('/categories');
+    revalidatePath('/dashboard/categories');
 }

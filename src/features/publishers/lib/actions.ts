@@ -8,7 +8,7 @@ export async function createPublisher(name: string, description?: string, websit
     const newPublisher = await prisma.publishers.create({
         data: { id: randomUUID(), name, description, website, updated_at: new Date() },
     });
-    revalidatePath('/publishers');
+    revalidatePath('/dashboard/publishers');
     return newPublisher;
 }
 
@@ -17,11 +17,11 @@ export async function updatePublisher(id: string, name: string, description?: st
         where: { id },
         data: { name, description, website, updated_at: new Date() },
     });
-    revalidatePath('/publishers');
+    revalidatePath('/dashboard/publishers');
     return updatedPublisher;
 }
 
 export async function deletePublisher(id: string): Promise<void> {
     await prisma.publishers.delete({ where: { id } });
-    revalidatePath('/publishers');
+    revalidatePath('/dashboard/publishers');
 }

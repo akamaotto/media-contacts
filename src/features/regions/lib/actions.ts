@@ -8,7 +8,7 @@ export async function createRegion(code: string, name: string, category: string,
     const newRegion = await prisma.regions.create({
         data: { id: randomUUID(), code, name, category, parent_code: parentCode, updated_at: new Date() },
     });
-    revalidatePath('/regions');
+    revalidatePath('/dashboard/regions');
     return newRegion;
 }
 
@@ -17,7 +17,7 @@ export async function updateRegion(code: string, name: string, category: string,
         where: { code },
         data: { name, category, parent_code: parentCode, updated_at: new Date() },
     });
-    revalidatePath('/regions');
+    revalidatePath('/dashboard/regions');
     return updatedRegion;
 }
 
@@ -28,5 +28,5 @@ export async function deleteRegion(code: string) {
         throw new Error('Cannot delete region that is in use by countries.');
     }
     await prisma.regions.delete({ where: { code } });
-    revalidatePath('/regions');
+    revalidatePath('/dashboard/regions');
 }

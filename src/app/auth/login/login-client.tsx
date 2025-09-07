@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import { PATHS } from "@/lib/constants";
 
 export default function LoginClient() {
   const router = useRouter();
@@ -15,12 +16,12 @@ export default function LoginClient() {
   const { data: session, status } = useSession();
   
   // State for callback URL to handle SSR properly
-  const [callbackUrl, setCallbackUrl] = useState("/");
+  const [callbackUrl, setCallbackUrl] = useState<string>(PATHS.HOME);
   
   // Handle search params safely on client side only
   useEffect(() => {
     if (params) {
-      const url = params.get("callbackUrl") || "/";
+      const url = params.get("callbackUrl") || PATHS.HOME;
       setCallbackUrl(url);
     }
   }, [params]);
@@ -40,7 +41,7 @@ export default function LoginClient() {
         router.push(redirectUrl);
       } else if (status === "authenticated") {
         // Otherwise, just go to the homepage if already logged in
-        router.push("/");
+        router.push(PATHS.HOME);
       }
     }
   }, [status, session, pendingRedirect, redirectUrl, router]);
@@ -63,7 +64,7 @@ export default function LoginClient() {
       // and wait for session to be available
       toast.success("Login successful! Redirecting...");
       setPendingRedirect(true);
-      setRedirectUrl(res?.url || "/");
+      setRedirectUrl(res?.url || PATHS.HOME);
       
       // Keep loading state active until redirect happens
       // Loading state will be cleared by the router navigation

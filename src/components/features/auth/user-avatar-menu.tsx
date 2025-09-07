@@ -1,6 +1,8 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { PATHS } from "@/lib/constants";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,10 +14,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Users, Home } from "lucide-react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 
 export function UserAvatarMenu() {
   const { data: session } = useSession();
+  const router = useRouter();
   // Check for both ADMIN and admin (case insensitive)
   const isAdmin = session?.user && 
     (session.user.role === "ADMIN" || 
@@ -51,14 +53,28 @@ export function UserAvatarMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+          <Link 
+            href={PATHS.DASHBOARD_PROFILE}
+            onClick={(e) => {
+              e.preventDefault();
+              router.push(PATHS.DASHBOARD_PROFILE);
+            }} 
+            className="flex items-center gap-2 cursor-pointer"
+          >
             <User className="h-4 w-4" />
             <span>Profile</span>
           </Link>
         </DropdownMenuItem>
         {isAdmin && (
           <DropdownMenuItem asChild>
-            <Link href="/admin/users" className="flex items-center gap-2 cursor-pointer">
+            <Link 
+              href={PATHS.DASHBOARD_ADMIN_USERS}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push(PATHS.DASHBOARD_ADMIN_USERS);
+              }} 
+              className="flex items-center gap-2 cursor-pointer"
+            >
               <Users className="h-4 w-4" />
               <span>Users</span>
             </Link>
@@ -67,7 +83,7 @@ export function UserAvatarMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           className="flex items-center gap-2 cursor-pointer"
-          onClick={() => signOut({ callbackUrl: "/auth/login" })}
+          onClick={async () => await signOut({ callbackUrl: PATHS.LOGIN })}
         >
           <LogOut className="h-4 w-4" />
           <span>Logout</span>

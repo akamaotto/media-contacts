@@ -17,7 +17,7 @@ export async function createOutlet(data: any) {
             countries: { connect: (data.countryIds || []).map((id: string) => ({ id })) },
         }
     });
-    revalidatePath('/outlets');
+    revalidatePath('/dashboard/outlets');
     return newOutlet;
 }
 
@@ -43,11 +43,11 @@ export async function updateOutlet(id: string, data: any) {
         where: { id },
         data: updateData
     });
-    revalidatePath('/outlets');
+    revalidatePath('/dashboard/outlets');
     return updatedOutlet;
 }
 
 export async function deleteOutlet(id: string) {
     await prisma.outlets.delete({ where: { id } });
-    revalidatePath('/outlets');
+    revalidatePath('/dashboard/outlets');
 }

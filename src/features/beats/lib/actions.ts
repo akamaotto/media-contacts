@@ -11,7 +11,7 @@ export async function createBeat(name: string, description?: string) {
     const newBeat = await prisma.beats.create({
         data: { id: randomUUID(), name, description, updated_at: new Date() },
     });
-    revalidatePath('/beats'); // Assuming a path
+    revalidatePath('/dashboard/beats'); // Assuming a path
     return newBeat;
 }
 
@@ -20,11 +20,11 @@ export async function updateBeat(id: string, name: string, description?: string)
         where: { id },
         data: { name, description, updated_at: new Date() },
     });
-    revalidatePath('/beats');
+    revalidatePath('/dashboard/beats');
     return updatedBeat;
 }
 
 export async function deleteBeat(id: string) {
     await prisma.beats.delete({ where: { id } });
-    revalidatePath('/beats');
+    revalidatePath('/dashboard/beats');
 }

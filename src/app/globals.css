@@ -85,7 +85,7 @@
   /* Pastel Dark Theme (AA-safe) */
   --background: 222 20% 12%;       /* soft blue-charcoal */
   --foreground: 210 18% 92%;
-  --card: 222 18% 14%;             /* dark charcoal */
+  --card: 222 16% 18%;             /* slightly lighter charcoal */
   --card-foreground: 210 18% 92%;
   --popover: 222 47% 7%;          /* solid dark surface */
   --popover-foreground: 210 18% 92%;
@@ -99,7 +99,7 @@
   --accent-foreground: 210 18% 92%;
   --destructive: 0 60% 44%;
   --destructive-foreground: 210 22% 96%;
-  --border: 222 12% 22%;
+  --border: 222 12% 30%;
   --input: 222 12% 22%;
   --ring: 220 55% 64%;
   /* charts & sidebar (dark) */

@@ -20,28 +20,54 @@ export async function GET() {
       console.warn('[Dashboard Metrics] No session found, returning public metrics for debugging');
     }
 
-    // Use default period since we removed request parameter
-    const period = '30d' as const;
-
-    // Validate period parameter
-    if (!['7d', '30d', '3m'].includes(period)) {
-      return NextResponse.json(
-        { error: 'Invalid period. Must be one of: 7d, 30d, 3m' },
-        { status: 400 }
-      );
-    }
-
-    // Compute basic dashboard metrics directly
-    const [totalContacts, totalPublishers, totalOutlets, verifiedContacts] = await prisma.$transaction([
+    // Compute all-time dashboard metrics directly
+    const [
+      totalContacts,
+      verifiedContacts,
+      totalOutlets,
+      totalPublishers,
+      countriesWithContacts,
+      languagesWithContacts,
+      regionsWithContacts
+    ] = await prisma.$transaction([
       prisma.media_contacts.count(),
-      prisma.publishers.count(),
+      prisma.media_contacts.count({ where: { email_verified_status: true } }),
       prisma.outlets.count(),
-      prisma.media_contacts.count({ where: { email_verified_status: true } })
+      prisma.publishers.count(),
+      prisma.countries.count({
+        where: {
+          media_contacts: {
+            some: {}
+          }
+        }
+      }),
+      prisma.languages.count({
+        where: {
+          countries: {
+            some: {
+              media_contacts: {
+                some: {}
+              }
+            }
+          }
+        }
+      }),
+      prisma.regions.count({
+        where: {
+          countries: {
+            some: {
+              media_contacts: {
+                some: {}
+              }
+            }
+          }
+        }
+      })
     ]);
 
     // Include flat fields for backwards compatibility with existing UI
     const metrics = {
-      period,
+      period: 'all-time',
       // flat fields expected by ContactsMetricCard
       totalContacts,
       verifiedContacts,
@@ -51,6 +77,9 @@ export async function GET() {
         publishers: totalPublishers,
         outlets: totalOutlets,
         verifiedContacts,
+        countriesWithContacts,
+        languagesWithContacts,
+        regionsWithContacts,
         emailVerificationRate: totalContacts > 0 ? Math.round((verifiedContacts / totalContacts) * 100) : 0,
       },
       deltas: {
@@ -59,6 +88,9 @@ export async function GET() {
         publishers: 0,
         outlets: 0,
         verifiedContacts: 0,
+        countries: 0,
+        languages: 0,
+        regions: 0,
       },
       generatedAt: new Date().toISOString(),
     } as const;

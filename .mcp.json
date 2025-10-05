@@ -1,0 +1,59 @@
+{
+    "mcpServers": {
+      "brave-search": {
+        "command": "npx",
+        "args": ["-y", "@brave/brave-search-mcp-server", "--transport", "stdio"],
+        "env": {
+          "BRAVE_API_KEY": "BSAarq2snCk3XmA0e65t_N7TmRie08r"
+        }
+      },
+      "context7": {
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp", "--api-key", "ctx7sk-d4ebafd8-e506-4258-a4dc-21d2b345fbe0"]
+      },
+      "playwright": {
+        "command": "npx",
+        "args": ["@playwright/mcp@latest"]
+      },
+      "mobile-next": {
+        "command": "npx",
+        "args": ["-y", "@mobilenext/mobile-mcp@latest"]
+      },
+      "postgres": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://neondb_owner:npg_tnEDGMPV37WB@ep-tight-pine-a2baeagw-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"]
+      },
+      "cascade-thinking": {
+        "command": "npx",
+        "args": ["-y", "cascade-thinking-mcp"]
+      },
+      "git": {
+        "command": "uvx",
+        "args": ["mcp-server-git", "--repository", "/Users/akamaotto/code/media-contacts"]
+      },
+      "time": {
+        "command": "npx",
+        "args": ["-y", "time-mcp"]
+      },
+      "everything": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-everything"
+        ]
+      },
+      "swagger-mcp": {
+        "command": "npx",
+        "args": ["-y", "swagger-mcp", "--swagger-file", "/Users/akamaotto/code/media-contacts/openapi.json"]
+      },
+      "zai-vision": {
+        "command": "npx",
+        "args": ["-y", "@z_ai/mcp-server"],
+        "env": {
+          "Z_AI_API_KEY": "2af99fa4a705430cbafbacd41166d0da.Ia6dRugMOrG5Nv3z",
+          "Z_AI_MODE": "ZAI"
+        }
+      }
+    }
+  }
+  

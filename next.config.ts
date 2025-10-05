@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
   experimental: {
     // Fix for missing client reference manifest
     optimizePackageImports: ['@prisma/client'],
+    // Enable server components external packages for Prisma
+    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
   },
   // Disable image optimization to avoid issues
   images: {
@@ -32,6 +34,15 @@ const nextConfig: NextConfig = {
         tls: false,
       };
     }
+
+    // Fix for Prisma query engine in Vercel
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        '@prisma/client': '@prisma/client',
+      });
+    }
+
     return config;
   },
 };

@@ -5,7 +5,8 @@ import { CountriesTable } from './countries-table';
 import { AddCountrySheet } from './add-country-sheet';
 import { CountryDetailSheet } from './country-detail-sheet';
 import type { Country } from '@/app/api/countries/types';
-import { PageHeader } from "@/components/dashboard/page-header";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function CountriesClientView() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -45,12 +46,18 @@ export function CountriesClientView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Countries"
-        description="Manage countries and geographic regions for media contacts"
-        addButtonLabel="Add Country"
-        onAddClick={() => setIsAddModalOpen(true)}
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Countries</h2>
+          <p className="text-muted-foreground">
+            Manage countries and geographic regions for media contacts
+          </p>
+        </div>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Country
+        </Button>
+      </div>
 
       {/* Countries Table */}
       <CountriesTable

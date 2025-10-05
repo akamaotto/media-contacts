@@ -8,7 +8,8 @@ import { DeleteLanguageDialog } from './delete-language-dialog';
 import { LanguageDetailSheet } from './language-detail-sheet';
 import { Language } from '@/lib/types/geography';
 import { LanguagesTableErrorBoundary } from './error-boundary';
-import { PageHeader } from "@/components/dashboard/page-header";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function LanguagesClientView() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -60,12 +61,18 @@ export function LanguagesClientView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Languages"
-        description="Manage languages and their associated media contacts"
-        addButtonLabel="Add Language"
-        onAddClick={() => setIsAddModalOpen(true)}
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Languages</h2>
+          <p className="text-muted-foreground">
+            Manage languages and their associated media contacts
+          </p>
+        </div>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Language
+        </Button>
+      </div>
 
       {/* Languages Table with Error Boundary */}
       <LanguagesTableErrorBoundary>

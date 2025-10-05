@@ -6,7 +6,8 @@ import { AddBeatSheet } from "./add-beat-sheet";
 import { EditBeatSheet } from "./edit-beat-sheet";
 import { DeleteBeatDialog } from "./delete-beat-dialog";
 import { BeatDetailSheet } from "./beat-detail-sheet";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Minimal Beat type used for local state and props
 type Beat = {
@@ -64,12 +65,18 @@ export function BeatsClientView({}: BeatsClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Beats"
-        description="Manage journalistic beats and topics covered by media contacts"
-        addButtonLabel="Add Beat"
-        onAddClick={() => setIsAddModalOpen(true)}
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Beats</h2>
+          <p className="text-muted-foreground">
+            Manage journalistic beats and topics covered by media contacts
+          </p>
+        </div>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Beat
+        </Button>
+      </div>
 
       <BeatsTable
         onEdit={handleEdit}

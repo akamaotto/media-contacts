@@ -6,7 +6,8 @@ import { AddCategorySheet } from "./add-category-sheet";
 import { EditCategorySheet } from "./edit-category-sheet";
 import { DeleteCategoryDialog } from "./delete-category-dialog";
 import { CategoryDetailSheet } from "./category-detail-sheet";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 // Local minimal Category type for UI usage
 type Category = {
   id: string;
@@ -66,12 +67,18 @@ export function CategoriesClientView({}: CategoriesClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Categories"
-        description="Manage content categories for organizing media contacts and outlets"
-        addButtonLabel="Add Category"
-        onAddClick={() => setIsAddModalOpen(true)}
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Categories</h2>
+          <p className="text-muted-foreground">
+            Manage content categories for organizing media contacts and outlets
+          </p>
+        </div>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Category
+        </Button>
+      </div>
 
       <CategoriesTable
         onEdit={handleEdit}

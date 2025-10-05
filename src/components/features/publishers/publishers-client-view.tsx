@@ -6,7 +6,8 @@ import { AddPublisherSheet } from "./add-publisher-sheet";
 import { EditPublisherSheet } from "./edit-publisher-sheet";
 import { DeletePublisherDialog } from "./delete-publisher-dialog";
 import { PublisherDetailSheet } from "./publisher-detail-sheet";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 // Local minimal Publisher type for UI usage
 type Publisher = {
   id: string;
@@ -63,12 +64,18 @@ export function PublishersClientView({}: PublishersClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Publishers"
-        description="Manage media publishing companies and organizations"
-        addButtonLabel="Add Publisher"
-        onAddClick={() => setIsAddModalOpen(true)}
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Publishers</h2>
+          <p className="text-muted-foreground">
+            Manage media publishing companies and organizations
+          </p>
+        </div>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Publisher
+        </Button>
+      </div>
 
       <PublishersTable
         onEdit={handleEdit}

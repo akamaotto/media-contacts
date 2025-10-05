@@ -7,7 +7,8 @@ import { EditOutletSheet } from "./edit-outlet-sheet";
 import { DeleteOutletDialog } from "./delete-outlet-dialog";
 import { OutletDetailSheet } from "./outlet-detail-sheet";
 import type { Outlet } from "@/features/outlets/lib/types";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface OutletsClientViewProps {
   // Future props if needed
@@ -74,12 +75,18 @@ export function OutletsClientView({}: OutletsClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Media Outlets"
-        description="Manage media outlets and publications where contacts work"
-        addButtonLabel="Add Outlet"
-        onAddClick={() => setIsAddModalOpen(true)}
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Media Outlets</h2>
+          <p className="text-muted-foreground">
+            Manage media outlets and publications where contacts work
+          </p>
+        </div>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Outlet
+        </Button>
+      </div>
 
       <OutletsTable
         onEdit={handleEdit}

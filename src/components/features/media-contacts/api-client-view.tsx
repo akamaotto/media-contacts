@@ -6,7 +6,7 @@ import {FastMediaContactsTable} from './fast-table';
 import {ApiMediaContactsFilters} from './api-filters/ApiMediaContactsFilters';
 import {UpdateMediaContactSheet} from './update-media-contact-sheet';
 import {ViewMediaContactSheet} from './view-media-contact-sheet';
-import { PageHeader } from '@/components/dashboard/page-header';
+import { Plus } from 'lucide-react';
 import {
     ApiContact,
     FastTableContact,
@@ -534,12 +534,18 @@ export default function ApiMediaContactsClientView({
     return (
         <div className='space-y-6'>
             {/* Page Header */}
-            <PageHeader
-                title="Media Contacts"
-                description="Manage your database of media contacts and journalists"
-                addButtonLabel="Add Contact"
-                onAddClick={() => setIsUpdateSheetOpen(true)}
-            />
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tight">Media Contacts</h2>
+                    <p className="text-muted-foreground">
+                        Manage your database of media contacts and journalists
+                    </p>
+                </div>
+                <Button onClick={handleAddContact}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Contact
+                </Button>
+            </div>
 
             {/* View Contact Sheet */}
             <ViewMediaContactSheet

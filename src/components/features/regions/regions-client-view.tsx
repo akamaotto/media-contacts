@@ -7,7 +7,8 @@ import { EditRegionSheet } from "./edit-region-sheet";
 import { DeleteRegionDialog } from "./delete-region-dialog";
 import { RegionDetailSheet } from "./region-detail-sheet";
 import type { Region } from "@/lib/types/geography";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface RegionsClientViewProps {
   // Future props if needed
@@ -89,12 +90,18 @@ export function RegionsClientView({}: RegionsClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Regions"
-        description="Manage geographic regions and their associated countries"
-        addButtonLabel="Add Region"
-        onAddClick={() => setIsAddSheetOpen(true)}
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Regions</h2>
+          <p className="text-muted-foreground">
+            Manage geographic regions and their associated countries
+          </p>
+        </div>
+        <Button onClick={() => setIsAddSheetOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Region
+        </Button>
+      </div>
 
       <RegionsTable
         onEdit={handleEdit}

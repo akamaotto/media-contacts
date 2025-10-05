@@ -30,11 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        // Enhanced production session persistence
-        ...(process.env.NODE_ENV === "production" && process.env.AUTH_URL?.includes('vercel.app') && {
-          domain: ".vercel.app",
-          maxAge: 30 * 24 * 60 * 60, // 30 days
-        }),
+        maxAge: 30 * 24 * 60 * 60, // 30 days
       },
     },
     callbackUrl: {
@@ -43,9 +39,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        ...(process.env.NODE_ENV === "production" && process.env.AUTH_URL?.includes('vercel.app') && {
-          domain: ".vercel.app",
-        }),
       },
     },
     csrfToken: {
@@ -55,9 +48,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        ...(process.env.NODE_ENV === "production" && process.env.AUTH_URL?.includes('vercel.app') && {
-          domain: ".vercel.app",
-        }),
       },
     },
   },

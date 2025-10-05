@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, useSession, getCsrfToken } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,12 +26,27 @@ export default function LoginClient() {
     }
   }, [params]);
 
+  // Get CSRF token for NextAuth 5
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      try {
+        const token = await getCsrfToken();
+        setCsrfToken(token);
+      } catch (error) {
+        console.error("Failed to fetch CSRF token:", error);
+      }
+    };
+
+    fetchCsrfToken();
+  }, []);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState("");
+  const [csrfToken, setCsrfToken] = useState("");
   
   // Redirect if already logged in
   useEffect(() => {
@@ -52,6 +67,7 @@ export default function LoginClient() {
     const res = await signIn("credentials", {
       email,
       password,
+      csrfToken,
       redirect: false,
       callbackUrl,
     });

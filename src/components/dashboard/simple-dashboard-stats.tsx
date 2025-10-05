@@ -9,7 +9,8 @@ import {
   Newspaper,
   Globe,
   Languages,
-  MapPin
+  MapPin,
+  Tag
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -20,6 +21,7 @@ interface DashboardStats {
   countriesWithContacts: number;
   languagesWithContacts: number;
   regionsWithContacts: number;
+  beatsWithContacts: number;
 }
 
 interface StatCardProps {
@@ -55,6 +57,7 @@ export function SimpleDashboardStats() {
     countriesWithContacts: 0,
     languagesWithContacts: 0,
     regionsWithContacts: 0,
+    beatsWithContacts: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -73,6 +76,7 @@ export function SimpleDashboardStats() {
             countriesWithContacts: metrics.totals?.countriesWithContacts || 0,
             languagesWithContacts: metrics.totals?.languagesWithContacts || 0,
             regionsWithContacts: metrics.totals?.regionsWithContacts || 0,
+            beatsWithContacts: metrics.totals?.beatsWithContacts || 0,
           });
         }
       } catch (error) {
@@ -88,7 +92,7 @@ export function SimpleDashboardStats() {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {Array.from({ length: 7 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="h-4 w-20 bg-muted rounded animate-pulse"></div>
@@ -104,13 +108,7 @@ export function SimpleDashboardStats() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Database Overview</h2>
-        <p className="text-muted-foreground">All-time statistics for your media contacts database</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <StatCard
           title="Total Contacts"
           value={stats.totalContacts}
@@ -166,7 +164,14 @@ export function SimpleDashboardStats() {
           color="text-teal-600"
           bgColor="bg-teal-50 dark:bg-teal-900/20"
         />
+
+        <StatCard
+          title="Beats with Contacts"
+          value={stats.beatsWithContacts}
+          icon={Tag}
+          color="text-orange-600"
+          bgColor="bg-orange-50 dark:bg-orange-900/20"
+        />
       </div>
-    </div>
   );
 }

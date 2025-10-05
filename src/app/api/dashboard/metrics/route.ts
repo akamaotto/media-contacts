@@ -28,7 +28,8 @@ export async function GET() {
       totalPublishers,
       countriesWithContacts,
       languagesWithContacts,
-      regionsWithContacts
+      regionsWithContacts,
+      beatsWithContacts
     ] = await prisma.$transaction([
       prisma.media_contacts.count(),
       prisma.media_contacts.count({ where: { email_verified_status: true } }),
@@ -62,6 +63,13 @@ export async function GET() {
             }
           }
         }
+      }),
+      prisma.beats.count({
+        where: {
+          media_contacts: {
+            some: {}
+          }
+        }
       })
     ]);
 
@@ -80,6 +88,7 @@ export async function GET() {
         countriesWithContacts,
         languagesWithContacts,
         regionsWithContacts,
+        beatsWithContacts,
         emailVerificationRate: totalContacts > 0 ? Math.round((verifiedContacts / totalContacts) * 100) : 0,
       },
       deltas: {
@@ -91,6 +100,7 @@ export async function GET() {
         countries: 0,
         languages: 0,
         regions: 0,
+        beats: 0,
       },
       generatedAt: new Date().toISOString(),
     } as const;

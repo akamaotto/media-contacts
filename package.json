@@ -10,7 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:csv": "jest --testPathPatterns=__tests__/backend/csv",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && prisma db push --skip-generate",
     "test:e2e": "playwright test --config=config/playwright.config.ts",
     "test:e2e:headed": "playwright test --config=config/playwright.config.ts --headed",
     "test:unit": "jest --config=config/jest.config.js",

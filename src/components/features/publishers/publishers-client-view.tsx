@@ -6,6 +6,7 @@ import { AddPublisherSheet } from "./add-publisher-sheet";
 import { EditPublisherSheet } from "./edit-publisher-sheet";
 import { DeletePublisherDialog } from "./delete-publisher-dialog";
 import { PublisherDetailSheet } from "./publisher-detail-sheet";
+import { PageHeader } from "@/components/dashboard/page-header";
 // Local minimal Publisher type for UI usage
 type Publisher = {
   id: string;
@@ -62,7 +63,14 @@ export function PublishersClientView({}: PublishersClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <PublishersTable 
+      <PageHeader
+        title="Publishers"
+        description="Manage media publishing companies and organizations"
+        addButtonLabel="Add Publisher"
+        onAddClick={() => setIsAddModalOpen(true)}
+      />
+
+      <PublishersTable
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}

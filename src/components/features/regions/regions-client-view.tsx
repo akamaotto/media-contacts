@@ -7,6 +7,7 @@ import { EditRegionSheet } from "./edit-region-sheet";
 import { DeleteRegionDialog } from "./delete-region-dialog";
 import { RegionDetailSheet } from "./region-detail-sheet";
 import type { Region } from "@/lib/types/geography";
+import { PageHeader } from "@/components/dashboard/page-header";
 
 interface RegionsClientViewProps {
   // Future props if needed
@@ -88,7 +89,14 @@ export function RegionsClientView({}: RegionsClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <RegionsTable 
+      <PageHeader
+        title="Regions"
+        description="Manage geographic regions and their associated countries"
+        addButtonLabel="Add Region"
+        onAddClick={() => setIsAddSheetOpen(true)}
+      />
+
+      <RegionsTable
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}

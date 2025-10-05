@@ -7,6 +7,7 @@ import { EditOutletSheet } from "./edit-outlet-sheet";
 import { DeleteOutletDialog } from "./delete-outlet-dialog";
 import { OutletDetailSheet } from "./outlet-detail-sheet";
 import type { Outlet } from "@/features/outlets/lib/types";
+import { PageHeader } from "@/components/dashboard/page-header";
 
 interface OutletsClientViewProps {
   // Future props if needed
@@ -73,7 +74,14 @@ export function OutletsClientView({}: OutletsClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <OutletsTable 
+      <PageHeader
+        title="Media Outlets"
+        description="Manage media outlets and publications where contacts work"
+        addButtonLabel="Add Outlet"
+        onAddClick={() => setIsAddModalOpen(true)}
+      />
+
+      <OutletsTable
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}

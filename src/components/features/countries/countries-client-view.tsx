@@ -5,6 +5,7 @@ import { CountriesTable } from './countries-table';
 import { AddCountrySheet } from './add-country-sheet';
 import { CountryDetailSheet } from './country-detail-sheet';
 import type { Country } from '@/app/api/countries/types';
+import { PageHeader } from "@/components/dashboard/page-header";
 
 export function CountriesClientView() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -44,9 +45,16 @@ export function CountriesClientView() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Countries"
+        description="Manage countries and geographic regions for media contacts"
+        addButtonLabel="Add Country"
+        onAddClick={() => setIsAddModalOpen(true)}
+      />
+
       {/* Countries Table */}
-      <CountriesTable 
-        key={refreshTrigger} 
+      <CountriesTable
+        key={refreshTrigger}
         onView={handleViewCountry}
       />
       

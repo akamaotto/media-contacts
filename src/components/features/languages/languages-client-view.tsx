@@ -8,6 +8,7 @@ import { DeleteLanguageDialog } from './delete-language-dialog';
 import { LanguageDetailSheet } from './language-detail-sheet';
 import { Language } from '@/lib/types/geography';
 import { LanguagesTableErrorBoundary } from './error-boundary';
+import { PageHeader } from "@/components/dashboard/page-header";
 
 export function LanguagesClientView() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -59,10 +60,17 @@ export function LanguagesClientView() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Languages"
+        description="Manage languages and their associated media contacts"
+        addButtonLabel="Add Language"
+        onAddClick={() => setIsAddModalOpen(true)}
+      />
+
       {/* Languages Table with Error Boundary */}
       <LanguagesTableErrorBoundary>
-        <LanguagesTable 
-          key={refreshTrigger} 
+        <LanguagesTable
+          key={refreshTrigger}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onView={handleView}

@@ -21,16 +21,17 @@ export function DashboardHeader({ session }: DashboardHeaderProps) {
   };
 
   return (
-    <div className="flex items-center justify-between space-y-2">
-      <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-muted-foreground">
+          Welcome back, {session.user?.name || session.user?.email}
+        </p>
+      </div>
       <div className="flex items-center space-x-2">
         <Button onClick={handleAddContact} disabled={isLoading}>
           <Plus className="mr-2 h-4 w-4" />
           Add Contact
         </Button>
-        <p className="text-sm text-muted-foreground">
-          Welcome back, {session.user?.name || session.user?.email}
-        </p>
       </div>
     </div>
   );

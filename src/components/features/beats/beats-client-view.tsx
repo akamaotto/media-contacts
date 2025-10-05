@@ -6,6 +6,7 @@ import { AddBeatSheet } from "./add-beat-sheet";
 import { EditBeatSheet } from "./edit-beat-sheet";
 import { DeleteBeatDialog } from "./delete-beat-dialog";
 import { BeatDetailSheet } from "./beat-detail-sheet";
+import { PageHeader } from "@/components/dashboard/page-header";
 
 // Minimal Beat type used for local state and props
 type Beat = {
@@ -63,13 +64,20 @@ export function BeatsClientView({}: BeatsClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <BeatsTable 
+      <PageHeader
+        title="Beats"
+        description="Manage journalistic beats and topics covered by media contacts"
+        addButtonLabel="Add Beat"
+        onAddClick={() => setIsAddModalOpen(true)}
+      />
+
+      <BeatsTable
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
         ref={refreshTableRef}
       />
-      
+
       {/* Add Beat Sheet */}
       <AddBeatSheet
         isOpen={isAddModalOpen}

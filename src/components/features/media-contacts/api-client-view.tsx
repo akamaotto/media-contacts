@@ -6,6 +6,7 @@ import {FastMediaContactsTable} from './fast-table';
 import {ApiMediaContactsFilters} from './api-filters/ApiMediaContactsFilters';
 import {UpdateMediaContactSheet} from './update-media-contact-sheet';
 import {ViewMediaContactSheet} from './view-media-contact-sheet';
+import { PageHeader } from '@/components/dashboard/page-header';
 import {
     ApiContact,
     FastTableContact,
@@ -532,6 +533,14 @@ export default function ApiMediaContactsClientView({
 
     return (
         <div className='space-y-6'>
+            {/* Page Header */}
+            <PageHeader
+                title="Media Contacts"
+                description="Manage your database of media contacts and journalists"
+                addButtonLabel="Add Contact"
+                onAddClick={() => setIsUpdateSheetOpen(true)}
+            />
+
             {/* View Contact Sheet */}
             <ViewMediaContactSheet
                 isOpen={isViewSheetOpen}

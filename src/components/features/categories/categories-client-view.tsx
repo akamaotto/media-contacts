@@ -6,6 +6,7 @@ import { AddCategorySheet } from "./add-category-sheet";
 import { EditCategorySheet } from "./edit-category-sheet";
 import { DeleteCategoryDialog } from "./delete-category-dialog";
 import { CategoryDetailSheet } from "./category-detail-sheet";
+import { PageHeader } from "@/components/dashboard/page-header";
 // Local minimal Category type for UI usage
 type Category = {
   id: string;
@@ -65,7 +66,14 @@ export function CategoriesClientView({}: CategoriesClientViewProps) {
 
   return (
     <div className="space-y-6">
-      <CategoriesTable 
+      <PageHeader
+        title="Categories"
+        description="Manage content categories for organizing media contacts and outlets"
+        addButtonLabel="Add Category"
+        onAddClick={() => setIsAddModalOpen(true)}
+      />
+
+      <CategoriesTable
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}

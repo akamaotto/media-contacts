@@ -113,64 +113,64 @@ export function SimpleDashboardStats() {
           title="Total Contacts"
           value={stats.totalContacts}
           icon={Users}
-          color="text-blue-600"
-          bgColor="bg-blue-50 dark:bg-blue-900/20"
+          color="text-slate-700 dark:text-slate-300"
+          bgColor="bg-slate-100 dark:bg-slate-800"
         />
 
         <StatCard
           title="Verified Contacts"
           value={stats.verifiedContacts}
           icon={CheckCircle}
-          color="text-green-600"
-          bgColor="bg-green-50 dark:bg-green-900/20"
+          color="text-slate-700 dark:text-slate-300"
+          bgColor="bg-slate-100 dark:bg-slate-800"
         />
 
         <StatCard
           title="Media Outlets"
           value={stats.totalOutlets}
           icon={Newspaper}
-          color="text-purple-600"
-          bgColor="bg-purple-50 dark:bg-purple-900/20"
+          color="text-slate-700 dark:text-slate-300"
+          bgColor="bg-slate-100 dark:bg-slate-800"
         />
 
         <StatCard
           title="Publishers"
           value={stats.totalPublishers}
           icon={Building2}
-          color="text-orange-600"
-          bgColor="bg-orange-50 dark:bg-orange-900/20"
+          color="text-slate-700 dark:text-slate-300"
+          bgColor="bg-slate-100 dark:bg-slate-800"
         />
 
         <StatCard
           title="Countries with Contacts"
           value={stats.countriesWithContacts}
           icon={Globe}
-          color="text-indigo-600"
-          bgColor="bg-indigo-50 dark:bg-indigo-900/20"
+          color="text-slate-700 dark:text-slate-300"
+          bgColor="bg-slate-100 dark:bg-slate-800"
         />
 
         <StatCard
           title="Languages with Contacts"
           value={stats.languagesWithContacts}
           icon={Languages}
-          color="text-cyan-600"
-          bgColor="bg-cyan-50 dark:bg-cyan-900/20"
+          color="text-slate-700 dark:text-slate-300"
+          bgColor="bg-slate-100 dark:bg-slate-800"
         />
 
         <StatCard
           title="Regions with Contacts"
           value={stats.regionsWithContacts}
           icon={MapPin}
-          color="text-teal-600"
-          bgColor="bg-teal-50 dark:bg-teal-900/20"
+          color="text-slate-700 dark:text-slate-300"
+          bgColor="bg-slate-100 dark:bg-slate-800"
         />
 
         <StatCard
           title="Beats with Contacts"
           value={stats.beatsWithContacts}
           icon={Tag}
-          color="text-orange-600"
-          bgColor="bg-orange-50 dark:bg-orange-900/20"
+          color="text-slate-700 dark:text-slate-300"
+          bgColor="bg-slate-100 dark:bg-slate-800"
         />
       </div>
   );

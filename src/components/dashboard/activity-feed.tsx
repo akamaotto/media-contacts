@@ -58,37 +58,37 @@ const activityTypeConfig = {
   create: {
     icon: Plus,
     label: 'Created',
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200'
+    color: 'text-green-700 dark:text-green-300',
+    bgColor: 'bg-green-50 dark:bg-green-950',
+    borderColor: 'border-green-200 dark:border-green-800'
   },
   update: {
     icon: Edit,
     label: 'Updated',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200'
+    color: 'text-blue-700 dark:text-blue-300',
+    bgColor: 'bg-blue-50 dark:bg-blue-950',
+    borderColor: 'border-blue-200 dark:border-blue-800'
   },
   delete: {
     icon: Trash2,
     label: 'Deleted',
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200'
+    color: 'text-red-700 dark:text-red-300',
+    bgColor: 'bg-red-50 dark:bg-red-950',
+    borderColor: 'border-red-200 dark:border-red-800'
   },
   import: {
     icon: Upload,
     label: 'Imported',
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200'
+    color: 'text-purple-700 dark:text-purple-300',
+    bgColor: 'bg-purple-50 dark:bg-purple-950',
+    borderColor: 'border-purple-200 dark:border-purple-800'
   },
   export: {
     icon: Download,
     label: 'Exported',
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200'
+    color: 'text-orange-700 dark:text-orange-300',
+    bgColor: 'bg-orange-50 dark:bg-orange-950',
+    borderColor: 'border-orange-200 dark:border-orange-800'
   }
 };
 
@@ -97,42 +97,42 @@ const entityTypeConfig = {
   media_contact: {
     icon: User,
     label: 'Contact',
-    color: 'text-blue-600'
+    color: 'text-blue-700 dark:text-blue-300'
   },
   outlet: {
     icon: Newspaper,
     label: 'Outlet',
-    color: 'text-green-600'
+    color: 'text-green-700 dark:text-green-300'
   },
   publisher: {
     icon: Building2,
     label: 'Publisher',
-    color: 'text-purple-600'
+    color: 'text-purple-700 dark:text-purple-300'
   },
   beat: {
     icon: Tag,
     label: 'Beat',
-    color: 'text-orange-600'
+    color: 'text-orange-700 dark:text-orange-300'
   },
   category: {
     icon: Tag,
     label: 'Category',
-    color: 'text-pink-600'
+    color: 'text-pink-700 dark:text-pink-300'
   },
   country: {
     icon: Globe,
     label: 'Country',
-    color: 'text-indigo-600'
+    color: 'text-indigo-700 dark:text-indigo-300'
   },
   language: {
     icon: Languages,
     label: 'Language',
-    color: 'text-cyan-600'
+    color: 'text-cyan-700 dark:text-cyan-300'
   },
   region: {
     icon: MapPin,
     label: 'Region',
-    color: 'text-teal-600'
+    color: 'text-teal-700 dark:text-teal-300'
   }
 };
 
@@ -247,19 +247,19 @@ export function ActivityFeed({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <EntityIcon className={cn('h-3 w-3', entityConfig.color)} />
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-foreground">
               {typeConfig.label} {entityConfig.label}
             </span>
             <Badge variant="outline" className="text-xs">
               {activity.entityName}
             </Badge>
           </div>
-          
-          <p className="text-xs text-muted-foreground mb-2">
+
+          <p className="text-xs text-foreground/70 mb-2">
             by {activity.user.name || activity.user.email}
           </p>
-          
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+
+          <div className="flex items-center gap-2 text-xs text-foreground/60">
             <Clock className="h-3 w-3" />
             <span>
               {formatDistanceToNow(activity.timestamp, { addSuffix: true })}

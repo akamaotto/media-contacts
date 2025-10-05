@@ -59,36 +59,36 @@ const activityTypeConfig = {
     icon: Plus,
     label: 'Created',
     color: 'text-green-700 dark:text-green-300',
-    bgColor: 'bg-green-50 dark:bg-green-950',
-    borderColor: 'border-green-200 dark:border-green-800'
+    bgColor: 'bg-slate-50 dark:bg-slate-900',
+    borderColor: 'border-slate-200 dark:border-slate-700'
   },
   update: {
     icon: Edit,
     label: 'Updated',
     color: 'text-blue-700 dark:text-blue-300',
-    bgColor: 'bg-blue-50 dark:bg-blue-950',
-    borderColor: 'border-blue-200 dark:border-blue-800'
+    bgColor: 'bg-slate-50 dark:bg-slate-900',
+    borderColor: 'border-slate-200 dark:border-slate-700'
   },
   delete: {
     icon: Trash2,
     label: 'Deleted',
     color: 'text-red-700 dark:text-red-300',
-    bgColor: 'bg-red-50 dark:bg-red-950',
-    borderColor: 'border-red-200 dark:border-red-800'
+    bgColor: 'bg-slate-50 dark:bg-slate-900',
+    borderColor: 'border-slate-200 dark:border-slate-700'
   },
   import: {
     icon: Upload,
     label: 'Imported',
     color: 'text-purple-700 dark:text-purple-300',
-    bgColor: 'bg-purple-50 dark:bg-purple-950',
-    borderColor: 'border-purple-200 dark:border-purple-800'
+    bgColor: 'bg-slate-50 dark:bg-slate-900',
+    borderColor: 'border-slate-200 dark:border-slate-700'
   },
   export: {
     icon: Download,
     label: 'Exported',
     color: 'text-orange-700 dark:text-orange-300',
-    bgColor: 'bg-orange-50 dark:bg-orange-950',
-    borderColor: 'border-orange-200 dark:border-orange-800'
+    bgColor: 'bg-slate-50 dark:bg-slate-900',
+    borderColor: 'border-slate-200 dark:border-slate-700'
   }
 };
 
@@ -236,9 +236,8 @@ export function ActivityFeed({
         {/* Activity Type Icon */}
         <div className={cn(
           'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-          typeConfig.bgColor,
-          typeConfig.borderColor,
-          'border-2'
+          'bg-slate-100 dark:bg-slate-800',
+          'border-2 border-slate-200 dark:border-slate-700'
         )}>
           <TypeIcon className={cn('h-4 w-4', typeConfig.color)} />
         </div>

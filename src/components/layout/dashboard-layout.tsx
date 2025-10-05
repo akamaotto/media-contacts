@@ -15,9 +15,6 @@ import {
 } from '@/components/ui/breadcrumb'
 import { usePathname } from 'next/navigation'
 import { UserPlus, Plus } from 'lucide-react'
-import { DashboardLayoutTitle } from './dashboard-layout-title'
-import { BreadcrumbButtons } from './breadcrumb-buttons'
-import { getDefaultButtons } from './dashboard-button-configs'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -114,140 +111,36 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
-  // Generate breadcrumb and buttons based on current path
-  const getBreadcrumb = () => {
+  // Generate breadcrumb title based on current path
+  const getBreadcrumbTitle = () => {
     if (pathname === '/') {
-      return { 
-        title: 'Dashboard', 
-        subtitle: 'Analytics and insights for your media contacts',
-        buttons: []
-      }
+      return 'Dashboard'
     } else if (pathname === '/profile') {
-      return { 
-        title: 'Profile', 
-        subtitle: 'Manage your account settings',
-        buttons: getDefaultButtons()
-      }
+      return 'Profile'
     } else if (pathname === '/publishers') {
-      return { 
-        title: 'Publishers', 
-        subtitle: 'Manage media publishers and their outlets',
-        buttons: [{
-          label: "Add Publisher",
-          onClick: handleAddPublisher,
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
+      return 'Publishers'
     } else if (pathname === '/outlets') {
-      return { 
-        title: 'Outlets', 
-        subtitle: 'Manage media outlets and their categories',
-        buttons: [{
-          label: "Add Outlet",
-          onClick: handleAddOutlet,
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
+      return 'Media Outlets'
     } else if (pathname === '/beats') {
-      return { 
-        title: 'Beats', 
-        subtitle: 'Manage and organize journalist beats',
-        buttons: [{
-          label: "Add Beat",
-          onClick: handleAddBeat,
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
+      return 'Beats'
     } else if (pathname === '/categories') {
-      return { 
-        title: 'Categories', 
-        subtitle: 'Organize beats and outlets by editorial themes',
-        buttons: [{
-          label: "Add Category",
-          onClick: handleAddCategory,
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
+      return 'Categories'
     } else if (pathname === '/countries') {
-      return { 
-        title: 'Countries', 
-        subtitle: 'Manage and organize countries',
-        buttons: [{
-          label: "Add Country",
-          onClick: handleAddCountry,
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
+      return 'Countries'
     } else if (pathname === '/languages') {
-      return { 
-        title: 'Languages', 
-        subtitle: 'Manage and organize languages',
-        buttons: [{
-          label: "Add Language",
-          onClick: handleAddLanguage,
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
+      return 'Languages'
     } else if (pathname === '/regions') {
-      return { 
-        title: 'Regions', 
-        subtitle: 'Manage and organize regions',
-        buttons: [{
-          label: "Add Region",
-          onClick: handleAddRegion,
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
-    } else if (pathname === '/publishers') {
-      return { 
-        title: 'Publishers', 
-        subtitle: 'Manage media publishers and their outlets',
-        buttons: [{
-          label: "Add Publisher",
-          onClick: handleAddPublisher,
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
+      return 'Regions'
     } else if (pathname === '/admin/users') {
-      return { 
-        title: 'Admin', 
-        subtitle: 'User Management',
-        buttons: [{
-          label: "Add User",
-          onClick: handleAddUser,
-          variant: "default" as const,
-          icon: <UserPlus className="h-4 w-4" />
-        }]
-      }
+      return 'Admin'
     } else if (pathname === '/media-contacts') {
-      return { 
-        title: 'Media Contacts', 
-        subtitle: 'Manage your media contacts, search by criteria, and organize your media database',
-        buttons: [{
-          label: "Add Contact",
-          onClick: () => setIsAddContactOpen(true),
-          variant: "default" as const,
-          icon: <Plus className="h-4 w-4" />
-        }]
-      }
+      return 'Media Contacts'
     } else {
-      return { 
-        title: 'Dashboard', 
-        subtitle: 'Analytics and insights for your media contacts',
-        buttons: []
-      }
+      return 'Dashboard'
     }
   }
 
-  const breadcrumb = getBreadcrumb()
+  const breadcrumbTitle = getBreadcrumbTitle()
 
   return (
     <SidebarProvider>
@@ -261,7 +154,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>
+                  <BreadcrumbPage>{breadcrumbTitle}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -270,14 +163,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main content area */}
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {/* Only show DashboardLayoutTitle for non-dashboard pages */}
-          {pathname !== '/' && (
-            <DashboardLayoutTitle 
-              title={breadcrumb.title}
-              subtitle={breadcrumb.subtitle}
-              buttons={breadcrumb.buttons}
-            />
-          )}
           {/* Main content */}
           <div>
             {children}

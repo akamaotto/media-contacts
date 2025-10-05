@@ -75,7 +75,10 @@ export function mapMediaContactToCsvRow(contact: ExtendedMediaContact, fields: s
   const result: Record<string, string> = {};
   
   fields.forEach((field) => {
-    if (mapping[field]) {
+    if (
+      Object.prototype.hasOwnProperty.call(mapping, field) &&
+      typeof mapping[field] === "function"
+    ) {
       result[field] = mapping[field](contact);
     }
   });

@@ -11,14 +11,14 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
-  // Transpile packages for better compatibility
-  transpilePackages: ['@prisma/client'],
+  // Transpile packages for better compatibility (excluding Prisma)
+  transpilePackages: [],
+  // External packages configuration for Prisma
+  serverExternalPackages: ['@prisma/client', 'prisma'],
   // Experimental features to fix client reference manifest issues
   experimental: {
     // Fix for missing client reference manifest
-    optimizePackageImports: ['@prisma/client'],
-    // Enable server components external packages for Prisma
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
+    optimizePackageImports: [],
   },
   // Disable image optimization to avoid issues
   images: {

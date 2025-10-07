@@ -1,7 +1,5 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
 import { ApiCountryFilter } from './ApiCountryFilter';
 import { ApiBeatFilter } from './ApiBeatFilter';
 import { ApiOutletFilter } from './ApiOutletFilter';
@@ -28,21 +26,11 @@ interface ApiFiltersRowProps {
   outlets: FilterItem[];
   regions: FilterItem[];
   languages: FilterItem[];
-  countriesLoading: boolean;
-  beatsLoading: boolean;
-  outletsLoading: boolean;
-  regionsLoading: boolean;
-  languagesLoading: boolean;
-  countrySearch: string;
-  setCountrySearch: (value: string) => void;
-  beatSearch: string;
-  setBeatSearch: (value: string) => void;
-  outletSearch: string;
-  setOutletSearch: (value: string) => void;
-  regionSearch: string;
-  setRegionSearch: (value: string) => void;
-  languageSearch: string;
-  setLanguageSearch: (value: string) => void;
+  onCountryItemsResolved: (items: FilterItem[]) => void;
+  onBeatItemsResolved: (items: FilterItem[]) => void;
+  onOutletItemsResolved: (items: FilterItem[]) => void;
+  onRegionItemsResolved: (items: FilterItem[]) => void;
+  onLanguageItemsResolved: (items: FilterItem[]) => void;
 }
 
 export function ApiFiltersRow({
@@ -63,85 +51,49 @@ export function ApiFiltersRow({
   outlets,
   regions,
   languages,
-  countriesLoading,
-  beatsLoading,
-  outletsLoading,
-  regionsLoading,
-  languagesLoading,
-  countrySearch,
-  setCountrySearch,
-  beatSearch,
-  setBeatSearch,
-  outletSearch,
-  setOutletSearch,
-  regionSearch,
-  setRegionSearch,
-  languageSearch,
-  setLanguageSearch
+  onCountryItemsResolved,
+  onBeatItemsResolved,
+  onOutletItemsResolved,
+  onRegionItemsResolved,
+  onLanguageItemsResolved
 }: ApiFiltersRowProps) {
-  const [isCountryOpen, setIsCountryOpen] = useState(false);
-  const [isBeatOpen, setIsBeatOpen] = useState(false);
-  const [isOutletOpen, setIsOutletOpen] = useState(false);
-  const [isRegionOpen, setIsRegionOpen] = useState(false);
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-
   return (
-    <div className="flex flex-wrap gap-4 items-center">
+    <div className="flex gap-3 items-center overflow-x-auto pb-2">
       <ApiCountryFilter
         selectedCountryIds={selectedCountryIds}
         onCountryFilterChange={onCountryFilterChange}
         countries={countries}
-        countriesLoading={countriesLoading}
-        countrySearch={countrySearch}
-        setCountrySearch={setCountrySearch}
-        isOpen={isCountryOpen}
-        onOpenChange={setIsCountryOpen}
+        onItemsResolved={onCountryItemsResolved}
       />
-      
+
       <ApiBeatFilter
         selectedBeatIds={selectedBeatIds}
         onBeatFilterChange={onBeatFilterChange}
         beats={beats}
-        beatsLoading={beatsLoading}
-        beatSearch={beatSearch}
-        setBeatSearch={setBeatSearch}
-        isOpen={isBeatOpen}
-        onOpenChange={setIsBeatOpen}
+        onItemsResolved={onBeatItemsResolved}
       />
-      
+
       <ApiOutletFilter
         selectedOutletIds={selectedOutletIds}
         onOutletFilterChange={onOutletFilterChange}
         outlets={outlets}
-        outletsLoading={outletsLoading}
-        outletSearch={outletSearch}
-        setOutletSearch={setOutletSearch}
-        isOpen={isOutletOpen}
-        onOpenChange={setIsOutletOpen}
+        onItemsResolved={onOutletItemsResolved}
       />
-      
+
       <ApiRegionFilter
         selectedRegionCodes={selectedRegionCodes}
         onRegionFilterChange={onRegionFilterChange}
         regions={regions}
-        regionsLoading={regionsLoading}
-        regionSearch={regionSearch}
-        setRegionSearch={setRegionSearch}
-        isOpen={isRegionOpen}
-        onOpenChange={setIsRegionOpen}
+        onItemsResolved={onRegionItemsResolved}
       />
-      
+
       <ApiLanguageFilter
         selectedLanguageCodes={selectedLanguageCodes}
         onLanguageFilterChange={onLanguageFilterChange}
         languages={languages}
-        languagesLoading={languagesLoading}
-        languageSearch={languageSearch}
-        setLanguageSearch={setLanguageSearch}
-        isOpen={isLanguageOpen}
-        onOpenChange={setIsLanguageOpen}
+        onItemsResolved={onLanguageItemsResolved}
       />
-      
+
       <ApiEmailVerificationFilter
         emailVerified={emailVerified}
         onEmailVerifiedChange={onEmailVerifiedChange}

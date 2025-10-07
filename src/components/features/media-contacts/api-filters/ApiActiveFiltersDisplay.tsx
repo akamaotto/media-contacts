@@ -108,29 +108,55 @@ export function ApiActiveFiltersDisplay({
         })}
         
         {selectedRegionCodes.map(regionCode => {
-          const region = regions.find(r => r.code === regionCode);
+          // Try to find by code first, then by ID (UUID)
+          let region = regions.find(r => r.code === regionCode);
+          if (!region) {
+            region = regions.find(r => r.id === regionCode);
+          }
           return region ? (
             <Badge key={regionCode} variant="secondary" className="flex items-center gap-1">
               {region.label}
-              <XIcon 
-                className="h-3 w-3 cursor-pointer" 
+              <XIcon
+                className="h-3 w-3 cursor-pointer"
                 onClick={() => onRegionFilterChange(selectedRegionCodes.filter(code => code !== regionCode))}
               />
             </Badge>
-          ) : null;
+          ) : (
+            // Fallback: show the code/ID directly if no region found
+            <Badge key={regionCode} variant="secondary" className="flex items-center gap-1">
+              {regionCode}
+              <XIcon
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => onRegionFilterChange(selectedRegionCodes.filter(code => code !== regionCode))}
+              />
+            </Badge>
+          );
         })}
         
         {selectedLanguageCodes.map(languageCode => {
-          const language = languages.find(l => l.code === languageCode);
+          // Try to find by code first, then by ID (UUID)
+          let language = languages.find(l => l.code === languageCode);
+          if (!language) {
+            language = languages.find(l => l.id === languageCode);
+          }
           return language ? (
             <Badge key={languageCode} variant="secondary" className="flex items-center gap-1">
               {language.label}
-              <XIcon 
-                className="h-3 w-3 cursor-pointer" 
+              <XIcon
+                className="h-3 w-3 cursor-pointer"
                 onClick={() => onLanguageFilterChange(selectedLanguageCodes.filter(code => code !== languageCode))}
               />
             </Badge>
-          ) : null;
+          ) : (
+            // Fallback: show the code/ID directly if no language found
+            <Badge key={languageCode} variant="secondary" className="flex items-center gap-1">
+              {languageCode}
+              <XIcon
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => onLanguageFilterChange(selectedLanguageCodes.filter(code => code !== languageCode))}
+              />
+            </Badge>
+          );
         })}
         
         {emailVerified !== 'all' && (

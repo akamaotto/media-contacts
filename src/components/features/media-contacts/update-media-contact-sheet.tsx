@@ -162,28 +162,24 @@ export function UpdateMediaContactSheet({
     useEffect(() => {
         async function fetchData() {
             try {
-                // Use modern API endpoint instead of server action
-                const response = await errorHandler.fetchWithRetry(
-                    '/api/countries',
-                    { method: 'GET' },
-                    { maxRetries: 1, baseDelayMs: 500 }
-                );
+                // Direct fetch to avoid issues with errorHandler
+                const response = await fetch('/api/filters/countries?limit=247');
 
-                const result = errorHandler.handleResponse(response, {
-                    showSuccessToast: false,
-                    showErrorToast: false
-                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-                if (result.success && Array.isArray(result.data)) {
-                    setAllCountries(
-                        result.data.map((c: any) => ({
-                            id: c.id,
-                            name: c.name,
-                            code: c.code ?? null,
-                        }))
-                    );
+                const result = await response.json();
+
+                if (result.items && Array.isArray(result.items)) {
+                    const mappedCountries = result.items.map((c: any) => ({
+                        id: c.id,
+                        name: c.label,  // Store as name internally
+                        code: c.code ?? null,
+                    }));
+                    setAllCountries(mappedCountries);
                 } else {
-                    console.warn('Failed to fetch countries, using empty array');
+                    console.warn('Failed to fetch countries, using empty array - invalid response format');
                     setAllCountries([]);
                 }
             } catch (error) {
@@ -195,13 +191,13 @@ export function UpdateMediaContactSheet({
             fetchData();
             setFormActionFeedback(null);
         }
-    }, [isOpen, errorHandler]);
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen) {
             if (contact) {
                 // Initialize form with contact data
-                
+
                 // Initialize tag states from contact data with explicit handling for null/undefined
                 const contactSocials = contact.socials
                     ? Array.isArray(contact.socials)
@@ -234,6 +230,7 @@ export function UpdateMediaContactSheet({
                 // Set tag inputs
                 const initialBeats = contact.beats?.map((b) => b.name) || [];
                 console.log('UpdateMediaContactSheet: Setting initial beats:', initialBeats);
+                console.log('UpdateMediaContactSheet: Setting initial country IDs:', contact.countries?.map((c) => c.id) || []);
                 setBeatTags(initialBeats);
                 setOutletTags(contact.outlets?.map((o) => o.name) || []);
                 setSocialTags(contactSocials);
@@ -241,6 +238,15 @@ export function UpdateMediaContactSheet({
             }
         }
     }, [contact, isOpen]); // Removed 'form' from dependencies to prevent infinite re-renders
+
+    // Update form country IDs when allCountries is loaded and contact data is available
+    useEffect(() => {
+        if (isOpen && contact && allCountries.length > 0) {
+            const contactCountryIds = contact.countries?.map((c) => c.id) || [];
+            console.log('UpdateMediaContactSheet: Updating form countryIds after allCountries loaded:', contactCountryIds);
+            form.setValue('countryIds', contactCountryIds);
+        }
+    }, [contact, isOpen, allCountries, form]);
 
     /**
      * Handles form submission with comprehensive validation and error handling
@@ -637,20 +643,22 @@ export function UpdateMediaContactSheet({
                                                 ?.map((id: string) => {
                                                     const country =
                                                         allCountries.find(
-                                                            (c: Country) =>
+                                                            (c: any) =>
                                                                 c.id === id,
                                                         );
-                                                    return (
-                                                        country || {
-                                                            id: '',
-                                                            name: '',
-                                                            code: '',
-                                                        }
-                                                    );
+                                                    if (!country) {
+                                                        return null;
+                                                    }
+                                                    // Convert from API format (name) to component format (label)
+                                                    return {
+                                                        id: country.id,
+                                                        label: country.name,  // Map name to label
+                                                        code: country.code || '',
+                                                    };
                                                 })
                                                 .filter(
-                                                    (c: Country) =>
-                                                        c.id !== '',
+                                                    (c: any) =>
+                                                        c && c.id !== '',
                                                 ) || [];
 
                                         return (

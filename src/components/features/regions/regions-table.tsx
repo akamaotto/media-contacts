@@ -43,7 +43,7 @@ export const RegionsTable = forwardRef<{ refresh: () => void }, RegionsTableProp
   const [regions, setRegions] = useState<Region[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

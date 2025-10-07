@@ -183,14 +183,13 @@ export function CountryAutocomplete({
                         key={country.id}
                         value={country.label}
                         onSelect={() => handleSelect(country)}
-                        className="flex items-center"
+                        className="flex items-center hover:bg-gray-100 dark:hover:bg-accent cursor-pointer rounded-sm transition-colors"
                       >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedCountries.some(c => c.id === country.id) ? "opacity-100" : "opacity-0"
-                          )}
-                        />
+                        <div className='mr-2 h-4 w-4 border-2 border-gray-400 dark:border-border rounded flex items-center justify-center bg-white dark:bg-background hover:border-gray-600 dark:hover:border-primary transition-colors'>
+                            {selectedCountries.some(c => c.id === country.id) && (
+                              <Check className='h-3 w-3 text-blue-600 dark:text-primary' />
+                            )}
+                          </div>
                         <span>{country.label}</span>
                         {country.code && (
                           <span className="ml-2 text-muted-foreground text-xs">({country.code})</span>

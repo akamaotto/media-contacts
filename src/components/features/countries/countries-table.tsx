@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, AlertCircle, Globe, Edit, Trash2, Search, MoreHorizontal, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Loader2, AlertCircle, Globe, Edit, Trash2, Search, MoreHorizontal, ChevronLeft, ChevronRight, Eye, List, RotateCcw, X } from "lucide-react";
 import { toast } from 'sonner';
 import { EditCountrySheet } from './edit-country-sheet';
 import { DeleteCountryDialog } from './delete-country-dialog';
@@ -32,6 +32,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Country } from './types';
+import { RegionAutocomplete } from './region-autocomplete';
+import { LanguageAutocomplete } from './language-autocomplete';
+
+// Lightweight response item types for filters APIs
+type RegionItem = { id: string; label: string; code?: string; category?: string };
+type LanguageItem = { id: string; label: string; code?: string };
 
 interface CountriesTableProps {
   onEdit?: (country: Country) => void;
@@ -43,16 +49,21 @@ export const CountriesTable = forwardRef<{ refresh: () => void }, CountriesTable
   const [countries, setCountries] = useState<Country[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [selectedRegionsMap, setSelectedRegionsMap] = useState<Map<string, { label: string; code?: string; category?: string }>>(new Map());
+  const [selectedLanguagesMap, setSelectedLanguagesMap] = useState<Map<string, { label: string; code?: string }>>(new Map());
   const [editingCountry, setEditingCountry] = useState<Country | null>(null);
   const [deletingCountry, setDeletingCountry] = useState<Country | null>(null);
+  const [filtersVisible, setFiltersVisible] = useState(true);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  // Server-side filtering - update API call when search changes
+  // Server-side filtering - update API call when filters change
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchTerm !== '') {
@@ -62,7 +73,17 @@ export const CountriesTable = forwardRef<{ refresh: () => void }, CountriesTable
     }, 300); // Debounce search
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, currentPage, pageSize]);
+  }, [searchTerm, selectedRegions, selectedLanguages, currentPage, pageSize]);
+
+  // Fetch region details when selected regions change
+  useEffect(() => {
+    fetchRegionDetails(selectedRegions);
+  }, [selectedRegions]);
+
+  // Fetch language details when selected languages change
+  useEffect(() => {
+    fetchLanguageDetails(selectedLanguages);
+  }, [selectedLanguages]);
 
   const fetchCountries = async () => {
     try {
@@ -78,6 +99,16 @@ export const CountriesTable = forwardRef<{ refresh: () => void }, CountriesTable
 
       if (searchTerm.trim()) {
         params.append('search', searchTerm.trim());
+      }
+
+      // Add region filters
+      if (selectedRegions.length > 0) {
+        params.append('regionIds', selectedRegions.join(','));
+      }
+
+      // Add language filters
+      if (selectedLanguages.length > 0) {
+        params.append('languageIds', selectedLanguages.join(','));
       }
 
       const response = await fetch(`/api/countries?${params}`);
@@ -126,6 +157,78 @@ export const CountriesTable = forwardRef<{ refresh: () => void }, CountriesTable
     setDeletingCountry(null);
   };
 
+  // Fetch region details by IDs
+  const fetchRegionDetails = async (regionIds: string[]) => {
+    if (regionIds.length === 0) {
+      setSelectedRegionsMap(new Map());
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        ids: regionIds.join(','),
+        limit: regionIds.length.toString()
+      });
+
+      const response = await fetch(`/api/filters/regions?${params}`);
+      if (response.ok) {
+        const result: { items?: RegionItem[] } = await response.json();
+        const regionsMap = new Map<string, { label: string; code?: string; category?: string }>();
+        (result.items || []).forEach((region: RegionItem) => {
+          regionsMap.set(region.id, {
+            label: region.label,
+            code: region.code,
+            category: region.category
+          });
+        });
+        setSelectedRegionsMap(regionsMap);
+      }
+    } catch (error) {
+      console.error('Failed to fetch region details:', error);
+    }
+  };
+
+  // Fetch language details by IDs
+  const fetchLanguageDetails = async (languageIds: string[]) => {
+    if (languageIds.length === 0) {
+      setSelectedLanguagesMap(new Map());
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        ids: languageIds.join(','),
+        limit: languageIds.length.toString()
+      });
+
+      const response = await fetch(`/api/filters/languages?${params}`);
+      if (response.ok) {
+        const result: { items?: LanguageItem[] } = await response.json();
+        const languagesMap = new Map<string, { label: string; code?: string }>();
+        (result.items || []).forEach((language: LanguageItem) => {
+          languagesMap.set(language.id, {
+            label: language.label,
+            code: language.code
+          });
+        });
+        setSelectedLanguagesMap(languagesMap);
+      }
+    } catch (error) {
+      console.error('Failed to fetch language details:', error);
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setSelectedRegions([]);
+    setSelectedLanguages([]);
+    setSelectedRegionsMap(new Map());
+    setSelectedLanguagesMap(new Map());
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = selectedRegions.length > 0 || selectedLanguages.length > 0 || searchTerm.trim();
+
   useEffect(() => {
     fetchCountries();
   }, []);
@@ -162,28 +265,21 @@ export const CountriesTable = forwardRef<{ refresh: () => void }, CountriesTable
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
-        {/* Search and Controls */}
-        <div className="flex items-center justify-between space-x-4">
-          <div className="flex items-center space-x-2 flex-1">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search countries..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Badge variant="secondary" className="font-mono text-xs">
-              {totalCount} total
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="font-mono text-sm px-3 py-1">
+              {totalCount.toLocaleString()} total
             </Badge>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Show:</span>
+
+          {/* Results Counter and Per Page */}
+          <div className="flex items-center gap-3">
+            
+            <span className="text-sm text-muted-foreground whitespace-nowrap">per page:</span>
             <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-              <SelectTrigger className="w-20">
+              <SelectTrigger className="w-16 h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -194,6 +290,130 @@ export const CountriesTable = forwardRef<{ refresh: () => void }, CountriesTable
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Search and Filters Row */}
+        <div className="bg-card border border-border rounded-lg p-6">
+          {/* Search and Filters Layout */}
+          <div className="flex flex-col md:flex-row gap-6 mb-6">
+            {/* Search - 50% width */}
+            <div className="flex-1 min-w-0">
+              <label className="text-sm font-semibold flex items-center gap-2 mb-4">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search for countries..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-4 h-9 bg-muted/50 border-border/50 focus:bg-background focus:border-primary w-full"
+                />
+              </div>
+            </div>
+
+            {/* Region - 25% width */}
+            <div className="w-full md:w-1/4 min-w-0">
+              <label className="text-sm font-semibold flex items-center gap-2 mb-2">
+                Region
+              </label>
+              <RegionAutocomplete
+                selectedRegions={selectedRegions}
+                onRegionsChange={setSelectedRegions}
+                onRegionsMapChange={setSelectedRegionsMap}
+                placeholder="All Regions"
+              />
+            </div>
+
+            {/* Language - 25% width */}
+            <div className="w-full md:w-1/4 min-w-0">
+              <label className="text-sm font-semibold flex items-center gap-2 mb-2">
+                Language
+              </label>
+              <LanguageAutocomplete
+                selectedLanguages={selectedLanguages}
+                onLanguagesChange={setSelectedLanguages}
+                onLanguagesMapChange={setSelectedLanguagesMap}
+                placeholder="All Languages"
+              />
+            </div>
+          </div>
+
+          {/* Filter Controls and Active Filters */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <List className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">Filters</span>
+              {hasActiveFilters && (
+                <Badge variant="default" className="ml-2 text-xs">
+                  {selectedRegions.length + selectedLanguages.length + (searchTerm.trim() ? 1 : 0)} active
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFilters}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset Filters
+              </Button>
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          {hasActiveFilters && (
+            <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Active Filters:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {searchTerm.trim() && (
+                  <Badge variant="default" className="gap-1 px-3 py-1">
+                    <Search className="h-3 w-3" />
+                    Search: "{searchTerm}"
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {selectedRegions.map(regionId => {
+                  const region = selectedRegionsMap.get(regionId);
+                  return (
+                    <Badge key={regionId} variant="default" className="gap-1 px-3 py-1">
+                      Region: {region?.label || regionId}
+                      <button
+                        onClick={() => setSelectedRegions(prev => prev.filter(id => id !== regionId))}
+                        className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+                {selectedLanguages.map(languageId => {
+                  const language = selectedLanguagesMap.get(languageId);
+                  return (
+                    <Badge key={languageId} variant="default" className="gap-1 px-3 py-1">
+                      Language: {language?.label || languageId}
+                      <button
+                        onClick={() => setSelectedLanguages(prev => prev.filter(id => id !== languageId))}
+                        className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Countries Table */}

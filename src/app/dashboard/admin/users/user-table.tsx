@@ -71,31 +71,33 @@ const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-  // Handle form submission result
-  if (formState.success) {
-    toast.success(editingUser ? "User updated" : "User created");
-    setIsOpen(false);
-    setEditingUser(null);
-    // Reset form state
-    formState.success = false;
-  } else if (formState.error) {
-    toast.error(formState.error);
-  }
-  
+    
   // Function to close the delete dialog
   const closeDeleteDialog = () => {
     setDeleteDialogOpen(false);
     setUserToDelete(null);
   };
-  
-  // Use useEffect to handle state changes
+
+  // Use useEffect to handle user form state changes
+  useEffect(() => {
+    if (formState.success) {
+      toast.success(editingUser ? "User updated" : "User created");
+      setIsOpen(false);
+      setEditingUser(null);
+
+      // Force a page reload to refresh the user list
+      window.location.reload();
+    } else if (formState.error) {
+      toast.error(formState.error);
+    }
+  }, [formState, editingUser]);
+
+  // Use useEffect to handle delete form state changes
   useEffect(() => {
     if (deleteFormState.success) {
       toast.success("User deleted");
       closeDeleteDialog();
-      // Reset form state
-      deleteFormState.success = false;
-      
+
       // Force a page reload to refresh the user list
       window.location.reload();
     } else if (deleteFormState.error) {
@@ -133,18 +135,18 @@ const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
       <div className="rounded-md border overflow-hidden">
         <div className="overflow-auto">
           <Table className="relative w-full">
-            <TableHeader className="sticky top-0 z-10 bg-white border-b">
+            <TableHeader className="sticky top-0 z-10 bg-background border-b">
               <TableRow>
-                <TableHead className="bg-white font-medium">
+                <TableHead className="bg-background font-medium">
                   Name
                 </TableHead>
-                <TableHead className="bg-white font-medium">
+                <TableHead className="bg-background font-medium">
                   Email
                 </TableHead>
-                <TableHead className="bg-white font-medium">
+                <TableHead className="bg-background font-medium">
                   Role
                 </TableHead>
-                <TableHead className="bg-white font-medium text-right">
+                <TableHead className="bg-background font-medium text-right">
                   Actions
                 </TableHead>
               </TableRow>
@@ -158,9 +160,9 @@ const UserTable = forwardRef<UserTableRef, UserTableProps>(({ users }, ref) => {
                 </TableRow>
               ) : (
                 users.map((user) => (
-                  <TableRow 
-                    key={user.id} 
-                    className="hover:bg-gray-100 cursor-pointer transition-colors"
+                  <TableRow
+                    key={user.id}
+                    className="hover:bg-muted/50 cursor-pointer transition-colors"
                     onClick={() => handleViewUser(user)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {

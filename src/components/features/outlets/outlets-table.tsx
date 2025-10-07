@@ -43,7 +43,7 @@ export const OutletsTable = forwardRef<{ refresh: () => void }, OutletsTableProp
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

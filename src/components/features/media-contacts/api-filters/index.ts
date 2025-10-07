@@ -9,3 +9,4 @@ export * from './ApiRegionFilter';
 export * from './ApiLanguageFilter';
 export * from './ApiEmailVerificationFilter';
 export * from './types';
+export * from './FilterCombobox';

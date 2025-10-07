@@ -12,9 +12,5 @@ export default async function CountriesPage() {
     redirect("/auth/login");
   }
 
-  return (
-    <div className="container mx-auto py-6">
-      <CountriesClientView />
-    </div>
-  );
+  return <CountriesClientView />;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import {Button} from '@/components/ui/button';
 import {
     Table,
@@ -62,6 +62,7 @@ interface FastTableProps {
     onSortChange?: (sortBy: string | undefined, sortOrder: 'asc' | 'desc' | undefined) => void;
 }
 
+
 export function FastMediaContactsTable({
     searchTerm = '',
     countryIds = [],
@@ -89,8 +90,18 @@ export function FastMediaContactsTable({
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const fetchControllerRef = useRef<AbortController | null>(null);
+    const requestIdRef = useRef(0);
 
     const fetchData = useCallback(async () => {
+        const controller = new AbortController();
+        requestIdRef.current += 1;
+        const requestId = requestIdRef.current;
+
+        // Cancel any in-flight request before starting a new one
+        fetchControllerRef.current?.abort();
+        fetchControllerRef.current = controller;
+
         setIsLoading(true);
         setError(null);
 
@@ -141,7 +152,7 @@ export function FastMediaContactsTable({
             }
 
             // SINGLE API CALL - No more multiple requests!
-            const response = await fetch(`/api/media-contacts?${params}` , { cache: 'no-store' });
+            const response = await fetch(`/api/media-contacts?${params}` , { cache: 'no-store', signal: controller.signal });
 
             if (!response.ok) {
                 throw new Error(
@@ -151,6 +162,10 @@ export function FastMediaContactsTable({
 
             const result = await response.json();
             console.log('API Response:', result);
+
+            if (requestId !== requestIdRef.current) {
+                return;
+            }
 
             // Fix: API returns data in 'data' property, not 'contacts'
             // Transform MediaContact objects to FastTableContact objects
@@ -181,6 +196,14 @@ export function FastMediaContactsTable({
 
             onDataChange?.(result.pagination?.totalCount || 0);
         } catch (err) {
+            if ((err as Error).name === 'AbortError') {
+                return;
+            }
+
+            if (requestId !== requestIdRef.current) {
+                return;
+            }
+
             console.error('❌ [FAST-TABLE] Fetch error:', err);
             setError(
                 err instanceof Error ? err.message : 'Failed to load contacts',
@@ -188,7 +211,10 @@ export function FastMediaContactsTable({
             setData([]);
             setTotalCount(0);
         } finally {
-            setIsLoading(false);
+            if (requestId === requestIdRef.current && !controller.signal.aborted) {
+                setIsLoading(false);
+                fetchControllerRef.current = null;
+            }
         }
     }, [searchTerm,
         countryIds,
@@ -203,10 +229,14 @@ export function FastMediaContactsTable({
         sortBy,
         sortOrder,
         onDataChange,
+        onDataUpdate,
     ]);
 
     useEffect(() => {
         fetchData();
+        return () => {
+            fetchControllerRef.current?.abort();
+        };
     }, [fetchData]);
 
     if (isLoading) {

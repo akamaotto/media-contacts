@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Whenever an image is in the prompt, use zai vision mcp to check what is in the image.
 
 ## Development Commands
 

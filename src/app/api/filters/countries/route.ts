@@ -54,12 +54,12 @@ export async function GET(request: NextRequest) {
           c.id,
           c.name,
           c.code,
-          COUNT(mc.id) as count
+          COUNT(DISTINCT mc.id) as count
         FROM countries c
-        LEFT JOIN "_MediaContactCountries" mcc ON c.id = mcc."B"
-        LEFT JOIN media_contacts mc ON mcc."A" = mc.id
+        LEFT JOIN "_MediaContactCountries" mcc ON mcc."A" = c.id
+        LEFT JOIN media_contacts mc ON mc.id = mcc."B"
         GROUP BY c.id, c.name, c.code
-        ORDER BY COUNT(mc.id) DESC, c.name ASC
+        ORDER BY COUNT(DISTINCT mc.id) DESC, c.name ASC
         LIMIT ${limit}
       ` as CountryResult[];
     } else {
@@ -69,10 +69,10 @@ export async function GET(request: NextRequest) {
           c.id,
           c.name,
           c.code,
-          COUNT(mc.id) as count
+          COUNT(DISTINCT mc.id) as count
         FROM countries c
-        LEFT JOIN "_MediaContactCountries" mcc ON c.id = mcc."B"
-        LEFT JOIN media_contacts mc ON mcc."A" = mc.id
+        LEFT JOIN "_MediaContactCountries" mcc ON mcc."A" = c.id
+        LEFT JOIN media_contacts mc ON mc.id = mcc."B"
         WHERE c.name ILIKE ${`%${query}%`} OR c.code ILIKE ${`%${query}%`}
         GROUP BY c.id, c.name, c.code
         ORDER BY 
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
             WHEN c.name ILIKE ${'%' + query + '%'} THEN 2
             ELSE 3
           END,
-          COUNT(mc.id) DESC,
+          COUNT(DISTINCT mc.id) DESC,
           c.name ASC
         LIMIT ${limit}
       ` as CountryResult[];

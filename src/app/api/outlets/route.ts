@@ -5,7 +5,7 @@ import { createOutlet } from '@/features/outlets/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Check authentication
     const session = await auth();
@@ -13,7 +13,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const outlets = await getOutlets();
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const pageSize = parseInt(searchParams.get('pageSize') || '10', 10);
+    const search = searchParams.get('search') || undefined;
+
+    const outlets = await getOutlets({ page, pageSize, search });
     return NextResponse.json(outlets);
   } catch (error) {
     console.error('Error in GET /api/outlets:', error);

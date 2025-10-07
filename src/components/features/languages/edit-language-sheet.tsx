@@ -243,8 +243,9 @@ export function EditLanguageSheet({ isOpen, onOpenChange, onSuccess, language }:
                               setAssignedCountries(prev => [...prev, country]);
                               setCountrySelectOpen(false);
                             }}
+                            className="flex items-center hover:bg-gray-100 dark:hover:bg-accent cursor-pointer rounded-sm transition-colors"
                           >
-                            <Check className="mr-2 h-4 w-4 opacity-0" />
+                            <div className='mr-2 h-4 w-4 border-2 border-gray-400 dark:border-border rounded flex items-center justify-center bg-white dark:bg-background hover:border-gray-600 dark:hover:border-primary transition-colors'></div>
                             <span className="mr-2">{country.flag_emoji}</span>
                             {country.name} ({country.code})
                           </CommandItem>

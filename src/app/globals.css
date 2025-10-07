@@ -177,7 +177,13 @@
     border-color: hsl(var(--badge-border)) !important;
   }
   
-  /* Ensure solid backgrounds for sheets and dropdowns in dark mode */
+  /* Ensure solid backgrounds for sheets and dropdowns in light and dark modes */
+  [data-slot="sheet-content"] {
+    @apply bg-card border-border;
+    background-color: hsl(var(--card)) !important;
+    backdrop-filter: none !important;
+  }
+
   .dark [data-slot="sheet-content"] {
     @apply bg-card border-border;
     background-color: hsl(var(--card)) !important;
@@ -196,6 +202,15 @@
   }
   
   /* Command palette and similar dropdown components */
+  [data-slot="command"],
+  [data-slot="command-content"],
+  [data-slot="popover-content"],
+  [data-slot="dropdown-content"] {
+    @apply bg-popover border-border;
+    background-color: hsl(var(--popover)) !important;
+    backdrop-filter: none !important;
+  }
+
   .dark [data-slot="command"],
   .dark [data-slot="command-content"],
   .dark [data-slot="popover-content"],
@@ -206,21 +221,39 @@
   }
   
   /* Dialog components */
+  [data-slot="dialog-content"] {
+    @apply bg-card border-border;
+    background-color: hsl(var(--card)) !important;
+    backdrop-filter: none !important;
+  }
+
   .dark [data-slot="dialog-content"] {
     @apply bg-card border-border;
     background-color: hsl(var(--card)) !important;
     backdrop-filter: none !important;
   }
   
-  /* Ensure consistent backgrounds for all overlay components */
+  /* Ensure consistent backgrounds for all overlay components in light and dark modes */
+  .bg-popover {
+    background-color: hsl(var(--popover)) !important;
+  }
+
+  .bg-card {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .bg-background {
+    background-color: hsl(var(--background)) !important;
+  }
+
   .dark .bg-popover {
     background-color: hsl(var(--popover)) !important;
   }
-  
+
   .dark .bg-card {
     background-color: hsl(var(--card)) !important;
   }
-  
+
   .dark .bg-background {
     background-color: hsl(var(--background)) !important;
   }

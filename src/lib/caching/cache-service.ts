@@ -71,9 +71,9 @@ export const cacheService = new CacheService();
 // Cache key generators
 export const CacheKeys = {
   filters: {
-    countries: (query: string, limit: number) => `filters:countries:${query || 'popular'}:${limit}`,
-    beats: (query: string, limit: number) => `filters:beats:${query || 'popular'}:${limit}`,
-    outlets: (query: string, limit: number) => `filters:outlets:${query || 'popular'}:${limit}`,
+    countries: (query: string, limit: number) => `filters:v2:countries:${query || 'popular'}:${limit}`,
+    beats: (query: string, limit: number) => `filters:v2:beats:${query || 'popular'}:${limit}`,
+    outlets: (query: string, limit: number) => `filters:v2:outlets:${query || 'popular'}:${limit}`,
     regions: (query: string, limit: number) => `filters:regions:${query || 'popular'}:${limit}`,
     languages: (query: string, limit: number) => `filters:languages:${query || 'popular'}:${limit}`,
   },

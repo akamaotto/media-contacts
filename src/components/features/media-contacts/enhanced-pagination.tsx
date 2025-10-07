@@ -51,10 +51,10 @@ export function EnhancedPagination({
     const endItem = Math.min(currentPage * pageSize, totalCount);
 
     return (
-        <div className='flex items-center justify-between border-t border-border bg-background px-4 py-3 sm:px-6 mt-4'>
-            <div className='flex flex-1 items-center'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t border-border bg-background px-4 py-3 sm:px-6 mt-4'>
+            <div className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4'>
                 <div className='flex items-center space-x-2'>
-                    <p className='text-sm font-medium text-muted-foreground'>
+                    <p className='text-sm font-medium text-muted-foreground whitespace-nowrap'>
                         Rows per page
                     </p>
                     <Select
@@ -79,15 +79,15 @@ export function EnhancedPagination({
                         </SelectContent>
                     </Select>
                 </div>
-                <div className='ml-4 text-sm text-muted-foreground'>
+                <div className='text-sm text-muted-foreground'>
                     {totalCount === 0
                         ? 'No contacts found'
                         : `Showing ${startItem} to ${endItem} of ${totalCount} contacts`}
                 </div>
             </div>
 
-            <div className='flex items-center space-x-2'>
-                <div className='text-sm text-muted-foreground mr-4'>
+            <div className='flex flex-col sm:flex-row sm:items-center gap-4 items-center'>
+                <div className='text-sm text-muted-foreground text-center sm:text-left whitespace-nowrap min-w-0'>
                     Page {currentPage} of {totalPages}
                 </div>
 

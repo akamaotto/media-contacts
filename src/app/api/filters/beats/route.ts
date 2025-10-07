@@ -54,12 +54,12 @@ export async function GET(request: NextRequest) {
           b.id,
           b.name,
           b.description,
-          COUNT(mc.id) as count
+          COUNT(DISTINCT mc.id) as count
         FROM beats b
-        LEFT JOIN "_MediaContactBeats" mcb ON b.id = mcb."B"
-        LEFT JOIN media_contacts mc ON mcb."A" = mc.id
+        LEFT JOIN "_MediaContactBeats" mcb ON mcb."A" = b.id
+        LEFT JOIN media_contacts mc ON mc.id = mcb."B"
         GROUP BY b.id, b.name, b.description
-        ORDER BY COUNT(mc.id) DESC, b.name ASC
+        ORDER BY COUNT(DISTINCT mc.id) DESC, b.name ASC
         LIMIT ${limit}
       ` as BeatResult[];
     } else {
@@ -69,10 +69,10 @@ export async function GET(request: NextRequest) {
           b.id,
           b.name,
           b.description,
-          COUNT(mc.id) as count
+          COUNT(DISTINCT mc.id) as count
         FROM beats b
-        LEFT JOIN "_MediaContactBeats" mcb ON b.id = mcb."B"
-        LEFT JOIN media_contacts mc ON mcb."A" = mc.id
+        LEFT JOIN "_MediaContactBeats" mcb ON mcb."A" = b.id
+        LEFT JOIN media_contacts mc ON mc.id = mcb."B"
         WHERE b.name ILIKE ${`%${query}%`}
         GROUP BY b.id, b.name, b.description
         ORDER BY 
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
             WHEN b.name ILIKE ${'%' + query + '%'} THEN 2
             ELSE 3
           END,
-          COUNT(mc.id) DESC,
+          COUNT(DISTINCT mc.id) DESC,
           b.name ASC
         LIMIT ${limit}
       ` as BeatResult[];

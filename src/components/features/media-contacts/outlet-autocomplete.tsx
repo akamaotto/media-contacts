@@ -229,28 +229,15 @@ export function OutletAutocomplete({
                           key={outlet.id}
                           value={outlet.label}
                           onSelect={() => handleSelect(outlet)}
-                          className='flex items-center'
+                          className='flex items-center hover:bg-gray-100 dark:hover:bg-accent cursor-pointer rounded-sm transition-colors'
                         >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              outlets.includes(outlet.label)
-                                ? 'opacity-100'
-                                : 'opacity-0',
+                          <div className='mr-2 h-4 w-4 border-2 border-gray-400 dark:border-border rounded flex items-center justify-center bg-white dark:bg-background hover:border-gray-600 dark:hover:border-primary transition-colors'>
+                            {outlets.includes(outlet.label) && (
+                              <Check className='h-3 w-3 text-blue-600 dark:text-primary' />
                             )}
-                          />
-                          <div className='flex flex-col'>
+                          </div>
+                          <div className='flex items-center'>
                             <span>{outlet.label}</span>
-                            {outlet.description && (
-                              <span className='text-sm text-muted-foreground'>
-                                {outlet.description}
-                              </span>
-                            )}
-                            {outlet.website && (
-                              <span className='text-xs text-muted-foreground'>
-                                {outlet.website}
-                              </span>
-                            )}
                           </div>
                           {outlet.count !== undefined && (
                             <span className='ml-auto text-xs text-muted-foreground'>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { ApiFiltersSearchInput } from './ApiFiltersSearchInput';
 import { ApiFiltersRow } from './ApiFiltersRow';
@@ -29,6 +29,46 @@ interface ApiFiltersProps {
   languages?: FilterItem[];
 }
 
+type Lookup = Record<string, FilterItem>;
+
+const buildLookup = (items: FilterItem[], valueKey: 'id' | 'code' = 'id'): Lookup => {
+  const next: Lookup = {};
+  for (const item of items) {
+    const key =
+      valueKey === 'code'
+        ? item.code ?? item.id
+        : item.id;
+
+    if (key) {
+      next[key] = { ...item };
+    }
+  }
+  return next;
+};
+
+const mergeLookup = (
+  current: Lookup,
+  incoming: FilterItem[],
+  valueKey: 'id' | 'code' = 'id',
+): Lookup => {
+  if (incoming.length === 0) return current;
+
+  const next = { ...current };
+  for (const item of incoming) {
+    const key =
+      valueKey === 'code'
+        ? item.code ?? item.id
+        : item.id;
+
+    if (key) {
+      next[key] = { ...item };
+    }
+  }
+  return next;
+};
+
+const lookupValues = (lookup: Lookup) => Object.values(lookup);
+
 export function ApiMediaContactsFilters({
   searchTerm,
   onSearchChange,
@@ -50,111 +90,77 @@ export function ApiMediaContactsFilters({
   regions: initialRegions = [],
   languages: initialLanguages = [],
 }: ApiFiltersProps) {
-  // Filter options with loading states
-  const [countries, setCountries] = useState<FilterItem[]>(initialCountries);
-  const [beats, setBeats] = useState<FilterItem[]>(initialBeats);
-  const [outlets, setOutlets] = useState<FilterItem[]>(initialOutlets);
-  const [regions, setRegions] = useState<FilterItem[]>(initialRegions);
-  const [languages, setLanguages] = useState<FilterItem[]>(initialLanguages);
-  
-  const [countriesLoading, setCountriesLoading] = useState(false);
-  const [beatsLoading, setBeatsLoading] = useState(false);
-  const [outletsLoading, setOutletsLoading] = useState(false);
-  const [regionsLoading, setRegionsLoading] = useState(false);
-  const [languagesLoading, setLanguagesLoading] = useState(false);
-  
-  const [countrySearch, setCountrySearch] = useState("");
-  const [beatSearch, setBeatSearch] = useState("");
-  const [outletSearch, setOutletSearch] = useState("");
-  const [regionSearch, setRegionSearch] = useState("");
-  const [languageSearch, setLanguageSearch] = useState("");
+  const [countryLookup, setCountryLookup] = useState<Lookup>(() =>
+    buildLookup(initialCountries, 'id'),
+  );
+  const [beatLookup, setBeatLookup] = useState<Lookup>(() =>
+    buildLookup(initialBeats, 'id'),
+  );
+  const [outletLookup, setOutletLookup] = useState<Lookup>(() =>
+    buildLookup(initialOutlets, 'id'),
+  );
+  const [regionLookup, setRegionLookup] = useState<Lookup>(() =>
+    buildLookup(initialRegions, 'code'),
+  );
+  const [languageLookup, setLanguageLookup] = useState<Lookup>(() =>
+    buildLookup(initialLanguages, 'code'),
+  );
 
-  // Update state when props change
   useEffect(() => {
-    setCountries(initialCountries);
+    setCountryLookup((prev) =>
+      mergeLookup(buildLookup(initialCountries, 'id'), lookupValues(prev), 'id'),
+    );
   }, [initialCountries]);
 
   useEffect(() => {
-    setBeats(initialBeats);
+    setBeatLookup((prev) =>
+      mergeLookup(buildLookup(initialBeats, 'id'), lookupValues(prev), 'id'),
+    );
   }, [initialBeats]);
 
   useEffect(() => {
-    setOutlets(initialOutlets);
+    setOutletLookup((prev) =>
+      mergeLookup(buildLookup(initialOutlets, 'id'), lookupValues(prev), 'id'),
+    );
   }, [initialOutlets]);
 
   useEffect(() => {
-    setRegions(initialRegions);
+    setRegionLookup((prev) =>
+      mergeLookup(buildLookup(initialRegions, 'code'), lookupValues(prev), 'code'),
+    );
   }, [initialRegions]);
 
   useEffect(() => {
-    setLanguages(initialLanguages);
+    setLanguageLookup((prev) =>
+      mergeLookup(buildLookup(initialLanguages, 'code'), lookupValues(prev), 'code'),
+    );
   }, [initialLanguages]);
 
-  // Fetch popular items on mount if not provided
-  useEffect(() => {
-    // If we don't have initial data, fetch popular items
-    if (initialCountries.length === 0 && initialBeats.length === 0 && 
-        initialOutlets.length === 0 && initialRegions.length === 0 && 
-        initialLanguages.length === 0) {
-      const fetchPopularItems = async () => {
-        try {
-          // Fetch popular countries
-          setCountriesLoading(true);
-          const countriesRes = await fetch("/api/filters/countries?limit=5");
-          if (countriesRes.ok) {
-            const data = await countriesRes.json();
-            setCountries(data.items || []);
-          }
-          setCountriesLoading(false);
+  const countries = useMemo(() => lookupValues(countryLookup), [countryLookup]);
+  const beats = useMemo(() => lookupValues(beatLookup), [beatLookup]);
+  const outlets = useMemo(() => lookupValues(outletLookup), [outletLookup]);
+  const regions = useMemo(() => lookupValues(regionLookup), [regionLookup]);
+  const languages = useMemo(() => lookupValues(languageLookup), [languageLookup]);
 
-          // Fetch popular beats
-          setBeatsLoading(true);
-          const beatsRes = await fetch("/api/filters/beats?limit=5");
-          if (beatsRes.ok) {
-            const data = await beatsRes.json();
-            setBeats(data.items || []);
-          }
-          setBeatsLoading(false);
+  const handleCountryItemsResolved = useCallback((items: FilterItem[]) => {
+    setCountryLookup((current) => mergeLookup(current, items, 'id'));
+  }, []);
 
-          // Fetch popular outlets
-          setOutletsLoading(true);
-          const outletsRes = await fetch("/api/filters/outlets?limit=5");
-          if (outletsRes.ok) {
-            const data = await outletsRes.json();
-            setOutlets(data.items || []);
-          }
-          setOutletsLoading(false);
+  const handleBeatItemsResolved = useCallback((items: FilterItem[]) => {
+    setBeatLookup((current) => mergeLookup(current, items, 'id'));
+  }, []);
 
-          // Fetch popular regions
-          setRegionsLoading(true);
-          const regionsRes = await fetch("/api/filters/regions?limit=5");
-          if (regionsRes.ok) {
-            const data = await regionsRes.json();
-            setRegions(data.items || []);
-          }
-          setRegionsLoading(false);
+  const handleOutletItemsResolved = useCallback((items: FilterItem[]) => {
+    setOutletLookup((current) => mergeLookup(current, items, 'id'));
+  }, []);
 
-          // Fetch popular languages
-          setLanguagesLoading(true);
-          const languagesRes = await fetch("/api/filters/languages?limit=5");
-          if (languagesRes.ok) {
-            const data = await languagesRes.json();
-            setLanguages(data.items || []);
-          }
-          setLanguagesLoading(false);
-        } catch (error) {
-          console.error("Failed to fetch popular items:", error);
-          setCountriesLoading(false);
-          setBeatsLoading(false);
-          setOutletsLoading(false);
-          setRegionsLoading(false);
-          setLanguagesLoading(false);
-        }
-      };
+  const handleRegionItemsResolved = useCallback((items: FilterItem[]) => {
+    setRegionLookup((current) => mergeLookup(current, items, 'code'));
+  }, []);
 
-      fetchPopularItems();
-    }
-  }, [initialCountries.length, initialBeats.length, initialOutlets.length, initialRegions.length, initialLanguages.length]);
+  const handleLanguageItemsResolved = useCallback((items: FilterItem[]) => {
+    setLanguageLookup((current) => mergeLookup(current, items, 'code'));
+  }, []);
 
   // Calculate active filters count
   const activeFiltersCount = 
@@ -204,21 +210,11 @@ export function ApiMediaContactsFilters({
             outlets={outlets}
             regions={regions}
             languages={languages}
-            countriesLoading={countriesLoading}
-            beatsLoading={beatsLoading}
-            outletsLoading={outletsLoading}
-            regionsLoading={regionsLoading}
-            languagesLoading={languagesLoading}
-            countrySearch={countrySearch}
-            setCountrySearch={setCountrySearch}
-            beatSearch={beatSearch}
-            setBeatSearch={setBeatSearch}
-            outletSearch={outletSearch}
-            setOutletSearch={setOutletSearch}
-            regionSearch={regionSearch}
-            setRegionSearch={setRegionSearch}
-            languageSearch={languageSearch}
-            setLanguageSearch={setLanguageSearch}
+            onCountryItemsResolved={handleCountryItemsResolved}
+            onBeatItemsResolved={handleBeatItemsResolved}
+            onOutletItemsResolved={handleOutletItemsResolved}
+            onRegionItemsResolved={handleRegionItemsResolved}
+            onLanguageItemsResolved={handleLanguageItemsResolved}
           />
           
           <ApiActiveFiltersDisplay

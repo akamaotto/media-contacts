@@ -11,15 +11,8 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
-  // Transpile packages for better compatibility (excluding Prisma)
-  transpilePackages: [],
   // External packages configuration for Prisma
   serverExternalPackages: ['@prisma/client', 'prisma'],
-  // Experimental features to fix client reference manifest issues
-  experimental: {
-    // Fix for missing client reference manifest
-    optimizePackageImports: [],
-  },
   // Disable image optimization to avoid issues
   images: {
     unoptimized: true,
@@ -33,14 +26,6 @@ const nextConfig: NextConfig = {
         net: false,
         tls: false,
       };
-    }
-
-    // Fix for Prisma query engine in Vercel
-    if (isServer) {
-      config.externals = config.externals || [];
-      config.externals.push({
-        '@prisma/client': '@prisma/client',
-      });
     }
 
     return config;

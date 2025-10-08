@@ -102,23 +102,36 @@ model languages {
 }
 
 model media_contacts {
-  id                    String      @id
+  id                    String                    @id
   name                  String
   title                 String
   bio                   String?
-  email                 String      @unique
-  email_verified_status Boolean     @default(false)
+  email                 String                    @unique
+  email_verified_status Boolean                   @default(false)
   socials               String[]
-  created_at            DateTime    @default(now())
+  created_at            DateTime                  @default(now())
   updated_at            DateTime
   authorLinks           String[]
-  beats                 beats[]     @relation("MediaContactBeats")
-  countries             countries[] @relation("MediaContactCountries")
-  outlets               outlets[]   @relation("MediaContactOutlets")
+  beats                 beats[]                   @relation("MediaContactBeats")
+  countries             countries[]               @relation("MediaContactCountries")
+  outlets               outlets[]                 @relation("MediaContactOutlets")
+  discovery_source      DiscoverySource           @default(MANUAL)
+  discovery_method      String?
+  ai_confidence_score   Int?
+  discovered_at         DateTime?
+  ai_search_id          String?
+  discovery_metadata    Json?
+  ai_search             ai_searches?              @relation(fields: [ai_search_id], references: [id], onDelete: SetNull)
+  ai_contact_duplicates_original ai_contact_duplicates[] @relation("OriginalContact")
+  ai_contact_duplicates_duplicate ai_contact_duplicates[] @relation("DuplicateContact")
 
   @@index([email_verified_status])
   @@index([name])
   @@index([updated_at])
+  @@index([discovery_source])
+  @@index([ai_confidence_score])
+  @@index([discovered_at])
+  @@index([ai_search_id])
 }
 
 model outlets {
@@ -180,6 +193,7 @@ model users {
   accounts       accounts[]
   activity_logs  activity_logs[]
   sessions       sessions[]
+  ai_searches    ai_searches[]
 }
 
 model verification_tokens {
@@ -188,6 +202,145 @@ model verification_tokens {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model ai_searches {
+  id                  String         @id @default(cuid())
+  userId              String
+  status              SearchStatus   @default(PENDING)
+  configuration       Json
+  contacts_found      Int            @default(0)
+  contacts_imported   Int            @default(0)
+  duration_seconds    Int?
+  started_at          DateTime?
+  completed_at        DateTime?
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+  users               users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ai_search_sources   ai_search_sources[]
+  ai_performance_logs ai_performance_logs[]
+  media_contacts      media_contacts[]
+  ai_search_cache     ai_search_cache?
+
+  @@unique([userId, status])
+  @@index([status])
+  @@index([created_at])
+  @@index([userId])
+  @@index([started_at])
+  @@index([completed_at])
+}
+
+model ai_search_sources {
+  id                String    @id @default(cuid())
+  searchId          String
+  sourceUrl         String
+  sourceType        String
+  domain            String?
+  title             String?
+  confidenceScore   Decimal   @db.Decimal(3, 2)
+  contactCount      Int       @default(0)
+  processingTimeMs  Int?
+  created_at        DateTime  @default(now())
+  ai_searches       ai_searches @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  @@index([searchId])
+  @@index([sourceType])
+  @@index([domain])
+  @@index([confidenceScore])
+  @@index([created_at])
+}
+
+model ai_performance_logs {
+  id            String    @id @default(cuid())
+  searchId      String
+  operation     String
+  startTime     DateTime
+  endTime       DateTime?
+  durationMs    Int?
+  status        String
+  metadata      Json?
+  created_at    DateTime  @default(now())
+  ai_searches   ai_searches @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  @@index([searchId])
+  @@index([operation])
+  @@index([status])
+  @@index([startTime])
+  @@index([durationMs])
+}
+
+model ai_search_cache {
+  id                 String    @id @default(cuid())
+  queryHash          String    @unique
+  searchConfiguration Json
+  results            Json
+  contactCount       Int       @default(0)
+  averageConfidence  Decimal?  @db.Decimal(3, 2)
+  expiresAt          DateTime
+  accessCount        Int       @default(0)
+  lastAccessedAt     DateTime  @default(now())
+  created_at         DateTime  @default(now())
+  searchId           String?   @unique
+  ai_searches        ai_searches? @relation(fields: [searchId], references: [id], onDelete: SetNull)
+
+  @@index([queryHash])
+  @@index([expiresAt])
+  @@index([accessCount])
+  @@index([lastAccessedAt])
+  @@index([created_at])
+}
+
+model ai_contact_duplicates {
+  id                    String           @id @default(cuid())
+  originalContactId     String
+  duplicateContactId    String
+  similarityScore       Decimal          @db.Decimal(3, 2)
+  duplicateType         DuplicateType
+  verificationStatus    VerificationStatus @default(PENDING)
+  verifiedAt            DateTime?
+  verifiedBy            String?
+  created_at            DateTime         @default(now())
+  updated_at            DateTime         @updatedAt
+  originalContact       media_contacts   @relation("OriginalContact", fields: [originalContactId], references: [id], onDelete: Cascade)
+  duplicateContact      media_contacts   @relation("DuplicateContact", fields: [duplicateContactId], references: [id], onDelete: Cascade)
+
+  @@unique([originalContactId, duplicateContactId])
+  @@index([similarityScore])
+  @@index([duplicateType])
+  @@index([verificationStatus])
+  @@index([created_at])
+}
+
+enum DiscoverySource {
+  MANUAL
+  AI_SEARCH
+  CSV_IMPORT
+  API
+  OTHER
+}
+
+enum SearchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum DuplicateType {
+  EMAIL
+  NAME_OUTLET
+  NAME_TITLE
+  OUTLET_TITLE
+  SIMILAR_BIO
+  SOCIAL_MEDIA
+}
+
+enum VerificationStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  MANUAL_REVIEW
 }
 
 enum Role {

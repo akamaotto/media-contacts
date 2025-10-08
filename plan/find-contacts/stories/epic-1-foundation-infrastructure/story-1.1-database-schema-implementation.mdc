@@ -1,0 +1,296 @@
+# Story 1.1: Database Schema Implementation
+**Epic**: Epic 1: Foundation & Infrastructure
+**Estimated Time**: 2 days
+**Priority**: Critical
+**Status**: Pending
+**Assignee**: Backend Developer
+
+## Objective
+Implement the complete database schema required for the AI-powered contact discovery feature, including new tables, indexes, constraints, and security policies.
+
+## Acceptance Criteria
+- [ ] All database migrations run successfully without errors
+- [ ] Foreign key constraints are properly enforced
+- [ ] Indexes improve query performance by >50% on test data
+- [ ] Row Level Security policies prevent unauthorized access to user data
+- [ ] Database functions work as expected in unit tests
+- [ ] Migration scripts are idempotent and reversible
+- [ ] Database schema passes security audit
+- [ ] Performance tests meet specified benchmarks
+
+## Technical Requirements
+
+### Tables to Create
+1. **ai_searches** - Main search tracking table
+   - UUID primary key with default generation
+   - User ID foreign key with cascade delete
+   - Search configuration stored as JSONB
+   - Status tracking (pending, processing, completed, failed, cancelled)
+   - Performance metrics (contacts found, imported, duration)
+   - Timestamp tracking for lifecycle management
+   - Unique constraint on user_id + status
+
+2. **ai_search_sources** - Source tracking for searches
+   - UUID primary key with default generation
+   - Search ID foreign key with cascade delete
+   - Source URL, type, domain, and title
+   - Confidence score (0.0 to 1.0) for quality assessment
+   - Contact extraction count and processing time
+   - Source type validation (media_outlet, linkedin, twitter, etc.)
+
+3. **ai_performance_logs** - Performance monitoring
+   - UUID primary key with default generation
+   - Search ID foreign key with cascade delete
+   - Operation, start time, end time, duration
+   - Success/failure status tracking
+   - Metadata storage for detailed information
+
+4. **ai_search_cache** - Result caching
+   - UUID primary key with default generation
+   - Query hash for cache keying
+   - Search configuration and results storage
+   - Contact count and average confidence
+   - Expiration timestamp for cache invalidation
+   - Access count and last accessed tracking
+
+5. **ai_contact_duplicates** - Duplicate detection
+   - UUID primary key with default generation
+   - Original and duplicate contact ID foreign keys
+   - Similarity score for matching confidence
+   - Duplicate type categorization (email, name_outlet, etc.)
+   - Verification status and tracking
+   - Unique constraint to prevent duplicate pairs
+
+### Database Extensions
+6. **Modified media_contacts table**
+   - `discovery_source` column (manual, ai_search, csv_import, api, other)
+   - `discovery_method` column (ai_openai, ai_anthropic, ai_exa, etc.)
+   - `ai_confidence_score` column (0-100 integer)
+   - `discovered_at` timestamp
+   - `ai_search_id` foreign key
+   - `discovery_metadata` JSONB column
+
+### Key Features
+- UUID primary keys for all tables
+- Foreign key relationships with proper cascading
+- JSONB fields for flexible configuration storage
+- Timestamp tracking for all records
+- Row Level Security (RLS) policies for data isolation
+- Comprehensive indexing strategy for performance
+
+### Database Functions
+- `update_search_statistics()` - Auto-update search statistics on changes
+- `cleanup_expired_cache()` - Automated cache cleanup function
+- `get_search_performance_metrics()` - Performance reporting function
+- `check_budget_alerts()` - Budget monitoring and alerting
+- `record_search_event()` - Event logging for audit trails
+
+### Views and Analytics
+- `ai_search_metrics` view - Pre-aggregated search performance data
+- Daily/weekly/monthly search statistics
+- User-specific search history and patterns
+- Cost tracking and budget monitoring
+
+## Dependencies
+- None (this is a foundation story)
+
+## Definition of Done
+- All database changes are reviewed and approved
+- Migration scripts are tested in staging environment
+- Database documentation is updated
+- Rollback plan is documented and tested
+- Performance benchmarks are established
+- Security audit is completed
+- All RLS policies are implemented and tested
+
+## Testing Requirements
+
+### Unit Tests
+```typescript
+// src/lib/database/__tests__/migrations.test.ts
+describe('Database Migrations', () => {
+  describe('ai_searches table', () => {
+    it('should create table with correct structure', async () => {
+      // Verify table exists with all columns
+      // Check data types and constraints
+      // Validate default values
+    });
+    
+    it('should enforce foreign key constraints', async () => {
+      // Test relationship enforcement
+      // Verify cascade delete behavior
+    });
+    
+    it('should enforce check constraints', async () => {
+      // Test duration check constraint
+      // Test contact count constraints
+    });
+  });
+  
+  describe('ai_search_sources table', () => {
+    it('should enforce source type validation', async () => {
+      // Test allowed source types
+      // Reject invalid source types
+    });
+  });
+  
+  describe('Row Level Security', () => {
+    it('should prevent cross-user data access', async () => {
+      // Test user1 cannot access user2's data
+      // Test role-based access control
+    });
+  });
+});
+```
+
+### Integration Tests
+```typescript
+// src/lib/api/__tests__/ai-search-integration.test.ts
+describe('AI Search Database Integration', () => {
+  it('should create and retrieve search records', async () => {
+    // Test full search workflow
+    // Verify data persistence
+  });
+  
+  it('should handle search progress updates', async () => {
+    // Test status transitions
+    // Verify timestamp tracking
+  });
+  
+  it('should enforce rate limits at database level', async () => {
+    // Test concurrent search handling
+    // Verify rate limit enforcement
+  });
+});
+```
+
+### Performance Tests
+```typescript
+// src/lib/database/__tests__/performance.test.ts
+describe('Database Performance', () => {
+  it('should handle 1000+ search records efficiently', async () => {
+    // Insert test data
+    // Measure query performance
+    // Verify index effectiveness
+  });
+  
+  it('should support complex JSONB queries', async () => {
+    // Test search configuration queries
+    // Verify JSONB indexing performance
+  });
+  
+  it('should maintain performance with concurrent access', async () => {
+    // Test concurrent read/write operations
+    // Verify transaction isolation
+  });
+});
+```
+
+## Implementation Notes
+
+### Migration Strategy
+- Use the provided migration script in `database-migrations.sql`
+- Run migrations in order to respect dependencies
+- Test each migration individually before combining
+- Include rollback scripts for each migration
+
+### Best Practices
+- Follow existing database naming conventions
+- Use UUID for all primary keys
+- Implement proper foreign key relationships
+- Add indexes for frequently queried columns
+- Use JSONB for flexible data storage
+- Implement audit trails for all operations
+- Consider future schema evolution needs
+
+### Security Considerations
+- Implement Row Level Security (RLS) for all tables
+- Use parameterized queries to prevent SQL injection
+- Validate all input data at the application level
+- Implement proper data encryption for sensitive fields
+- Set up database connection pooling
+- Use read replicas for reporting queries when needed
+
+### Performance Optimization
+- Create composite indexes for common query patterns
+- Use partial indexes for large tables
+- Implement query result caching where appropriate
+- Optimize JSONB queries with proper indexing
+- Monitor and tune slow queries
+- Consider table partitioning for large datasets
+
+### Development Guidelines
+- Write migration scripts that are idempotent
+- Include rollback procedures for all changes
+- Test migrations with both empty and populated databases
+- Document all schema changes and their rationale
+- Include performance benchmarks in documentation
+- Set up monitoring for database performance metrics
+
+## Related Documentation
+- [Database Migrations](../database-migrations.sql)
+- [Technical Specification](../technical-spec.md#database-design)
+- [API Contracts](../api-contracts.md#database-schema)
+- [Testing Strategy](../testing-strategy.md#database-testing)
+- [Deployment & Monitoring](../deployment-monitoring.md#database-deployment)
+
+## Rollback Plan
+### Migration Rollback
+```sql
+-- Rollback order: dependencies last to first
+DROP TABLE IF EXISTS ai_contact_duplicates;
+DROP TABLE IF EXISTS ai_search_cache;
+DROP TABLE IF EXISTS ai_performance_logs;
+DROP TABLE IF EXISTS ai_search_sources;
+DROP TABLE IF EXISTS ai_searches;
+
+-- Remove AI-related columns from media_contacts
+ALTER TABLE media_contacts 
+DROP COLUMN IF EXISTS discovery_source,
+DROP COLUMN IF EXISTS discovery_method,
+DROP COLUMN IF EXISTS ai_confidence_score,
+DROP COLUMN IF EXISTS discovered_at,
+DROP COLUMN IF EXISTS ai_search_id,
+DROP COLUMN IF EXISTS discovery_metadata;
+```
+
+### Emergency Procedures
+1. **Database Backup**: Full backup before migration
+2. **Staging Testing**: Test migrations in staging first
+3. **Rollback Ready**: Have rollback scripts prepared
+4. **Monitoring**: Monitor for issues during deployment
+5. **Communication**: Notify team of any issues
+
+## Success Metrics
+- Migration success rate: 100%
+- Database query performance: <100ms for common operations
+- Data integrity: 0 data corruption incidents
+- Security compliance: All security tests pass
+- Rollback success: 100% rollback capability when needed
+
+---
+
+## Development Notes
+
+### Prerequisites
+- PostgreSQL 13+ with JSONB support
+- Database superuser permissions for migration execution
+- Existing users table structure for foreign key relationships
+- Access to staging environment for testing
+
+### Environment Variables Required
+- `DATABASE_URL`: PostgreSQL connection string
+- `POSTGRES_USER`: Database user for migrations
+- `POSTGRES_PASSWORD`: Database password for migrations
+
+### Testing Environment Setup
+- Test database with same structure as production
+- Mock data generation for testing scenarios
+- Performance testing tools for benchmarking
+- Security scanning tools for validation
+
+### Deployment Considerations
+- Schedule migrations during low-traffic periods
+- Implement blue-green deployment for database changes
+- Have monitoring alerts for database performance
+- Document all procedures for future reference

@@ -1,0 +1,1589 @@
+# Deployment & Monitoring Plan - Find Contacts with AI
+
+## Overview
+This document outlines the comprehensive deployment strategy and monitoring plan for the Find Contacts with AI feature, ensuring reliable delivery, operational excellence, and continuous improvement.
+
+## Deployment Architecture
+
+### Infrastructure Overview
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        CDN (Vercel Edge)                      │
+├─────────────────────────────────────────────────────────────┤
+│                    Load Balancer (AWS ALB)                   │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │   Web App   │  │   API App   │  │ Background  │         │
+│  │  (Next.js)  │  │  (Next.js)  │  │  Workers    │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │  PostgreSQL │  │    Redis    │  │  File Storage│         │
+│  │   (Neon)    │  │   (Upstash) │  │   (Vercel)   │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+├─────────────────────────────────────────────────────────────┤
+│                      External Services                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │   OpenAI    │  │  Anthropic  │  │    Exa      │         │
+│  │    API      │  │    API      │  │   Search    │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Environment Strategy
+
+#### Development Environment
+```yaml
+# Environment: development
+Purpose: Local development and testing
+Infrastructure: Local Docker containers
+Database: Local PostgreSQL with test data
+External APIs: Mock services with real API keys (limited usage)
+Monitoring: Local development tools
+Deployment: Local development server
+
+Features:
+- Hot reload for rapid development
+- Mock AI services for cost control
+- Debug logging enabled
+- Test data seeding
+- Performance profiling tools
+```
+
+#### Staging Environment
+```yaml
+# Environment: staging
+Purpose: Pre-production testing and validation
+Infrastructure: Production-like infrastructure (smaller scale)
+Database: Staging PostgreSQL with sanitized production data
+External APIs: Real APIs with usage limits and monitoring
+Monitoring: Full production monitoring stack
+Deployment: Automated CI/CD pipeline
+
+Features:
+- Production-like configuration
+- Real external API integrations
+- Full monitoring and alerting
+- Performance testing
+- Security testing
+- User acceptance testing
+```
+
+#### Production Environment
+```yaml
+# Environment: production
+Purpose: Live production system
+Infrastructure: Scalable production infrastructure
+Database: Production PostgreSQL with high availability
+External APIs: Real APIs with comprehensive monitoring
+Monitoring: Comprehensive observability stack
+Deployment: Blue-green deployment with rollback capability
+
+Features:
+- High availability and scalability
+- Comprehensive monitoring and alerting
+- Security hardening
+- Performance optimization
+- Disaster recovery
+- Cost optimization
+```
+
+## Deployment Strategy
+
+### Continuous Integration/Continuous Deployment (CI/CD)
+
+#### GitHub Actions Workflow
+```yaml
+# .github/workflows/deploy-ai-feature.yml
+name: Deploy AI Feature
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/features/ai/**'
+      - 'src/lib/ai/**'
+      - 'src/app/api/ai/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/features/ai/**'
+      - 'src/lib/ai/**'
+      - 'src/app/api/ai/**'
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run type checking
+        run: npm run type-check
+        
+      - name: Run linting
+        run: npm run lint:check
+        
+      - name: Run unit tests
+        run: npm run test:unit -- --coverage --ci
+        
+      - name: Run integration tests
+        run: npm run test:integration
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        
+      - name: Security audit
+        run: npm audit --audit-level high
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_ENVIRONMENT: production
+          AI_SERVICE_API_KEYS: ${{ secrets.AI_SERVICE_API_KEYS }}
+          
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment"
+          # Vercel deployment command
+          vercel --token ${{ secrets.VERCEL_TOKEN }} --prod ${{ github.sha }}
+          
+      - name: Run smoke tests
+        run: npm run test:smoke:staging
+        
+      - name: Run performance tests
+        run: npm run test:performance:staging
+        
+      - name: Run accessibility tests
+        run: npm run test:a11y:staging
+
+  deploy-production:
+    needs: [build, deploy-staging]
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment"
+          # Vercel production deployment
+          vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --prebuilt ${{ github.sha }}
+          
+      - name: Run production smoke tests
+        run: npm run test:smoke:production
+        
+      - name: Update monitoring dashboards
+        run: |
+          curl -X POST "${{ secrets.MONITORING_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"event": "deployment", "version": "${{ github.sha }}", "environment": "production"}'
+            
+      - name: Notify team of deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+```
+
+### Blue-Green Deployment Strategy
+
+#### Deployment Phases
+```typescript
+// scripts/deployment/blue-green-deploy.ts
+interface DeploymentConfig {
+  version: string;
+  environment: 'staging' | 'production';
+  rolloutPercentage: number;
+  healthCheckEndpoints: string[];
+  rollbackThresholds: {
+    errorRate: number;
+    responseTime: number;
+    availability: number;
+  };
+}
+
+class BlueGreenDeployment {
+  async executeDeployment(config: DeploymentConfig): Promise<void> {
+    // Phase 1: Deploy to green environment
+    await this.deployToGreen(config);
+    
+    // Phase 2: Health checks
+    await this.runHealthChecks(config.healthCheckEndpoints);
+    
+    // Phase 3: Gradual traffic shift
+    await this.gradualTrafficShift(config);
+    
+    // Phase 4: Full cutover
+    await this.fullCutover();
+    
+    // Phase 5: Cleanup blue environment
+    await this.cleanupBlueEnvironment();
+  }
+  
+  private async deployToGreen(config: DeploymentConfig): Promise<void> {
+    console.log(`Deploying version ${config.version} to green environment`);
+    
+    // Deploy new version to green environment
+    await this.deployService(config.version, 'green');
+    
+    // Wait for deployment to complete
+    await this.waitForDeployment('green');
+  }
+  
+  private async runHealthChecks(endpoints: string[]): Promise<void> {
+    console.log('Running health checks...');
+    
+    for (const endpoint of endpoints) {
+      const response = await fetch(endpoint, { method: 'GET' });
+      
+      if (!response.ok) {
+        throw new Error(`Health check failed for ${endpoint}: ${response.status}`);
+      }
+    }
+    
+    console.log('All health checks passed');
+  }
+  
+  private async gradualTrafficShift(config: DeploymentConfig): Promise<void> {
+    const percentages = [5, 10, 25, 50, 75, 100];
+    
+    for (const percentage of percentages) {
+      console.log(`Shifting ${percentage}% traffic to green environment`);
+      
+      await this.updateTrafficSplit(percentage, 'green');
+      await this.monitorDeployment(config, percentage);
+      
+      // Wait and monitor
+      await this.sleep(5 * 60 * 1000); // 5 minutes
+    }
+  }
+  
+  private async monitorDeployment(config: DeploymentConfig, trafficPercentage: number): Promise<void> {
+    const metrics = await this.getMetrics();
+    
+    if (metrics.errorRate > config.rollbackThresholds.errorRate) {
+      throw new Error(`Error rate ${metrics.errorRate}% exceeds threshold ${config.rollbackThresholds.errorRate}%`);
+    }
+    
+    if (metrics.averageResponseTime > config.rollbackThresholds.responseTime) {
+      throw new Error(`Response time ${metrics.averageResponseTime}ms exceeds threshold ${config.rollbackThresholds.responseTime}ms`);
+    }
+    
+    if (metrics.availability < config.rollbackThresholds.availability) {
+      throw new Error(`Availability ${metrics.availability}% below threshold ${config.rollbackThresholds.availability}%`);
+    }
+  }
+}
+```
+
+## Monitoring Strategy
+
+### Observability Stack
+
+#### Metrics Collection
+```typescript
+// src/lib/monitoring/metrics-collector.ts
+import { register, Counter, Histogram, Gauge } from 'prom-client';
+
+class AIMetricsCollector {
+  private searchCounter: Counter<string>;
+  private searchDuration: Histogram<string>;
+  private contactsDiscovered: Counter<string>;
+  private confidenceDistribution: Histogram<string>;
+  private apiErrorCounter: Counter<string>;
+  private cacheHitRate: Gauge<string>;
+  private concurrentSearches: Gauge<string>;
+  private externalAPICalls: Counter<string>;
+  private externalAPICosts: Counter<string>;
+
+  constructor() {
+    this.searchCounter = new Counter({
+      name: 'ai_searches_total',
+      help: 'Total number of AI searches initiated',
+      labelNames: ['status', 'user_id', 'countries_count', 'categories_count']
+    });
+
+    this.searchDuration = new Histogram({
+      name: 'ai_search_duration_seconds',
+      help: 'Duration of AI searches in seconds',
+      labelNames: ['status', 'contacts_found'],
+      buckets: [5, 10, 15, 30, 45, 60, 120, 300]
+    });
+
+    this.contactsDiscovered = new Counter({
+      name: 'ai_contacts_discovered_total',
+      help: 'Total number of contacts discovered by AI search',
+      labelNames: ['confidence_range', 'verification_status']
+    });
+
+    this.confidenceDistribution = new Histogram({
+      name: 'ai_contact_confidence_score',
+      help: 'Distribution of confidence scores for discovered contacts',
+      labelNames: ['source_type'],
+      buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    });
+
+    this.apiErrorCounter = new Counter({
+      name: 'ai_api_errors_total',
+      help: 'Total number of API errors',
+      labelNames: ['api_service', 'error_type', 'http_status']
+    });
+
+    this.cacheHitRate = new Gauge({
+      name: 'ai_cache_hit_rate',
+      help: 'Cache hit rate for AI search results',
+      labelNames: ['cache_type']
+    });
+
+    this.concurrentSearches = new Gauge({
+      name: 'ai_concurrent_searches',
+      help: 'Number of currently active searches'
+    });
+
+    this.externalAPICalls = new Counter({
+      name: 'ai_external_api_calls_total',
+      help: 'Total number of external API calls',
+      labelNames: ['api_service', 'endpoint', 'status']
+    });
+
+    this.externalAPICosts = new Counter({
+      name: 'ai_external_api_costs_total',
+      help: 'Total cost of external API calls in USD',
+      labelNames: ['api_service']
+    });
+
+    // Register all metrics
+    register.registerMetric(this.searchCounter);
+    register.registerMetric(this.searchDuration);
+    register.registerMetric(this.contactsDiscovered);
+    register.registerMetric(this.confidenceDistribution);
+    register.registerMetric(this.apiErrorCounter);
+    register.registerMetric(this.cacheHitRate);
+    register.registerMetric(this.concurrentSearches);
+    register.registerMetric(this.externalAPICalls);
+    register.registerMetric(this.externalAPICosts);
+  }
+
+  recordSearchInitiated(userId: string, countriesCount: number, categoriesCount: number): void {
+    this.searchCounter.inc({
+      status: 'initiated',
+      user_id: userId,
+      countries_count: countriesCount.toString(),
+      categories_count: categoriesCount.toString()
+    });
+  }
+
+  recordSearchCompleted(duration: number, contactsFound: number, status: string): void {
+    this.searchDuration.observe(duration, {
+      status,
+      contacts_found: contactsFound.toString()
+    });
+
+    this.searchCounter.inc({
+      status,
+      user_id: 'unknown', // Not tracked in completion
+      countries_count: '0',
+      categories_count: '0'
+    });
+  }
+
+  recordContactDiscovered(confidence: number, verificationStatus: string): void {
+    this.contactsDiscovered.inc({
+      confidence_range: this.getConfidenceRange(confidence),
+      verification_status
+    });
+
+    this.confidenceDistribution.observe(confidence, {
+      source_type: 'ai_search'
+    });
+  }
+
+  recordAPIError(apiService: string, errorType: string, httpStatus: number): void {
+    this.apiErrorCounter.inc({
+      api_service: apiService,
+      error_type: errorType,
+      http_status: httpStatus.toString()
+    });
+  }
+
+  recordCacheHitRate(cacheType: string, hitRate: number): void {
+    this.cacheHitRate.set({ cache_type: cacheType }, hitRate);
+  }
+
+  incrementConcurrentSearches(): void {
+    this.concurrentSearches.inc();
+  }
+
+  decrementConcurrentSearches(): void {
+    this.concurrentSearches.dec();
+  }
+
+  recordExternalAPICall(apiService: string, endpoint: string, status: string, cost?: number): void {
+    this.externalAPICalls.inc({
+      api_service,
+      endpoint,
+      status
+    });
+
+    if (cost) {
+      this.externalAPICosts.inc({
+        api_service
+      }, cost);
+    }
+  }
+
+  private getConfidenceRange(confidence: number): string {
+    if (confidence >= 0.8) return 'high';
+    if (confidence >= 0.6) return 'medium';
+    return 'low';
+  }
+}
+
+export const aiMetrics = new AIMetricsCollector();
+```
+
+#### Logging Strategy
+```typescript
+// src/lib/monitoring/structured-logger.ts
+import winston from 'winston';
+
+interface LogContext {
+  userId?: string;
+  searchId?: string;
+  requestId?: string;
+  operation?: string;
+  duration?: number;
+  error?: Error;
+  metadata?: Record<string, any>;
+}
+
+class StructuredLogger {
+  private logger: winston.Logger;
+
+  constructor() {
+    this.logger = winston.createLogger({
+      level: process.env.LOG_LEVEL || 'info',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.errors({ stack: true }),
+        winston.format.json(),
+        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+          return JSON.stringify({
+            timestamp,
+            level,
+            message,
+            ...meta,
+            service: 'media-contacts-ai'
+          });
+        })
+      ),
+      transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({
+          filename: 'logs/ai-feature.log',
+          maxsize: 10 * 1024 * 1024, // 10MB
+          maxFiles: 5
+        })
+      ]
+    });
+  }
+
+  info(message: string, context: LogContext = {}): void {
+    this.logger.info(message, context);
+  }
+
+  warn(message: string, context: LogContext = {}): void {
+    this.logger.warn(message, context);
+  }
+
+  error(message: string, error: Error, context: LogContext = {}): void {
+    this.logger.error(message, { ...context, error: error.message, stack: error.stack });
+  }
+
+  debug(message: string, context: LogContext = {}): void {
+    this.logger.debug(message, context);
+  }
+
+  // AI-specific logging methods
+  logSearchStart(searchId: string, userId: string, config: any): void {
+    this.info('AI search initiated', {
+      searchId,
+      userId,
+      operation: 'search_start',
+      metadata: {
+        countries: config.countries?.length || 0,
+        categories: config.categories?.length || 0,
+        maxResults: config.maxResults
+      }
+    });
+  }
+
+  logSearchComplete(searchId: string, results: any, duration: number): void {
+    this.info('AI search completed', {
+      searchId,
+      operation: 'search_complete',
+      duration,
+      metadata: {
+        contactsFound: results.contacts?.length || 0,
+        averageConfidence: this.calculateAverageConfidence(results.contacts),
+        sourcesProcessed: results.sources?.length || 0
+      }
+    });
+  }
+
+  logAPIError(apiService: string, endpoint: string, error: Error, context: LogContext = {}): void {
+    this.error(`External API error: ${apiService}`, error, {
+      operation: 'api_call',
+      metadata: {
+        apiService,
+        endpoint,
+        ...context.metadata
+      }
+    });
+  }
+
+  logCacheOperation(operation: 'hit' | 'miss' | 'set', key: string, context: LogContext = {}): void {
+    this.debug(`Cache ${operation}`, {
+      operation: 'cache_operation',
+      metadata: {
+        cacheOperation: operation,
+        cacheKey: key,
+        ...context.metadata
+      }
+    });
+  }
+
+  private calculateAverageConfidence(contacts: any[]): number {
+    if (!contacts || contacts.length === 0) return 0;
+    const sum = contacts.reduce((acc, contact) => acc + (contact.confidence || 0), 0);
+    return sum / contacts.length;
+  }
+}
+
+export const logger = new StructuredLogger();
+```
+
+#### Health Checks
+```typescript
+// src/app/api/health/ai/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { aiMetrics } from '@/lib/monitoring/metrics-collector';
+
+interface HealthCheck {
+  service: string;
+  status: 'healthy' | 'unhealthy' | 'degraded';
+  responseTime: number;
+  lastCheck: string;
+  details?: any;
+}
+
+export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  
+  try {
+    const healthChecks = await Promise.allSettled([
+      checkOpenAIHealth(),
+      checkAnthropicHealth(),
+      checkExaHealth(),
+      checkDatabaseHealth(),
+      checkRedisHealth(),
+      checkSearchServiceHealth()
+    ]);
+
+    const results: HealthCheck[] = healthChecks.map((result, index) => {
+      const services = ['OpenAI', 'Anthropic', 'Exa', 'Database', 'Redis', 'SearchService'];
+      
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        return {
+          service: services[index],
+          status: 'unhealthy',
+          responseTime: -1,
+          lastCheck: new Date().toISOString(),
+          details: { error: result.reason.message }
+        };
+      }
+    });
+
+    const overallStatus = results.every(check => check.status === 'healthy') 
+      ? 'healthy' 
+      : results.some(check => check.status === 'unhealthy')
+      ? 'unhealthy'
+      : 'degraded';
+
+    const responseTime = Date.now() - startTime;
+
+    const healthReport = {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      responseTime,
+      checks: results,
+      metrics: {
+        concurrentSearches: await getConcurrentSearches(),
+        averageSearchTime: await getAverageSearchTime(),
+        successRate: await getSuccessRate(),
+        errorRate: await getErrorRate()
+      }
+    };
+
+    const statusCode = overallStatus === 'healthy' ? 200 : 
+                      overallStatus === 'degraded' ? 200 : 503;
+
+    return NextResponse.json(healthReport, { 
+      status: statusCode,
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/json'
+      }
+    });
+
+  } catch (error) {
+    return NextResponse.json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 503 });
+  }
+}
+
+async function checkOpenAIHealth(): Promise<HealthCheck> {
+  const startTime = Date.now();
+  
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      signal: AbortSignal.timeout(5000)
+    });
+
+    const responseTime = Date.now() - startTime;
+
+    return {
+      service: 'OpenAI',
+      status: response.ok ? 'healthy' : 'unhealthy',
+      responseTime,
+      lastCheck: new Date().toISOString(),
+      details: {
+        status: response.status,
+        available: response.ok
+      }
+    };
+  } catch (error) {
+    return {
+      service: 'OpenAI',
+      status: 'unhealthy',
+      responseTime: Date.now() - startTime,
+      lastCheck: new Date().toISOString(),
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
+async function checkSearchServiceHealth(): Promise<HealthCheck> {
+  const startTime = Date.now();
+  
+  try {
+    // Check if search service is responsive
+    const result = await performQuickHealthCheck();
+    const responseTime = Date.now() - startTime;
+
+    return {
+      service: 'SearchService',
+      status: result ? 'healthy' : 'unhealthy',
+      responseTime,
+      lastCheck: new Date().toISOString(),
+      details: {
+        functional: result
+      }
+    };
+  } catch (error) {
+    return {
+      service: 'SearchService',
+      status: 'unhealthy',
+      responseTime: Date.now() - startTime,
+      lastCheck: new Date().toISOString(),
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
+async function getConcurrentSearches(): Promise<number> {
+  // Implementation to get current concurrent searches from metrics
+  return 0; // Placeholder
+}
+
+async function getAverageSearchTime(): Promise<number> {
+  // Implementation to calculate average search time from metrics
+  return 0; // Placeholder
+}
+
+async function getSuccessRate(): Promise<number> {
+  // Implementation to calculate success rate from metrics
+  return 0; // Placeholder
+}
+
+async function getErrorRate(): Promise<number> {
+  // Implementation to calculate error rate from metrics
+  return 0; // Placeholder
+}
+```
+
+## Alerting Strategy
+
+### Alert Configuration
+
+#### Critical Alerts
+```yaml
+# alerts/ai-feature-critical.yml
+groups:
+  - name: ai-feature-critical
+    interval: 30s
+    rules:
+      - alert: AIServiceDown
+        expr: up{job="ai-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-feature
+        annotations:
+          summary: "AI service is down"
+          description: "AI service has been down for more than 1 minute"
+          runbook_url: "https://docs.company.com/runbooks/ai-service-down"
+
+      - alert: HighErrorRate
+        expr: rate(ai_api_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          service: ai-feature
+        annotations:
+          summary: "High error rate in AI services"
+          description: "Error rate is {{ $value }} errors per second"
+          runbook_url: "https://docs.company.com/runbooks/high-error-rate"
+
+      - alert: SearchTimeout
+        expr: ai_search_duration_seconds{quantile="0.95"} > 60
+        for: 5m
+        labels:
+          severity: critical
+          service: ai-feature
+        annotations:
+          summary: "AI searches are taking too long"
+          description: "95th percentile search duration is {{ $value }} seconds"
+          runbook_url: "https://docs.company.com/runbooks/search-timeout"
+
+      - alert: ExternalAPIFailure
+        expr: rate(ai_external_api_calls_total{status="error"}[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          service: ai-feature
+        annotations:
+          summary: "External API failure detected"
+          description: "External API error rate is {{ $value }} per second"
+          runbook_url: "https://docs.company.com/runbooks/external-api-failure"
+
+      - alert: DatabaseConnectionFailure
+        expr: up{job="postgres"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: ai-feature
+        annotations:
+          summary: "Database connection failure"
+          description: "Cannot connect to PostgreSQL database"
+          runbook_url: "https://docs.company.com/runbooks/database-failure"
+```
+
+#### Warning Alerts
+```yaml
+# alerts/ai-feature-warning.yml
+groups:
+  - name: ai-feature-warning
+    interval: 60s
+    rules:
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 > 512
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-feature
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}MB"
+
+      - alert: HighCPUUsage
+        expr: rate(cpu_usage_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-feature
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}%"
+
+      - alert: LowCacheHitRate
+        expr: ai_cache_hit_rate < 0.3
+        for: 10m
+        labels:
+          severity: warning
+          service: ai-feature
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value }}"
+
+      - alert: ExternalAPICostSpike
+        expr: rate(ai_external_api_costs_total[1h]) > 10
+        for: 15m
+        labels:
+          severity: warning
+          service: ai-feature
+        annotations:
+          summary: "External API cost spike detected"
+          description: "Hourly cost is ${{ $value }}"
+```
+
+### Notification Channels
+
+#### Slack Integration
+```typescript
+// src/lib/monitoring/slack-notifier.ts
+interface SlackNotification {
+  channel: string;
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+  timestamp: string;
+  context?: any;
+}
+
+class SlackNotifier {
+  private webhookUrl: string;
+
+  constructor(webhookUrl: string) {
+    this.webhookUrl = webhookUrl;
+  }
+
+  async sendNotification(notification: SlackNotification): Promise<void> {
+    const payload = {
+      channel: notification.channel,
+      username: 'AI Feature Monitor',
+      icon_emoji: this.getEmoji(notification.severity),
+      attachments: [
+        {
+          color: this.getColor(notification.severity),
+          fields: [
+            {
+              title: notification.message,
+              value: this.formatContext(notification.context),
+              short: false
+            },
+            {
+              title: 'Time',
+              value: notification.timestamp,
+              short: true
+            },
+            {
+              title: 'Severity',
+              value: notification.severity.toUpperCase(),
+              short: true
+            }
+          ],
+          footer: 'Media Contacts AI Monitoring',
+          ts: Math.floor(new Date(notification.timestamp).getTime() / 1000)
+        }
+      ]
+    };
+
+    try {
+      const response = await fetch(this.webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Slack notification failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Failed to send Slack notification:', error);
+    }
+  }
+
+  private getEmoji(severity: string): string {
+    switch (severity) {
+      case 'critical': return ':rotating_light:';
+      case 'warning': return ':warning:';
+      case 'info': return ':information_source:';
+      default: return ':robot_face:';
+    }
+  }
+
+  private getColor(severity: string): string {
+    switch (severity) {
+      case 'critical': return 'danger';
+      case 'warning': return 'warning';
+      case 'info': return 'good';
+      default: return '#cccccc';
+    }
+  }
+
+  private formatContext(context?: any): string {
+    if (!context) return 'No additional context';
+    
+    return Object.entries(context)
+      .map(([key, value]) => `*${key}*: ${value}`)
+      .join('\n');
+  }
+}
+
+export const slackNotifier = new SlackNotifier(process.env.SLACK_WEBHOOK_URL!);
+```
+
+## Performance Monitoring
+
+### Application Performance Monitoring (APM)
+
+#### Custom APM Integration
+```typescript
+// src/lib/monitoring/apm.ts
+interface APMTransaction {
+  name: string;
+  type: string;
+  startTime: number;
+  duration?: number;
+  result?: string;
+  context?: any;
+}
+
+class APMManager {
+  private transactions: Map<string, APMTransaction> = new Map();
+  
+  startTransaction(name: string, type: string): string {
+    const transactionId = this.generateId();
+    
+    this.transactions.set(transactionId, {
+      name,
+      type,
+      startTime: Date.now()
+    });
+    
+    return transactionId;
+  }
+  
+  endTransaction(transactionId: string, result?: string, context?: any): void {
+    const transaction = this.transactions.get(transactionId);
+    if (!transaction) return;
+    
+    transaction.duration = Date.now() - transaction.startTime;
+    transaction.result = result;
+    transaction.context = context;
+    
+    // Record metrics
+    this.recordTransactionMetrics(transaction);
+    
+    // Clean up
+    this.transactions.delete(transactionId);
+  }
+  
+  recordCustomMetric(name: string, value: number, tags?: Record<string, string>): void {
+    // Send custom metric to APM system
+    console.log(`Custom metric: ${name} = ${value}`, tags);
+  }
+  
+  recordError(error: Error, context?: any): void {
+    // Send error to APM system
+    console.error('APM Error:', error, context);
+  }
+  
+  private recordTransactionMetrics(transaction: APMTransaction): void {
+    const metricName = `transaction_duration_${transaction.type}`;
+    const tags = {
+      name: transaction.name,
+      result: transaction.result || 'unknown'
+    };
+    
+    this.recordCustomMetric(metricName, transaction.duration!, tags);
+  }
+  
+  private generateId(): string {
+    return `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+}
+
+export const apm = new APMManager();
+```
+
+#### Performance Middleware
+```typescript
+// src/lib/middleware/performance-monitoring.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { apm } from '@/lib/monitoring/apm';
+
+export function performanceMiddleware(request: NextRequest) {
+  const startTime = Date.now();
+  const url = request.nextUrl.pathname;
+  
+  // Start APM transaction
+  const transactionId = apm.startTransaction(url, 'http_request');
+  
+  // Add performance headers
+  const response = NextResponse.next();
+  
+  response.headers.set('Server-Timing', `total;dur=${Date.now() - startTime}`);
+  
+  // End transaction when response is sent
+  response.headers.set('X-Transaction-ID', transactionId);
+  
+  return response;
+}
+
+// Example usage in API routes
+export async function GET(request: NextRequest) {
+  const transactionId = apm.startTransaction('ai_search_progress', 'api_request');
+  
+  try {
+    // Your API logic here
+    const result = await getSearchProgress(request);
+    
+    apm.endTransaction(transactionId, 'success', {
+      userId: result.userId,
+      searchId: result.searchId
+    });
+    
+    return NextResponse.json(result);
+  } catch (error) {
+    apm.recordError(error, { transactionId });
+    apm.endTransaction(transactionId, 'error');
+    
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Cost Management
+
+### External API Cost Monitoring
+```typescript
+// src/lib/monitoring/cost-tracker.ts
+interface CostTracker {
+  trackAPICall(service: string, endpoint: string, cost: number, metadata?: any): void;
+  getDailyCost(service?: string): Promise<number>;
+  getMonthlyCost(service?: string): Promise<number>;
+  setBudget(service: string, budget: number): void;
+  checkBudgetAlerts(): Promise<BudgetAlert[]>;
+}
+
+interface BudgetAlert {
+  service: string;
+  currentSpend: number;
+  budget: number;
+  percentageUsed: number;
+  alertLevel: 'warning' | 'critical';
+}
+
+class CostTrackerImpl implements CostTracker {
+  private dailyCosts: Map<string, number> = new Map();
+  private monthlyCosts: Map<string, number> = new Map();
+  private budgets: Map<string, number> = new Map();
+  
+  trackAPICall(service: string, endpoint: string, cost: number, metadata?: any): void {
+    const today = new Date().toISOString().split('T')[0];
+    const currentMonth = today.substring(0, 7); // YYYY-MM
+    
+    // Update daily costs
+    const dailyKey = `${service}:${today}`;
+    this.dailyCosts.set(dailyKey, (this.dailyCosts.get(dailyKey) || 0) + cost);
+    
+    // Update monthly costs
+    const monthlyKey = `${service}:${currentMonth}`;
+    this.monthlyCosts.set(monthlyKey, (this.monthlyCosts.get(monthlyKey) || 0) + cost);
+    
+    // Record cost metric
+    aiMetrics.recordExternalAPICall(service, endpoint, 'success', cost);
+    
+    // Check budget alerts
+    this.checkBudgetAlerts().then(alerts => {
+      alerts.forEach(alert => {
+        if (alert.alertLevel === 'critical') {
+          slackNotifier.sendNotification({
+            channel: '#alerts',
+            message: `Critical budget alert for ${service}`,
+            severity: 'critical',
+            timestamp: new Date().toISOString(),
+            context: alert
+          });
+        }
+      });
+    });
+  }
+  
+  async getDailyCost(service?: string): Promise<number> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (service) {
+      return this.dailyCosts.get(`${service}:${today}`) || 0;
+    }
+    
+    // Sum all services for today
+    let total = 0;
+    for (const [key, cost] of this.dailyCosts.entries()) {
+      if (key.endsWith(`:${today}`)) {
+        total += cost;
+      }
+    }
+    
+    return total;
+  }
+  
+  async getMonthlyCost(service?: string): Promise<number> {
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    
+    if (service) {
+      return this.monthlyCosts.get(`${service}:${currentMonth}`) || 0;
+    }
+    
+    // Sum all services for current month
+    let total = 0;
+    for (const [key, cost] of this.monthlyCosts.entries()) {
+      if (key.endsWith(`:${currentMonth}`)) {
+        total += cost;
+      }
+    }
+    
+    return total;
+  }
+  
+  setBudget(service: string, budget: number): void {
+    this.budgets.set(service, budget);
+  }
+  
+  async checkBudgetAlerts(): Promise<BudgetAlert[]> {
+    const alerts: BudgetAlert[] = [];
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    
+    for (const [service, budget] of this.budgets.entries()) {
+      const currentSpend = this.monthlyCosts.get(`${service}:${currentMonth}`) || 0;
+      const percentageUsed = (currentSpend / budget) * 100;
+      
+      let alertLevel: 'warning' | 'critical';
+      if (percentageUsed >= 90) {
+        alertLevel = 'critical';
+      } else if (percentageUsed >= 75) {
+        alertLevel = 'warning';
+      } else {
+        continue; // No alert needed
+      }
+      
+      alerts.push({
+        service,
+        currentSpend,
+        budget,
+        percentageUsed,
+        alertLevel
+      });
+    }
+    
+    return alerts;
+  }
+}
+
+export const costTracker = new CostTrackerImpl();
+
+// Set budget limits
+costTracker.setBudget('openai', 1000); // $1000 per month
+costTracker.setBudget('anthropic', 500); // $500 per month
+costTracker.setBudget('exa', 200); // $200 per month
+```
+
+## Disaster Recovery
+
+### Backup Strategy
+```typescript
+// scripts/backup/ai-data-backup.ts
+interface BackupConfig {
+  database: {
+    host: string;
+    database: string;
+    username: string;
+    password: string;
+  };
+  storage: {
+    type: 's3' | 'gcs' | 'azure';
+    bucket: string;
+    region: string;
+  };
+  retention: {
+    daily: number;
+    weekly: number;
+    monthly: number;
+  };
+}
+
+class AIDataBackup {
+  private config: BackupConfig;
+  
+  constructor(config: BackupConfig) {
+    this.config = config;
+  }
+  
+  async performBackup(): Promise<BackupResult> {
+    const backupId = this.generateBackupId();
+    const startTime = Date.now();
+    
+    try {
+      console.log(`Starting AI data backup: ${backupId}`);
+      
+      // Backup search results
+      const searchResultsBackup = await this.backupSearchResults(backupId);
+      
+      // Backup search configurations
+      const searchConfigsBackup = await this.backupSearchConfigs(backupId);
+      
+      // Backup performance metrics
+      const metricsBackup = await this.backupMetrics(backupId);
+      
+      // Backup cache data
+      const cacheBackup = await this.backupCache(backupId);
+      
+      const result: BackupResult = {
+        backupId,
+        timestamp: new Date().toISOString(),
+        duration: Date.now() - startTime,
+        status: 'success',
+        components: {
+          searchResults: searchResultsBackup,
+          searchConfigs: searchConfigsBackup,
+          metrics: metricsBackup,
+          cache: cacheBackup
+        }
+      };
+      
+      console.log(`Backup completed successfully: ${backupId}`);
+      return result;
+      
+    } catch (error) {
+      console.error(`Backup failed: ${backupId}`, error);
+      
+      return {
+        backupId,
+        timestamp: new Date().toISOString(),
+        duration: Date.now() - startTime,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+  
+  private async backupSearchResults(backupId: string): Promise<BackupComponent> {
+    const query = `
+      SELECT 
+        id,
+        user_id,
+        search_config,
+        status,
+        total_contacts_found,
+        contacts_imported,
+        search_duration_seconds,
+        created_at,
+        completed_at
+      FROM ai_searches
+      WHERE created_at >= NOW() - INTERVAL '7 days'
+    `;
+    
+    const results = await this.executeQuery(query);
+    
+    const filename = `ai-search-results-${backupId}.json`;
+    await this.uploadToStorage(filename, results);
+    
+    return {
+      filename,
+      recordCount: results.length,
+      sizeBytes: JSON.stringify(results).length
+    };
+  }
+  
+  private async backupSearchConfigs(backupId: string): Promise<BackupComponent> {
+    // Similar implementation for search configurations
+    // This would backup user search preferences and configurations
+    
+    return {
+      filename: `ai-search-configs-${backupId}.json`,
+      recordCount: 0,
+      sizeBytes: 0
+    };
+  }
+  
+  private async backupMetrics(backupId: string): Promise<BackupComponent> {
+    // Implementation to backup performance metrics
+    // This would include search performance, API usage, etc.
+    
+    return {
+      filename: `ai-metrics-${backupId}.json`,
+      recordCount: 0,
+      sizeBytes: 0
+    };
+  }
+  
+  private async backupCache(backupId: string): Promise<BackupComponent> {
+    // Implementation to backup Redis cache data
+    // This would include search result cache, user sessions, etc.
+    
+    return {
+      filename: `ai-cache-${backupId}.json`,
+      recordCount: 0,
+      sizeBytes: 0
+    };
+  }
+  
+  private async executeQuery(query: string): Promise<any[]> {
+    // Implementation to execute database query
+    // This would use the database connection to execute the backup query
+    
+    return [];
+  }
+  
+  private async uploadToStorage(filename: string, data: any): Promise<void> {
+    // Implementation to upload backup file to cloud storage
+    // This would use S3, GCS, or Azure Blob Storage
+    
+    console.log(`Uploading ${filename} to storage`);
+  }
+  
+  private generateBackupId(): string {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const random = Math.random().toString(36).substr(2, 9);
+    return `ai-backup-${timestamp}-${random}`;
+  }
+}
+
+interface BackupResult {
+  backupId: string;
+  timestamp: string;
+  duration: number;
+  status: 'success' | 'failed';
+  components?: {
+    searchResults: BackupComponent;
+    searchConfigs: BackupComponent;
+    metrics: BackupComponent;
+    cache: BackupComponent;
+  };
+  error?: string;
+}
+
+interface BackupComponent {
+  filename: string;
+  recordCount: number;
+  sizeBytes: number;
+}
+```
+
+## Security Monitoring
+
+### Security Event Monitoring
+```typescript
+// src/lib/monitoring/security-monitor.ts
+interface SecurityEvent {
+  type: 'authentication_failure' | 'authorization_failure' | 'suspicious_activity' | 'data_access';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  userId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  resource?: string;
+  details: any;
+  timestamp: string;
+}
+
+class SecurityMonitor {
+  private events: SecurityEvent[] = [];
+  private alertThresholds = {
+    authenticationFailures: 5, // per minute
+    suspiciousActivities: 3, // per minute
+    dataAccessViolations: 1 // any
+  };
+  
+  recordEvent(event: SecurityEvent): void {
+    this.events.push(event);
+    
+    // Check if alert should be triggered
+    this.checkAlerts(event);
+    
+    // Clean old events (keep last hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    this.events = this.events.filter(e => new Date(e.timestamp) > oneHourAgo);
+  }
+  
+  private checkAlerts(event: SecurityEvent): void {
+    const recentEvents = this.getRecentEvents(60); // Last minute
+    
+    switch (event.type) {
+      case 'authentication_failure':
+        const authFailures = recentEvents.filter(e => e.type === 'authentication_failure');
+        if (authFailures.length >= this.alertThresholds.authenticationFailures) {
+          this.triggerSecurityAlert('Multiple authentication failures', authFailures);
+        }
+        break;
+        
+      case 'suspicious_activity':
+        const suspiciousActivities = recentEvents.filter(e => e.type === 'suspicious_activity');
+        if (suspiciousActivities.length >= this.alertThresholds.suspiciousActivities) {
+          this.triggerSecurityAlert('Suspicious activity detected', suspiciousActivities);
+        }
+        break;
+        
+      case 'data_access':
+        if (event.severity === 'critical') {
+          this.triggerSecurityAlert('Critical data access violation', [event]);
+        }
+        break;
+    }
+  }
+  
+  private triggerSecurityAlert(message: string, events: SecurityEvent[]): void {
+    const alert = {
+      message,
+      severity: this.getHighestSeverity(events),
+      events: events.map(e => ({
+        type: e.type,
+        severity: e.severity,
+        userId: e.userId,
+        ipAddress: e.ipAddress,
+        timestamp: e.timestamp
+      })),
+      timestamp: new Date().toISOString()
+    };
+    
+    // Send to security team
+    slackNotifier.sendNotification({
+      channel: '#security-alerts',
+      message: `🚨 Security Alert: ${message}`,
+      severity: alert.severity,
+      timestamp: alert.timestamp,
+      context: alert
+    });
+    
+    // Log security event
+    logger.error('Security alert triggered', new Error(message), {
+      operation: 'security_monitoring',
+      metadata: alert
+    });
+  }
+  
+  private getRecentEvents(minutes: number): SecurityEvent[] {
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+    return this.events.filter(e => new Date(e.timestamp) > cutoff);
+  }
+  
+  private getHighestSeverity(events: SecurityEvent[]): string {
+    const severityLevels = { low: 1, medium: 2, high: 3, critical: 4 };
+    let highestLevel = 0;
+    let highestSeverity = 'low';
+    
+    for (const event of events) {
+      const level = severityLevels[event.severity];
+      if (level > highestLevel) {
+        highestLevel = level;
+        highestSeverity = event.severity;
+      }
+    }
+    
+    return highestSeverity;
+  }
+}
+
+export const securityMonitor = new SecurityMonitor();
+```
+
+## Deployment Checklist
+
+### Pre-Deployment Checklist
+- [ ] **Code Review**: All code reviewed and approved
+- [ ] **Testing**: Unit, integration, and E2E tests passing
+- [ ] **Security**: Security scan passed, no vulnerabilities
+- [ ] **Performance**: Performance benchmarks met
+- [ ] **Documentation**: Documentation updated and complete
+- [ ] **Configuration**: Environment variables configured
+- [ ] **Dependencies**: Dependencies audited and secure
+- [ ] **Database**: Database migrations tested
+- [ ] **Monitoring**: Monitoring and alerting configured
+- [ ] **Backup**: Backup procedures tested
+
+### Post-Deployment Checklist
+- [ ] **Health Check**: All services healthy and responding
+- [ ] **Smoke Tests**: Critical functionality working
+- [ ] **Performance**: Performance within acceptable ranges
+- [ ] **Error Rates**: Error rates below thresholds
+- [ ] **Monitoring**: Metrics collection working
+- [ ] **Alerts**: Alerting system functional
+- [ ] **User Testing**: User acceptance testing passed
+- [ ] **Rollback Plan**: Rollback procedures documented
+- [ ] **Team Communication**: Team notified of deployment
+- [ ] **Documentation**: Deployment documentation updated
+
+---
+
+This comprehensive deployment and monitoring plan ensures the Find Contacts with AI feature can be deployed safely, monitored effectively, and maintained reliably in production. The systematic approach to observability, alerting, and disaster recovery provides confidence in the feature's operational excellence and long-term sustainability.

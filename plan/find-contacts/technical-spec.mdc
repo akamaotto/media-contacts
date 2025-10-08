@@ -1,0 +1,1149 @@
+# Find Contacts with AI - Technical Specification
+
+## Table of Contents
+1. [Overview](#overview)
+2. [System Architecture](#system-architecture)
+3. [Database Design](#database-design)
+4. [API Specification](#api-specification)
+5. [Component Architecture](#component-architecture)
+6. [AI Integration](#ai-integration)
+7. [Security Considerations](#security-considerations)
+8. [Performance & Scaling](#performance--scaling)
+9. [Error Handling](#error-handling)
+10. [Monitoring & Observability](#monitoring--observability)
+
+## Overview
+
+This document provides the technical specification for the "Find Contacts with AI" feature, following spec-kit best practices. It defines the system architecture, data models, API contracts, and implementation details required for development.
+
+### System Boundaries
+- **In Scope**: AI-powered contact discovery, verification, and import functionality
+- **Out of Scope**: Email outreach automation, CRM integration, advanced analytics
+
+### Assumptions & Constraints
+- Users have valid authentication sessions
+- External AI APIs have rate limits and costs
+- Contact discovery is limited to publicly available information
+- System must handle 50 concurrent searches maximum
+
+### Success Criteria
+- Search completion time < 30 seconds (95th percentile)
+- Contact accuracy rate > 75% (confidence score > 0.7)
+- System availability > 99.5%
+- User task completion rate > 90%
+
+## System Architecture
+
+### High-Level Architecture
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Frontend (Next.js)                   │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │  Modal UI   │  │  Progress   │  │  Results    │         │
+│  │  Components │  │  Tracking   │  │  Display    │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Backend (Next.js API)                    │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │   Search    │  │   Stream    │  │   Import    │         │
+│  │  Service    │  │  Service    │  │  Service    │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      External Services                       │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │  OpenAI/    │  │    Exa      │  │  Firecrawl  │         │
+│  │ Anthropic   │  │   Search    │  │   Scraper   │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Database (PostgreSQL)                     │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │  Media      │  │  AI Search  │  │  Search     │         │
+│  │  Contacts   │  │   History   │  │  Sources    │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Component Interaction Flow
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Frontend UI
+    participant API as Next.js API
+    participant AI as AI Services
+    participant DB as Database
+    
+    User->>UI: Click "Find Contacts"
+    UI->>UI: Show search modal
+    User->>UI: Select countries/categories
+    UI->>API: POST /api/ai/search
+    API->>DB: Create search record
+    API->>AI: Generate search queries
+    AI-->>API: Return queries
+    API->>AI: Execute web search
+    AI-->>API: Return raw results
+    API->>AI: Extract contact info
+    AI-->>API: Return extracted contacts
+    API->>DB: Store results
+    API-->>UI: Stream progress updates
+    UI->>UI: Show progress
+    API-->>UI: Send final results
+    UI->>UI: Display contacts
+    User->>UI: Select contacts to import
+    UI->>API: POST /api/ai/import
+    API->>DB: Import contacts
+    API-->>UI: Confirm import
+```
+
+## Database Design
+
+### Schema Overview
+The database will be extended to support AI-powered contact discovery while maintaining compatibility with existing data.
+
+### New Tables
+
+#### ai_searches
+Stores metadata about AI search operations.
+
+```sql
+CREATE TABLE ai_searches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    search_config JSONB NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
+    total_contacts_found INTEGER DEFAULT 0,
+    contacts_imported INTEGER DEFAULT 0,
+    search_duration_seconds INTEGER,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Indexes for performance
+    CONSTRAINT ai_searches_user_status_idx UNIQUE (user_id, status)
+);
+
+-- Indexes
+CREATE INDEX idx_ai_searches_user_id ON ai_searches(user_id);
+CREATE INDEX idx_ai_searches_status ON ai_searches(status);
+CREATE INDEX idx_ai_searches_created_at ON ai_searches(created_at DESC);
+```
+
+#### ai_search_sources
+Tracks the sources used for contact discovery.
+
+```sql
+CREATE TABLE ai_search_sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    search_id UUID NOT NULL REFERENCES ai_searches(id) ON DELETE CASCADE,
+    source_url TEXT NOT NULL,
+    source_type VARCHAR(50) NOT NULL,
+    domain_name VARCHAR(255),
+    title TEXT,
+    confidence_score DECIMAL(3,2) CHECK (confidence_score >= 0 AND confidence_score <= 1),
+    contacts_extracted INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Constraints
+    CONSTRAINT ai_search_sources_type_check CHECK (source_type IN ('media_outlet', 'linkedin', 'twitter', 'personal_website', 'company_page', 'other'))
+);
+
+-- Indexes
+CREATE INDEX idx_ai_search_sources_search_id ON ai_search_sources(search_id);
+CREATE INDEX idx_ai_search_sources_domain ON ai_search_sources(domain_name);
+CREATE INDEX idx_ai_search_sources_type ON ai_search_sources(source_type);
+```
+
+### Modified Tables
+
+#### media_contacts
+Extended to support AI discovery metadata.
+
+```sql
+-- Add new columns to existing table
+ALTER TABLE media_contacts 
+ADD COLUMN discovery_source VARCHAR(50) DEFAULT NULL,
+ADD COLUMN discovery_method VARCHAR(50) DEFAULT NULL,
+ADD COLUMN ai_confidence_score INTEGER CHECK (ai_confidence_score >= 0 AND ai_confidence_score <= 100),
+ADD COLUMN discovered_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+ADD COLUMN ai_search_id UUID REFERENCES ai_searches(id) DEFAULT NULL,
+ADD COLUMN discovery_metadata JSONB DEFAULT NULL;
+
+-- Add constraints
+ALTER TABLE media_contacts 
+ADD CONSTRAINT media_contacts_discovery_source_check 
+    CHECK (discovery_source IN ('manual', 'ai_search', 'csv_import', 'api', 'other'));
+
+ALTER TABLE media_contacts 
+ADD CONSTRAINT media_contacts_discovery_method_check 
+    CHECK (discovery_method IN ('ai_openai', 'ai_anthropic', 'ai_exa', 'ai_firecrawl', 'ai_combined', 'other'));
+
+-- Add indexes for performance
+CREATE INDEX idx_media_contacts_discovery_source ON media_contacts(discovery_source);
+CREATE INDEX idx_media_contacts_ai_confidence ON media_contacts(ai_confidence_score);
+CREATE INDEX idx_media_contacts_discovered_at ON media_contacts(discovered_at DESC);
+CREATE INDEX idx_media_contacts_ai_search_id ON media_contacts(ai_search_id);
+```
+
+### Data Types
+
+#### search_config JSONB Schema
+```json
+{
+  "countries": ["US", "UK", "CA"],
+  "categories": ["Technology", "Business"],
+  "beats": ["AI", "Startups", "FinTech"],
+  "maxResults": 50,
+  "options": {
+    "contactTypes": ["journalist", "editor", "freelancer"],
+    "outletTypes": ["mainstream", "niche", "local"],
+    "confidenceThreshold": 0.7,
+    "includeSocialProfiles": true,
+    "verifyEmails": true
+  }
+}
+```
+
+#### discovery_metadata JSONB Schema
+```json
+{
+  "extraction_method": "ai_web_search",
+  "verification_status": "verified",
+  "sources_count": 3,
+  "last_updated": "2025-01-15T10:30:00Z",
+  "extraction_confidence": 0.85,
+  "social_profiles_found": ["twitter", "linkedin"],
+  "content_samples": ["article_title_1", "article_title_2"]
+}
+```
+
+## API Specification
+
+### Authentication & Authorization
+All endpoints require valid authentication using the existing NextAuth setup. Users must have the `USER` role or higher.
+
+### Rate Limiting
+- Search endpoints: 5 requests per minute per user
+- Progress endpoints: 10 requests per minute per user
+- Import endpoints: 10 requests per minute per user
+
+### Error Response Format
+```json
+{
+  "success": false,
+  "error": {
+    "code": "SEARCH_RATE_LIMIT_EXCEEDED",
+    "message": "Too many search requests. Please try again later.",
+    "details": {
+      "retryAfter": 60,
+      "limit": 5,
+      "remaining": 0
+    }
+  },
+  "requestId": "req_123456789"
+}
+```
+
+### Endpoints
+
+#### POST /api/ai/search
+Initiates a new AI-powered contact search.
+
+**Request:**
+```json
+{
+  "countries": ["US", "UK", "CA"],
+  "categories": ["Technology", "Business"],
+  "beats": ["AI", "Startups"],
+  "maxResults": 50,
+  "options": {
+    "contactTypes": ["journalist", "editor"],
+    "outletTypes": ["mainstream", "niche"],
+    "confidenceThreshold": 0.7,
+    "includeSocialProfiles": true,
+    "verifyEmails": true
+  }
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "success": true,
+  "data": {
+    "searchId": "search_123456789",
+    "status": "processing",
+    "estimatedDuration": 25,
+    "maxResults": 50,
+    "createdAt": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+**Validation Errors (400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid search configuration",
+    "details": {
+      "countries": ["At least 1 country is required"],
+      "categories": ["At least 1 category is required"],
+      "maxResults": ["Must be between 1 and 100"]
+    }
+  }
+}
+```
+
+#### GET /api/ai/search/{searchId}/progress
+Retrieves real-time progress updates for a search.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "searchId": "search_123456789",
+    "status": "processing",
+    "progress": 65,
+    "currentStage": "Verifying contacts",
+    "stages": [
+      {
+        "name": "Generating search queries",
+        "status": "completed",
+        "duration": 3
+      },
+      {
+        "name": "Searching web sources",
+        "status": "completed", 
+        "duration": 12
+      },
+      {
+        "name": "Extracting contact information",
+        "status": "completed",
+        "duration": 8
+      },
+      {
+        "name": "Verifying contacts",
+        "status": "in_progress",
+        "duration": 4
+      },
+      {
+        "name": "Finalizing results",
+        "status": "pending",
+        "duration": null
+      }
+    ],
+    "contactsFound": 23,
+    "contactsVerified": 15,
+    "estimatedRemaining": 10,
+    "sourcesProcessed": 45,
+    "errors": []
+  }
+}
+```
+
+**Not Found (404):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "SEARCH_NOT_FOUND",
+    "message": "Search with ID 'search_123456789' not found"
+  }
+}
+```
+
+#### GET /api/ai/search/{searchId}/results
+Retrieves the final results of a completed search.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "searchId": "search_123456789",
+    "status": "completed",
+    "searchDuration": 22,
+    "totalFound": 23,
+    "totalVerified": 18,
+    "contacts": [
+      {
+        "id": "contact_1",
+        "name": "Sarah Johnson",
+        "title": "Technology Editor",
+        "email": "sarah.j@technews.com",
+        "outlet": "TechNews Daily",
+        "bio": "Covering AI and emerging technologies for over 5 years...",
+        "confidence": 0.85,
+        "socials": {
+          "twitter": "@sarahtech",
+          "linkedin": "https://linkedin.com/in/sarahjohnson",
+          "website": "https://sarahjohnson.tech"
+        },
+        "sources": [
+          {
+            "url": "https://technews.com/author/sarah",
+            "type": "media_outlet",
+            "title": "Sarah Johnson - TechNews",
+            "retrievedAt": "2025-01-15T10:35:00Z"
+          }
+        ],
+        "verificationStatus": "verified",
+        "lastUpdated": "2025-01-15T10:35:00Z"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://technews.com",
+        "type": "media_outlet",
+        "domain": "technews.com",
+        "contactsExtracted": 3,
+        "averageConfidence": 0.82
+      }
+    ],
+    "searchConfig": {
+      "countries": ["US", "UK"],
+      "categories": ["Technology"],
+      "maxResults": 50
+    },
+    "statistics": {
+      "sourcesProcessed": 45,
+      "queriesExecuted": 12,
+      "averageConfidence": 0.78,
+      "verificationRate": 0.78
+    }
+  }
+}
+```
+
+#### POST /api/ai/contacts/import
+Imports selected contacts into the main database.
+
+**Request:**
+```json
+{
+  "searchId": "search_123456789",
+  "contactIds": ["contact_1", "contact_3", "contact_7"],
+  "options": {
+    "skipDuplicates": true,
+    "updateExisting": false,
+    "addNotes": true
+  }
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "importId": "import_123456789",
+    "totalRequested": 3,
+    "imported": 2,
+    "skipped": 1,
+    "duplicates": 0,
+    "errors": [],
+    "importedContacts": [
+      {
+        "id": "media_contact_1",
+        "name": "Sarah Johnson",
+        "email": "sarah.j@technews.com",
+        "importStatus": "created"
+      },
+      {
+        "id": "media_contact_2", 
+        "name": "Mike Chen",
+        "email": "mike.chen@bizdaily.com",
+        "importStatus": "created"
+      }
+    ],
+    "skippedContacts": [
+      {
+        "contactId": "contact_7",
+        "name": "Emma Wilson",
+        "reason": "duplicate_existing",
+        "existingContactId": "media_contact_123"
+      }
+    ]
+  }
+}
+```
+
+#### DELETE /api/ai/search/{searchId}
+Cancels an in-progress search or deletes search history.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "searchId": "search_123456789",
+    "status": "cancelled",
+    "cancelledAt": "2025-01-15T10:40:00Z",
+    "progressAtCancellation": 65,
+    "contactsFoundAtCancellation": 23
+  }
+}
+```
+
+## Component Architecture
+
+### Frontend Component Structure
+```
+src/components/features/ai/
+├── find-contacts/
+│   ├── index.ts                    # Export barrel
+│   ├── find-contacts-button.tsx    # Header button component
+│   ├── find-contacts-modal.tsx     # Main modal container
+│   ├── search-form.tsx             # Search configuration form
+│   ├── search-progress.tsx         # Progress tracking component
+│   ├── results-table.tsx           # Results display table
+│   ├── contact-card.tsx            # Individual contact preview
+│   ├── import-summary.tsx          # Import confirmation
+│   └── types.ts                    # TypeScript definitions
+```
+
+### Component Dependencies
+
+#### find-contacts-button.tsx
+```typescript
+interface FindContactsButtonProps {
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: 'default' | 'outline' | 'ghost';
+}
+
+export const FindContactsButton: React.FC<FindContactsButtonProps>;
+```
+
+#### find-contacts-modal.tsx
+```typescript
+interface FindContactsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onContactsImported?: (contacts: MediaContact[]) => void;
+}
+
+export const FindContactsModal: React.FC<FindContactsModalProps>;
+```
+
+#### search-form.tsx
+```typescript
+interface SearchFormProps {
+  onSubmit: (config: SearchConfig) => void;
+  loading?: boolean;
+  initialConfig?: Partial<SearchConfig>;
+}
+
+interface SearchConfig {
+  countries: string[];
+  categories: string[];
+  beats?: string[];
+  maxResults: number;
+  options: SearchOptions;
+}
+
+export const SearchForm: React.FC<SearchFormProps>;
+```
+
+#### search-progress.tsx
+```typescript
+interface SearchProgressProps {
+  searchId: string;
+  onComplete: (results: SearchResult) => void;
+  onError: (error: Error) => void;
+  onCancel: () => void;
+}
+
+interface SearchProgress {
+  searchId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  progress: number;
+  currentStage: string;
+  stages: ProgressStage[];
+  contactsFound: number;
+  estimatedRemaining: number;
+}
+
+export const SearchProgress: React.FC<SearchProgressProps>;
+```
+
+#### results-table.tsx
+```typescript
+interface ResultsTableProps {
+  searchId: string;
+  contacts: DiscoveredContact[];
+  selectedContacts: string[];
+  onSelectionChange: (contactIds: string[]) => void;
+  onImport: (contactIds: string[]) => void;
+  loading?: boolean;
+}
+
+export const ResultsTable: React.FC<ResultsTableProps>;
+```
+
+### State Management
+Using React state and context for component communication:
+
+```typescript
+// find-contacts-context.tsx
+interface FindContactsContextType {
+  searchState: SearchState;
+  actions: {
+    startSearch: (config: SearchConfig) => Promise<void>;
+    cancelSearch: (searchId: string) => Promise<void>;
+    selectContacts: (contactIds: string[]) => void;
+    importContacts: (contactIds: string[]) => Promise<void>;
+  };
+}
+
+export const FindContactsProvider: React.FC<{ children: React.ReactNode }>;
+export const useFindContacts: () => FindContactsContextType;
+```
+
+## AI Integration
+
+### AI Service Architecture
+```
+src/lib/ai/
+├── search/
+│   ├── index.ts                    # Main orchestrator
+│   ├── query-generator.ts          # Search query creation
+│   ├── sources/
+│   │   ├── exa-search.ts           # Exa API integration
+│   │   ├── firecrawl-scraper.ts    # Firecrawl integration
+│   │   └── openai-search.ts        # OpenAI web search
+│   ├── extractors/
+│   │   ├── contact-extractor.ts    # Contact information extraction
+│   │   ├── social-extractor.ts     # Social media profile extraction
+│   │   └── content-analyzer.ts     # Content analysis
+│   ├── verifiers/
+│   │   ├── email-verifier.ts       # Email validation
+│   │   ├── confidence-scorer.ts    # Confidence scoring
+│   │   └── deduplicator.ts         # Duplicate detection
+│   └── types.ts                    # Type definitions
+```
+
+### Query Generation Strategy
+
+#### Search Query Templates
+```typescript
+interface SearchQuery {
+  id: string;
+  query: string;
+  source: 'exa' | 'firecrawl' | 'openai';
+  params: Record<string, any>;
+  expectedResults: number;
+  confidence: number;
+}
+
+class QueryGenerator {
+  generateQueries(config: SearchConfig): SearchQuery[] {
+    const baseQueries = [];
+    
+    // Country + Category combinations
+    for (const country of config.countries) {
+      for (const category of config.categories) {
+        baseQueries.push({
+          query: `journalists editors ${category} ${country} media contacts`,
+          source: 'exa',
+          params: { numResults: 10 }
+        });
+      }
+    }
+    
+    // Beat-specific queries
+    if (config.beats) {
+      for (const beat of config.beats) {
+        baseQueries.push({
+          query: `${beat} reporters writers media contacts`,
+          source: 'openai',
+          params: { searchContextSize: 'high' }
+        });
+      }
+    }
+    
+    return baseQueries;
+  }
+}
+```
+
+### Contact Extraction Pipeline
+
+#### Extraction Process
+```typescript
+interface ExtractedContact {
+  id: string;
+  name: string;
+  title?: string;
+  email?: string;
+  outlet?: string;
+  bio?: string;
+  socials: SocialProfile[];
+  confidence: number;
+  sources: SourceReference[];
+  verificationStatus: 'pending' | 'verified' | 'failed';
+}
+
+class ContactExtractor {
+  async extractFromContent(content: WebContent): Promise<ExtractedContact[]> {
+    const contacts = [];
+    
+    // Use AI models to identify contact information
+    const aiExtraction = await this.aiModel.extractContacts({
+      content: content.text,
+      context: {
+        url: content.url,
+        domain: content.domain,
+        type: content.type
+      }
+    });
+    
+    // Validate and score each extracted contact
+    for (const rawContact of aiExtraction.contacts) {
+      const validated = await this.validateContact(rawContact);
+      if (validated.confidence > 0.5) {
+        contacts.push(validated);
+      }
+    }
+    
+    return contacts;
+  }
+}
+```
+
+### Confidence Scoring Algorithm
+
+#### Scoring Factors
+```typescript
+interface ConfidenceFactors {
+  sourceCredibility: number;    // Domain authority (0-1)
+  informationCompleteness: number; // Data fields filled (0-1)
+  crossReferenceCount: number; // Multiple sources (0-1)
+  emailValidity: number;       // Email format and domain (0-1)
+  recency: number;            // Information freshness (0-1)
+  patternMatching: number;    // Contact pattern matching (0-1)
+}
+
+class ConfidenceScorer {
+  calculateScore(contact: ExtractedContact): number {
+    const factors: ConfidenceFactors = {
+      sourceCredibility: this.calculateSourceCredibility(contact.sources),
+      informationCompleteness: this.calculateCompleteness(contact),
+      crossReferenceCount: this.calculateCrossReferences(contact),
+      emailValidity: this.validateEmail(contact.email),
+      recency: this.calculateRecency(contact),
+      patternMatching: this.calculatePatternMatch(contact)
+    };
+    
+    // Weighted average
+    const weights = {
+      sourceCredibility: 0.25,
+      informationCompleteness: 0.20,
+      crossReferenceCount: 0.20,
+      emailValidity: 0.15,
+      recency: 0.10,
+      patternMatching: 0.10
+    };
+    
+    return Object.entries(factors).reduce((score, [factor, value]) => {
+      return score + (value * weights[factor as keyof typeof weights]);
+    }, 0);
+  }
+}
+```
+
+## Security Considerations
+
+### API Security
+- **Authentication**: All endpoints require valid NextAuth session
+- **Rate Limiting**: Per-user rate limits to prevent abuse
+- **Input Validation**: Comprehensive validation of all input parameters
+- **Output Sanitization**: Sanitize all AI-generated content before display
+
+### Data Privacy
+- **PII Detection**: Automatically detect and flag sensitive personal information
+- **Data Minimization**: Only collect necessary contact information
+- **Retention Policy**: Automatically clean up search history after 90 days
+- **User Consent**: Clear disclosure of data usage and processing
+
+### External API Security
+```typescript
+// API key management
+class SecureAPIClient {
+  private apiKey: string;
+  private rateLimiter: RateLimiter;
+  
+  constructor(apiKey: string, rateLimit: number) {
+    this.apiKey = apiKey;
+    this.rateLimiter = new RateLimiter(rateLimit);
+  }
+  
+  async makeRequest(endpoint: string, params: any): Promise<any> {
+    await this.rateLimiter.acquire();
+    
+    // Add request signing and monitoring
+    const response = await fetch(endpoint, {
+      headers: {
+        'Authorization': `Bearer ${this.maskedApiKey()}`,
+        'User-Agent': 'MediaContacts-AI/1.0'
+      }
+    });
+    
+    this.logUsage(endpoint, response.status);
+    return response.json();
+  }
+  
+  private maskedApiKey(): string {
+    // Return masked version for logging
+    return `****${this.apiKey.slice(-4)}`;
+  }
+}
+```
+
+## Performance & Scaling
+
+### Caching Strategy
+```typescript
+// Redis-based caching
+class SearchCache {
+  private redis: Redis;
+  private ttl: number = 3600; // 1 hour
+  
+  async getCachedResults(queryHash: string): Promise<SearchResult | null> {
+    const cached = await this.redis.get(`search:${queryHash}`);
+    return cached ? JSON.parse(cached) : null;
+  }
+  
+  async cacheResults(queryHash: string, results: SearchResult): Promise<void> {
+    await this.redis.setex(
+      `search:${queryHash}`,
+      this.ttl,
+      JSON.stringify(results)
+    );
+  }
+  
+  generateQueryHash(config: SearchConfig): string {
+    return crypto
+      .createHash('sha256')
+      .update(JSON.stringify(config))
+      .digest('hex');
+  }
+}
+```
+
+### Background Processing
+```typescript
+// Queue-based processing for heavy operations
+interface SearchJob {
+  id: string;
+  searchId: string;
+  config: SearchConfig;
+  priority: number;
+  createdAt: Date;
+  attempts: number;
+  maxAttempts: number;
+}
+
+class SearchQueue {
+  private queue: Queue<SearchJob>;
+  
+  async addSearchJob(searchId: string, config: SearchConfig): Promise<void> {
+    await this.queue.add('execute-search', {
+      id: generateId(),
+      searchId,
+      config,
+      priority: 1,
+      createdAt: new Date(),
+      attempts: 0,
+      maxAttempts: 3
+    });
+  }
+  
+  async processJob(job: SearchJob): Promise<void> {
+    try {
+      await this.executeSearch(job.searchId, job.config);
+      await this.markJobCompleted(job.id);
+    } catch (error) {
+      await this.handleJobFailure(job, error);
+    }
+  }
+}
+```
+
+### Performance Monitoring
+```typescript
+// Performance metrics collection
+class PerformanceMonitor {
+  private metrics: Map<string, PerformanceMetric[]>;
+  
+  recordSearchStart(searchId: string): void {
+    this.setMetric(searchId, 'start_time', Date.now());
+  }
+  
+  recordSearchEnd(searchId: string, results: SearchResult): void {
+    const startTime = this.getMetric(searchId, 'start_time');
+    const duration = Date.now() - startTime;
+    
+    this.setMetric(searchId, 'duration', duration);
+    this.setMetric(searchId, 'contacts_found', results.contacts.length);
+    this.setMetric(searchId, 'average_confidence', this.calculateAvgConfidence(results));
+    
+    // Alert on performance issues
+    if (duration > 30000) { // 30 seconds
+      this.alertSlowSearch(searchId, duration);
+    }
+  }
+}
+```
+
+## Error Handling
+
+### Error Classification
+```typescript
+enum ErrorType {
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR',
+  API_ERROR = 'API_ERROR',
+  AI_SERVICE_ERROR = 'AI_SERVICE_ERROR',
+  DATABASE_ERROR = 'DATABASE_ERROR',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  TIMEOUT_ERROR = 'TIMEOUT_ERROR'
+}
+
+interface AppError {
+  type: ErrorType;
+  code: string;
+  message: string;
+  details?: any;
+  retryable: boolean;
+  userFriendly: boolean;
+}
+
+class ErrorHandler {
+  handleError(error: Error, context: RequestContext): AppError {
+    if (error instanceof ValidationError) {
+      return {
+        type: ErrorType.VALIDATION_ERROR,
+        code: 'INVALID_INPUT',
+        message: 'Invalid search parameters',
+        details: error.validationErrors,
+        retryable: false,
+        userFriendly: true
+      };
+    }
+    
+    if (error instanceof RateLimitError) {
+      return {
+        type: ErrorType.RATE_LIMIT_ERROR,
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: 'Too many requests. Please try again later.',
+        details: { retryAfter: error.retryAfter },
+        retryable: true,
+        userFriendly: true
+      };
+    }
+    
+    // ... more error handling
+  }
+}
+```
+
+### Retry Strategy
+```typescript
+class RetryManager {
+  async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    maxAttempts: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> {
+    let lastError: Error;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        
+        if (!this.isRetryable(error) || attempt === maxAttempts) {
+          throw error;
+        }
+        
+        const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        await this.sleep(delay);
+      }
+    }
+    
+    throw lastError;
+  }
+  
+  private isRetryable(error: Error): boolean {
+    return error instanceof NetworkError || 
+           error instanceof TimeoutError ||
+           error instanceof TemporaryAPIError;
+  }
+}
+```
+
+## Monitoring & Observability
+
+### Metrics Collection
+```typescript
+// Custom metrics for AI search feature
+class AIMetrics {
+  private prometheus: PrometheusRegistry;
+  
+  // Counters
+  private searchCounter = new Counter({
+    name: 'ai_searches_total',
+    help: 'Total number of AI searches',
+    labelNames: ['status', 'user_id']
+  });
+  
+  private contactCounter = new Counter({
+    name: 'ai_contacts_discovered_total',
+    help: 'Total number of contacts discovered',
+    labelNames: ['confidence_range']
+  });
+  
+  // Histograms
+  private searchDuration = new Histogram({
+    name: 'ai_search_duration_seconds',
+    help: 'Duration of AI searches',
+    buckets: [5, 10, 15, 30, 45, 60, 120]
+  });
+  
+  // Gauges
+  private activeSearches = new Gauge({
+    name: 'ai_active_searches',
+    help: 'Number of currently active searches'
+  });
+  
+  recordSearchStart(userId: string): void {
+    this.activeSearches.inc();
+    this.searchCounter.inc({ status: 'started', user_id: userId });
+  }
+  
+  recordSearchComplete(userId: string, duration: number, contactsFound: number): void {
+    this.activeSearches.dec();
+    this.searchDuration.observe(duration);
+    this.searchCounter.inc({ status: 'completed', user_id: userId });
+    this.contactCounter.inc({ confidence_range: 'high' }, contactsFound);
+  }
+}
+```
+
+### Logging Strategy
+```typescript
+// Structured logging with correlation IDs
+class StructuredLogger {
+  private logger: winston.Logger;
+  
+  logSearchStart(searchId: string, userId: string, config: SearchConfig): void {
+    this.logger.info('Search started', {
+      event: 'search_started',
+      searchId,
+      userId,
+      config: this.sanitizeConfig(config),
+      timestamp: new Date().toISOString(),
+      traceId: this.generateTraceId()
+    });
+  }
+  
+  logSearchComplete(searchId: string, results: SearchResult): void {
+    this.logger.info('Search completed', {
+      event: 'search_completed',
+      searchId,
+      duration: results.duration,
+      contactsFound: results.contacts.length,
+      averageConfidence: this.calculateAvgConfidence(results),
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  logError(error: Error, context: RequestContext): void {
+    this.logger.error('Search error', {
+      event: 'search_error',
+      error: {
+        type: error.constructor.name,
+        message: error.message,
+        stack: error.stack
+      },
+      context: this.sanitizeContext(context),
+      timestamp: new Date().toISOString()
+    });
+  }
+}
+```
+
+### Health Checks
+```typescript
+// Health check endpoints for monitoring
+app.get('/api/health/ai', async (req, res) => {
+  const health = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    services: {
+      openai: await this.checkOpenAIHealth(),
+      exa: await this.checkExaHealth(),
+      firecrawl: await this.checkFirecrawlHealth(),
+      database: await this.checkDatabaseHealth(),
+      redis: await this.checkRedisHealth()
+    },
+    metrics: {
+      activeSearches: await this.getActiveSearches(),
+      averageResponseTime: await this.getAverageResponseTime(),
+      errorRate: await this.getErrorRate()
+    }
+  };
+  
+  const isHealthy = Object.values(health.services).every(service => service.status === 'healthy');
+  res.status(isHealthy ? 200 : 503).json(health);
+});
+```
+
+---
+
+## Implementation Tasks
+
+Based on this technical specification, the development tasks are organized into the following epics:
+
+### Epic 1: Foundation & Database
+- [ ] Database schema migrations
+- [ ] Basic API endpoints structure
+- [ ] Authentication integration
+- [ ] Error handling framework
+
+### Epic 2: AI Search Service
+- [ ] Query generation service
+- [ ] External API integrations (Exa, Firecrawl, OpenAI)
+- [ ] Contact extraction pipeline
+- [ ] Confidence scoring system
+
+### Epic 3: Frontend Components
+- [ ] Modal and form components
+- [ ] Progress tracking UI
+- [ ] Results display table
+- [ ] Import functionality
+
+### Epic 4: Integration & Testing
+- [ ] End-to-end integration
+- [ ] Performance optimization
+- [ ] Comprehensive testing
+- [ ] Documentation and deployment
+
+This technical specification provides the foundation for implementing the "Find Contacts with AI" feature with detailed requirements for each component and system integration.

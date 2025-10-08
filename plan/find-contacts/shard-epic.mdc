@@ -1,0 +1,217 @@
+# Shard Epic into Development Stories
+
+## Purpose
+This prompt breaks down a feature epic into individual development stories, creating detailed story files that can be independently developed and tested.
+
+## Usage
+Run this prompt when you have an epic number and name from the implementation plan and need to create detailed development stories.
+
+## Input Parameters
+- **epic_number**: The epic number (e.g., "1", "2", "3")
+- **epic_name**: The epic name (e.g., "Foundation & Infrastructure", "AI Search Service")
+- **feature_context**: All context from the feature planning (plan/find-contacts directory)
+
+## Output Structure
+For each story in the epic, create:
+```
+plan/find-contacts/stories/epic-{number}-{name}/story-{number}-{name}.mdc
+```
+
+## What Each Story Should Contain
+
+### Story Header
+```markdown
+# Story {number}: {Story Name}
+**Epic**: Epic {epic_number}: {epic_name}
+**Estimated Time**: {X days}
+**Priority**: {Critical|High|Medium|Low}
+**Status**: {Pending|In Progress|Completed}
+**Assignee**: {Developer Name}
+```
+
+### Story Content
+1. **Objective**: Clear statement of what needs to be accomplished
+2. **Acceptance Criteria**: Specific, measurable criteria for completion
+3. **Technical Requirements**: Detailed technical specifications
+4. **Dependencies**: What needs to be completed first
+5. **Definition of Done**: When the story is considered complete
+6. **Testing Requirements**: What tests need to be written
+7. **Implementation Notes**: Technical guidance and best practices
+
+## Instructions for the AI
+
+When you receive an epic breakdown request:
+
+1. **Read the Implementation Tasks Document**: Locate the epic in `implementation-tasks.mdc`
+2. **Identify All Stories**: Extract each task/subtask within the epic
+3. **Create Story Directory**: `plan/find-contacts/stories/epic-{number}-{name}/`
+4. **Generate Story Files**: Create one `.mdc` file per story with comprehensive details
+5. **Cross-Reference**: Link to relevant technical specs, API contracts, and component specs
+6. **Include Context**: Reference the broader feature documentation where relevant
+
+## Example Story Structure
+
+```markdown
+# Story 1.1: Database Schema Implementation
+**Epic**: Epic 1: Foundation & Infrastructure
+**Estimated Time**: 2 days
+**Priority**: Critical
+**Status**: Pending
+**Assignee**: Backend Developer
+
+## Objective
+Implement the complete database schema required for the AI-powered contact discovery feature, including new tables, indexes, constraints, and security policies.
+
+## Acceptance Criteria
+- [ ] All database migrations run successfully without errors
+- [ ] Foreign key constraints are properly enforced
+- [ ] Indexes improve query performance by >50% on test data
+- [ ] Row Level Security policies prevent unauthorized access
+- [ ] Database functions work as expected in unit tests
+- [ ] Migration scripts are idempotent and reversible
+- [ ] Database schema passes security audit
+
+## Technical Requirements
+### Tables to Create
+1. `ai_searches` - Main search tracking table
+2. `ai_search_sources` - Source tracking for searches
+3. `ai_performance_logs` - Performance monitoring
+4. `ai_search_cache` - Result caching
+5. `ai_contact_duplicates` - Duplicate detection
+
+### Key Features
+- UUID primary keys for all tables
+- Foreign key relationships with proper cascading
+- JSONB fields for flexible configuration storage
+- Timestamp tracking for all records
+- Row Level Security (RLS) policies
+
+### Database Functions
+- `update_search_statistics()` - Auto-update search statistics
+- `cleanup_expired_cache()` - Cache cleanup function
+- `get_search_performance_metrics()` - Performance reporting
+
+## Dependencies
+- None (this is a foundation story)
+
+## Definition of Done
+- All database changes are reviewed and approved
+- Migration scripts are tested in staging environment
+- Database documentation is updated
+- Rollback plan is documented and tested
+- Performance benchmarks are established
+
+## Testing Requirements
+### Unit Tests
+- Test all database functions
+- Test migration rollback scenarios
+- Test constraint enforcement
+- Test RLS policy enforcement
+
+### Integration Tests
+- Test API integration with new schema
+- Test data access patterns
+- Test performance with sample data
+
+## Implementation Notes
+- Use the migration script in `database-migrations.sql`
+- Follow the existing database naming conventions
+- Ensure all tables have proper indexing
+- Implement proper audit trails
+- Consider future schema evolution
+
+## Related Documentation
+- [Database Migrations](../database-migrations.sql)
+- [Technical Specification](../technical-spec.md#database-design)
+- [API Contracts](../api-contracts.md#database-schema)
+```
+
+## Epic Templates
+
+### Epic 1: Foundation & Infrastructure
+Expected stories:
+- Story 1.1: Database Schema Implementation
+- Story 1.2: API Infrastructure Setup  
+- Story 1.3: External AI Service Integration
+
+### Epic 2: AI Search Service
+Expected stories:
+- Story 2.1: Query Generation Service
+- Story 2.2: Contact Extraction Pipeline
+- Story 2.3: Search Orchestration Service
+
+### Epic 3: Frontend Components
+Expected stories:
+- Story 3.1: Modal and Form Components
+- Story 3.2: Progress Tracking Components
+- Story 3.3: Results Display Components
+
+### Epic 4: Integration & Testing
+Expected stories:
+- Story 4.1: End-to-End Integration
+- Story 4.2: Comprehensive Testing Suite
+- Story 4.3: Performance Optimization
+
+### Epic 5: Polish & Launch
+Expected stories:
+- Story 5.1: User Experience Polish
+- Story 5.2: Documentation and Training
+- Story 5.3: Launch Preparation
+
+## Usage Instructions
+
+To use this prompt:
+
+1. **Open the implementation tasks document**: `plan/find-contacts/implementation-tasks.mdc`
+2. **Identify the epic**: Find the epic section with the specified number and name
+3. **Extract all tasks**: Get all tasks/subtasks within that epic
+4. **Create stories**: Generate a detailed story file for each task
+5. **Organize by structure**: Create the directory structure and file naming
+6. **Cross-reference**: Link to relevant documentation
+7. **Validate completeness**: Ensure each story has all required sections
+
+## Quality Checklist
+
+For each generated story, ensure:
+- [ ] Clear, measurable acceptance criteria
+- [ ] Technical requirements are specific
+- [ ] Dependencies are properly identified
+- [ ] Testing requirements are comprehensive
+- [ ] Definition of done is unambiguous
+- [ ] Implementation notes are helpful
+- [ ] Cross-references are accurate
+- [ ] Story size is appropriate (1-5 days)
+- [ ] Priority is correctly assigned
+- [ ] Dependencies are logically ordered
+
+## Output Format
+
+The AI should respond with:
+1. **Confirmation** of which epic is being broken down
+2. **Directory structure** that will be created
+3. **List of stories** to be generated
+4. **Completion confirmation** when all stories are created
+
+Example response:
+```
+I'm breaking down Epic 2: AI Search Service into individual development stories.
+
+Creating directory structure:
+plan/find-contacts/stories/epic-2-ai-search-service/
+
+Stories to create:
+- Story 2.1: Query Generation Service
+- Story 2.2: Contact Extraction Pipeline  
+- Story 2.3: Search Orchestration Service
+
+All stories have been created with comprehensive details including acceptance criteria, technical requirements, testing needs, and cross-references to the broader feature documentation.
+```
+
+## Notes for AI Implementation
+
+- Always reference the specific sections in the implementation tasks document
+- Extract technical details from relevant specification documents
+- Ensure stories are appropriately sized for development
+- Maintain consistency in story structure and formatting
+- Include relevant cross-references to other documentation
+- Consider the overall feature context when writing individual stories

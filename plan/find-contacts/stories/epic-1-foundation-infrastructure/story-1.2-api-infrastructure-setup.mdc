@@ -1,0 +1,557 @@
+# Story 1.2: API Infrastructure Setup
+**Epic**: Epic 1: Foundation & Infrastructure
+**Estimated Time**: 3 days
+**Priority**: Critical
+**Status**: Pending
+**Assignee**: Backend Developer
+
+## Objective
+Set up the foundational API structure for the AI-powered contact discovery feature, including authentication, middleware, error handling, and base controllers.
+
+## Acceptance Criteria
+- [ ] All AI endpoints require valid authentication
+- [ ] Rate limits are enforced per user per endpoint type
+- [ ] Error responses follow consistent format
+- [ ] All requests are logged with correlation IDs
+- [ ] API documentation is generated automatically
+- [ ] Error handling covers all edge cases
+- [ ] CORS policies are properly configured
+- [ ] Input validation prevents injection attacks
+- [ ] Request/response times are within acceptable limits
+
+## Technical Requirements
+
+### API Route Structure
+```
+/api/ai/
+├── search/
+│   ├── route.ts              # Main search endpoint
+│   ├── [searchId]/
+│   │   ├── route.ts          # Get search progress
+│   │   ├── results.ts        # Get search results
+│   │   └── route.ts          # Cancel search
+│   └── route.ts              # Root search router
+├── contacts/
+│   ├── import.ts             # Import discovered contacts
+│   └── route.ts              # Contacts router
+├── health/
+│   └── route.ts              # Health check endpoint
+└── shared/
+    ├── types.ts               # Shared type definitions
+    ├── middleware.ts          # Common middleware
+    ├── errors.ts              # Error handling
+    └── validation.ts          # Input validation
+```
+
+### Authentication Middleware
+- **Session Validation**: Verify NextAuth session tokens
+- **Role-Based Access**: Enforce USER role requirement for AI endpoints
+- **Request Context**: Create user context for downstream processing
+- **Token Refresh**: Handle token refresh scenarios
+- **Logout Handling**: Clean up sessions on logout
+
+### Rate Limiting Middleware
+- **Per-User Rate Limits**: 
+  - Search endpoints: 5 requests per minute
+  - Progress endpoints: 10 requests per minute
+  - Import endpoints: 10 requests per minute
+- **Rate Limit Headers**: Include limit, remaining, and reset time headers
+- **Redis Backend**: Use Redis for distributed rate limiting
+- **User Identification**: Use user ID for rate limit keys
+- **Sliding Windows**: Implement sliding time window rate limiting
+
+### Error Handling System
+- **Structured Error Format**: Consistent error response structure
+- **Error Classification**: Categorize errors by type and severity
+- **Retry Logic**: Implement retry for transient errors
+- **Error Logging**: Comprehensive error logging with context
+- **User-Friendly Messages**: Convert technical errors to user-friendly language
+- **Stack Trace Logging**: Include stack traces for debugging
+
+### Request/Response Logging
+- **Request Logging**: Log all incoming requests with metadata
+- **Response Logging**: Log all responses with status codes
+- **Performance Tracking**: Track request/response times
+- **Correlation IDs**: Generate unique IDs for request tracing
+- **Security Events**: Log security-related events
+- **Data Sanitization**: Remove sensitive data from logs
+
+### API Versioning Strategy
+- **URL Versioning**: Use `/api/v1/` for versioned endpoints
+- **Header Versioning**: Support version specification in headers
+- **Backward Compatibility**: Maintain compatibility with older versions
+- **Version Deprecation**: Plan for version sunset policies
+- **Documentation**: Document version differences and migrations
+
+### CORS Configuration
+- **Origin Whitelist**: Configure allowed origins for API access
+- **Methods**: Specify allowed HTTP methods
+- **Headers**: Configure allowed request headers
+- **Credentials**: Handle authentication headers properly
+- **Preflight Handling**: Respond to preflight requests correctly
+
+### Input Validation
+- **Schema Validation**: Use Zod for request body validation
+- **Parameter Validation**: Validate query parameters and path parameters
+- **SQL Injection Prevention**: Parameterize all database queries
+- **XSS Prevention**: Sanitize and validate user input
+- **Size Limits**: Enforce reasonable payload size limits
+
+### Request ID Tracking
+- **Unique IDs**: Generate unique identifiers for each request
+- **Header Propagation**: Include request ID in response headers
+- **Log Correlation**: Use request IDs to correlate log entries
+- **Error Tracking**: Include request IDs in error reports
+- **Performance Monitoring**: Track performance by request ID
+
+## Dependencies
+- **Task 1.1**: Database Schema Implementation (for API testing)
+- **NextAuth Setup**: Existing authentication system
+- **Redis Server**: For rate limiting and caching
+- **Database Connection**: PostgreSQL connection string and configuration
+
+## Definition of Done
+- API infrastructure is deployed to staging environment
+- All middleware is tested with unit and integration tests
+- Error handling is verified with failure scenarios
+- Performance benchmarks are met (all API responses <200ms)
+- Security review is completed (no vulnerabilities)
+- API documentation is generated and accessible
+- Rate limiting is functional and tested
+- CORS policies are properly configured
+- Input validation prevents common attack vectors
+
+## Testing Requirements
+
+### Unit Tests
+```typescript
+// src/app/api/ai/search/__tests__/middleware.test.ts
+describe('AI Search Middleware', () => {
+  describe('Authentication Middleware', () => {
+    it('should allow authenticated requests', async () => {
+      // Test with valid session token
+      // Verify request passes through
+    });
+    
+    it('should reject unauthenticated requests', async () => {
+      // Test without session token
+      // Verify 401 response
+      // Check error response format
+    });
+    
+    it('should reject requests with invalid role', async () => {
+      // Test with user without proper role
+      // Verify 403 response
+    });
+  });
+  
+  describe('Rate Limiting Middleware', () => {
+    it('should enforce rate limits per user', async () => {
+      // Test rate limit enforcement
+      // Verify rate limit headers
+      // Test sliding window behavior
+    });
+    
+    it('should allow requests within limits', async () => {
+      // Test requests under rate limit
+      // Verify successful processing
+    });
+    
+    it('should handle rate limit exhaustion', async () => {
+      // Test requests at rate limit
+      // Verify 429 response
+      // Check retry after header
+    });
+  });
+  
+  describe('Error Handling Middleware', () => {
+    it('should handle validation errors gracefully', async () => {
+      // Test with invalid request body
+      // Verify 400 response
+      // Check error message format
+    });
+    
+    it('should handle database errors gracefully', async () => {
+      // Test with database connection failure
+      // Verify 500 response
+      // Check error logging
+    });
+    
+    it('should handle external API errors gracefully', async () => {
+      // Test with external service failure
+      // Verify appropriate response code
+      // Check error details included
+    });
+  });
+});
+```
+
+### Integration Tests
+```typescript
+// src/app/api/ai/search/__tests__/integration.test.ts
+describe('AI Search API Integration', () => {
+  describe('Search Workflow', () => {
+    it('should complete full search workflow', async () => {
+      // 1. Initiate search
+      // 2. Monitor progress
+      // 3. Get results
+      // 4. Import contacts
+      // Verify all steps work correctly
+    });
+    
+    it('should handle concurrent searches', async () => {
+      // Test multiple simultaneous searches
+      // Verify proper isolation
+      // Check rate limiting enforcement
+    });
+    
+    it('should handle search cancellation', async () => {
+      // Initiate search
+      // Cancel before completion
+      // Verify cancellation response
+      // Test resource cleanup
+    });
+  });
+  
+  describe('Authentication Flow', () => {
+    it('should handle session expiration', async () => {
+      // Test with expired session
+      // Verify 401 response
+      // Check error message
+    });
+    
+    it('should handle token refresh', async () => {
+      // Test with expiring session
+      // Verify transparent refresh
+      // Check continued functionality
+    });
+  });
+});
+```
+
+### Load Tests
+```typescript
+// tests/load/api-load.test.ts
+describe('AI Search API Load Testing', () => {
+  it('should handle 50 concurrent searches', async () => {
+    // Configure load test parameters
+    // Run concurrent search requests
+    // Verify all requests succeed
+    // Check response times remain acceptable
+  });
+  
+  it('should maintain performance under sustained load', async () => {
+    // Run sustained load test (5 minutes)
+    // Monitor response times
+    // Verify no performance degradation
+    // Check error rates remain low
+  });
+  
+  it('should handle burst traffic gracefully', async () => {
+    // Simulate traffic burst
+    // Test rate limiting effectiveness
+    // Verify system stability
+    // Check recovery time
+  });
+});
+```
+
+### Security Tests
+```typescript
+// tests/security/api-security.test.ts
+describe('AI Search API Security', () => {
+  describe('Authentication Security', () => {
+    it('should prevent token manipulation', async () => {
+      // Test with manipulated JWT tokens
+      // Verify token validation
+      // Check for proper rejection
+    });
+    
+    it('should prevent session hijacking', async () => {
+      // Test session fixation prevention
+      // Verify proper session handling
+      // Check for security headers
+    });
+  });
+  
+  describe('Input Validation Security', () => {
+    it('should prevent SQL injection', async () => {
+      // Test with malicious SQL in parameters
+      // Verify query parameterization
+      // Check for proper validation
+    });
+    
+    it('should prevent XSS attacks', async () => {
+      // Test with malicious scripts in input
+      // Verify input sanitization
+      // Check output encoding
+    });
+    
+    it('should validate large payloads', async () => {
+      // Test with oversized request bodies
+      // Verify size limit enforcement
+      // Check memory usage
+    });
+  });
+  
+  describe('Rate Limiting Security', () => {
+    it('should prevent rate limit bypass', async () => {
+      // Test rate limit bypass attempts
+      // Verify distributed enforcement
+      // Check IP-based fallbacks
+    });
+    
+    it('should handle distributed rate limiting', async () => {
+      // Test across multiple servers
+      // Verify consistent enforcement
+      // Check shared state synchronization
+    });
+  });
+});
+```
+
+## Implementation Notes
+
+### Middleware Order
+```typescript
+// src/app/api/ai/shared/middleware.ts
+export const aiMiddleware = [
+  // 1. Request ID generation
+  requestIdMiddleware,
+  
+  // 2. Request logging
+  requestLoggingMiddleware,
+  
+  // 3. CORS handling
+  corsMiddleware,
+  
+  // 4. Authentication
+  authenticationMiddleware,
+  
+  // 5. Rate limiting
+  rateLimitMiddleware,
+  
+  // 6. Input validation
+  validationMiddleware,
+  
+  // 7. Error handling
+  errorHandlingMiddleware,
+];
+```
+
+### Error Handling Patterns
+```typescript
+// src/app/api/ai/shared/errors.ts
+export class APIError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public statusCode: number = 500,
+    public details?: any,
+    public retryable: boolean = false,
+    public retryAfter?: number
+  ) {
+    super(message);
+    this.name = 'APIError';
+  }
+}
+
+export class ValidationError extends APIError {
+  constructor(message: string, details?: any) {
+    super('VALIDATION_ERROR', message, 400, details);
+    this.name = 'ValidationError';
+  }
+}
+
+export class AuthenticationError extends APIError {
+  constructor(message: string) {
+    super('UNAUTHORIZED', message, 401);
+    this.name = 'AuthenticationError';
+  }
+}
+
+export class RateLimitError extends APIError {
+  constructor(retryAfter: number) {
+    super('RATE_LIMIT_EXCEEDED', 'Too many requests', 429, { retryAfter });
+    this.name = 'RateLimitError';
+  }
+}
+```
+
+### Rate Limiting Implementation
+```typescript
+// src/lib/rate-limiting/ai-rate-limiter.ts
+import Redis from 'ioredis';
+import { RateLimiterRedis } from 'rate-limiter-flexible';
+
+export class AIRateLimiter {
+  private redis: Redis;
+  private limiters: Map<string, RateLimiterRedis> = new Map();
+  
+  constructor(redisUrl: string) {
+    this.redis = new Redis(redisUrl);
+    
+    // Configure rate limiters
+    this.limiters.set('search', new RateLimiterRedis({
+      store: this.redis,
+      keyPrefix: 'ai_search:',
+      points: 5, // 5 requests
+      duration: 60, // per minute
+      blockDuration: 60, // block for 1 minute
+    }));
+    
+    this.limiters.set('progress', new RateLimiterRedis({
+      store: this.redis,
+      keyPrefix: 'ai_progress:',
+      points: 10,
+      duration: 60,
+      blockDuration: 30,
+    }));
+    
+    this.limiters.set('import', new RateLimiterRedis({
+      store: this.redis,
+      keyPrefix: 'ai_import:',
+      points: 10,
+      duration: 60,
+      blockDuration: 30,
+    }));
+  }
+  
+  async consume(key: string, points: number = 1): Promise<boolean> {
+    const limiter = this.limiters.get(key);
+    if (!limiter) {
+      throw new Error(`Unknown rate limiter: ${key}`);
+    }
+    
+    return limiter.consume(points);
+  }
+  
+  async getPoints(key: string): Promise<number> {
+    const limiter = this.limiters.get(key);
+    if (!limiter) {
+      throw new Error(`Unknown rate limiter: ${key}`);
+    }
+    
+    return limiter.getPoints();
+  }
+}
+```
+
+### Request ID Generation
+```typescript
+// src/lib/correlation/request-id.ts
+import { randomUUID } from 'crypto';
+
+export class RequestIDGenerator {
+  static generate(): string {
+    return `req_${Date.now()}_${randomUUID()}`;
+  }
+  
+  static extractFromHeaders(headers: Headers): string | null {
+    return headers.get('x-request-id') || null;
+  }
+  
+  static addToHeaders(headers: Headers, requestId: string): void {
+    headers.set('x-request-id', requestId);
+  }
+}
+```
+
+## Related Documentation
+- [Technical Specification](../technical-spec.md#api-architecture)
+- [API Contracts](../api-contracts.md)
+- [Testing Strategy](../testing-strategy.md#api-testing)
+- [Deployment & Monitoring](../deployment-monitoring.md#api-monitoring)
+- [Component Specifications](../component-specifications.md#api-integration)
+
+## Monitoring Requirements
+
+### Key Metrics
+- **Request Volume**: Track API request volume by endpoint
+- **Response Times**: Monitor average and 95th percentile response times
+- **Error Rates**: Track error rates by endpoint and error type
+- **Authentication Success**: Track authentication success/failure rates
+- **Rate Limit Activity**: Monitor rate limit hits and bypass attempts
+
+### Alerting Rules
+- **High Error Rate**: Alert when error rate exceeds 5%
+- **Slow Response**: Alert when 95th percentile >500ms
+- **Authentication Failures**: Alert when authentication failures exceed 2%
+- **Rate Limit Exhaustion**: Alert when rate limits are consistently hit
+- **Unusual Traffic**: Alert on unusual traffic patterns
+
+### Logging Configuration
+- **Structured Logging**: Use JSON format for logs
+- **Log Levels**: Configure appropriate log levels (error, warn, info, debug)
+- **Log Rotation**: Implement log rotation to prevent disk space issues
+- **Security Logging**: Log security events and violations
+- **Performance Logging**: Log slow queries and performance bottlenecks
+
+## Rollback Procedures
+
+### API Rollback
+1. **Database Revert**: Roll back any database changes if needed
+2. **Code Rollback**: Use Git to revert code changes
+3. **Configuration Rollback**: Revert configuration file changes
+4. **Environment Rollback**: Revert environment variable changes
+
+### Emergency Response
+1. **Immediate Actions**: Stop traffic to affected endpoints
+2. **Root Cause Analysis**: Identify and fix the underlying issue
+3. **Communication**: Notify stakeholders of the issue
+4. **Recovery**: Implement fix and restore service
+5. **Post-Mortem**: Document lessons learned and improvements
+
+---
+
+## Development Guidelines
+
+### Code Organization
+- Follow existing API structure and patterns
+- Use TypeScript for all API code
+- Implement proper error handling at all levels
+- Use consistent naming conventions
+- Add comprehensive comments for complex logic
+
+### Testing Guidelines
+- Write tests for all new endpoints
+- Test both success and failure scenarios
+- Include edge cases and boundary conditions
+- Use mock data for isolated testing
+- Automate testing in CI/CD pipeline
+
+### Security Guidelines
+- Never trust client input
+- Validate all data at API boundaries
+- Use parameterized queries for database access
+- Implement proper authentication and authorization
+- Log security events for audit trails
+
+### Performance Guidelines
+- Optimize database queries with proper indexing
+- Use caching for frequently accessed data
+- Implement connection pooling for database connections
+- Monitor and optimize slow queries
+- Use compression for large response payloads
+
+---
+
+## Success Metrics
+
+### Performance Targets
+- API response time: <200ms (95th percentile)
+- Request processing time: <50ms (95th percentile)
+- Database query time: <100ms (95th percentile)
+- Error rate: <1% (excluding rate limits)
+
+### Quality Targets
+- Test coverage: >90% for API code
+- Code review completion: 100% for changes
+- Security scan: 0 high/critical vulnerabilities
+- Documentation completeness: 100% for new endpoints
+
+### Operational Targets
+- Uptime: >99.9% for API services
+- Mean Time to Recovery (MTTR): <5 minutes
+- Mean Time Between Failures (MTBF): >30 days
+- Change success rate: >95% for deployments

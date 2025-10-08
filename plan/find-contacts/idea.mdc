@@ -1,0 +1,218 @@
+# Find Contacts with AI - Feature Idea
+
+## Overview
+A powerful AI-powered feature that enables users to discover new media contacts by scanning the web based on selected countries and categories. The system uses advanced AI models to search, extract, and verify contact information from various online sources.
+
+## User Experience Flow
+
+### 1. Discovery
+- **Button**: "Find Contacts" button with sparkle (✨) icon in the header action buttons
+- **Placement**: Between existing CSV import/export and Add Contact buttons
+- **Visual Design**: Consistent with existing button styling, using accent color to indicate AI feature
+
+### 2. Selection Modal
+When clicked, opens a modal with:
+- **Title**: "Find Contacts with AI"
+- **Subtitle**: "Discover media contacts whose profiles match your requirements"
+- **Microcopy**: "We'll scan the web and bring you a curated list of media contacts based on your selected countries and categories. Our AI will analyze profiles, verify information, and provide confidence scores for each contact."
+
+#### Form Elements:
+- **Countries Multi-Select**: 
+  - Searchable dropdown with existing countries from database
+  - Visual indicators for selected countries
+  - Maximum selection limit (e.g., 10 countries)
+  
+- **Categories Multi-Select**:
+  - Pre-defined media categories (Technology, Business, Health, etc.)
+  - Beats as secondary selection if available
+  - Smart suggestions based on selected countries
+
+- **Advanced Options** (optional):
+  - Contact type preference (journalists, editors, freelancers)
+  - Outlet type (mainstream, niche, local)
+  - Maximum results limit
+
+### 3. Search Execution
+After selection:
+- **Action Button**: "Scan Web & Find Contacts" (primary CTA)
+- **Loading State**: Modal transitions to progress screen
+- **Progress Indicators**: Real-time updates showing:
+  - "Searching web sources..."
+  - "Analyzing profiles..."
+  - "Verifying contact information..."
+  - "Building your contact list..."
+
+### 4. Results Display
+- **Results Modal**: Table/grid of discovered contacts
+- **Contact Cards**: Each showing:
+  - Name, title, outlet
+  - Email (if found)
+  - Confidence score (0-100%)
+  - Source attribution
+  - Import checkbox
+  
+- **Bulk Actions**:
+  - Select all contacts
+  - Import selected contacts
+  - Save search for later
+
+## Technical Architecture
+
+### Frontend Components
+```
+src/components/features/ai/
+├── find-contacts-modal.tsx       # Main modal component
+├── search-form.tsx              # Country/category selection
+├── search-progress.tsx          # Loading/progress display
+├── results-table.tsx            # Discovered contacts display
+└── contact-card.tsx             # Individual contact preview
+```
+
+### Backend Services
+```
+src/lib/ai/search/
+├── contact-discovery.ts         # Main search orchestrator
+├── query-generator.ts           # AI-powered search query creation
+├── content-extractor.ts         # Web scraping and parsing
+├── contact-verifier.ts          # Information validation
+└── deduplicator.ts              # Duplicate detection
+```
+
+### API Endpoints
+```
+/api/ai/search/          # POST - Main search endpoint
+/api/ai/search/stream    # GET - Streaming progress updates
+/api/ai/search/parse     # POST - Content parsing service
+/api/ai/search/verify    # POST - Contact verification
+```
+
+## AI Search Strategy
+
+### 1. Query Generation
+- Use AI models to generate targeted search queries
+- Combine country, category, and beat information
+- Include outlet-specific search patterns
+- Generate variations for comprehensive coverage
+
+### 2. Multi-Source Search
+- **Primary**: Exa API for targeted content search
+- **Secondary**: Firecrawl for detailed page analysis
+- **Fallback**: OpenAI web search for broader coverage
+- **Specialized**: Media outlet specific searches
+
+### 3. Information Extraction
+- **Contact Details**: Name, email, title, outlet
+- **Social Profiles**: Twitter, LinkedIn, personal websites
+- **Content Analysis**: Recent articles, beats, expertise areas
+- **Verification**: Cross-reference multiple sources
+
+### 4. Quality Scoring
+- **Confidence Score**: AI-evaluated information accuracy (0-100%)
+- **Source Credibility**: Domain authority and reliability
+- **Information Freshness**: Recency of contact information
+- **Completeness**: How much required information is available
+
+### 5. Deduplication
+- **Email Matching**: Exact and fuzzy email matching
+- **Name + Outlet**: Combination matching for accuracy
+- **Social Profile**: Cross-reference social media profiles
+- **Database Integration**: Check against existing contacts
+
+## Integration Points
+
+### Existing Database Schema
+- **Countries**: Use existing countries table
+- **Categories**: Leverage existing categories and beats
+- **Outlets**: Connect to existing outlets table
+- **Contacts**: Add discovered contacts to media_contacts table
+
+### New Database Fields
+```sql
+ALTER TABLE media_contacts ADD COLUMN discovery_source VARCHAR(50);
+ALTER TABLE media_contacts ADD COLUMN discovery_method VARCHAR(50);
+ALTER TABLE media_contacts ADD COLUMN ai_confidence_score INTEGER;
+ALTER TABLE media_contacts ADD COLUMN discovered_at TIMESTAMP;
+```
+
+### AI Integration
+- **Vercel AI SDK**: Core AI functionality
+- **Multiple Providers**: OpenAI, Anthropic, Google for flexibility
+- **Web Search APIs**: Exa, Firecrawl for content discovery
+- **Content Analysis**: Existing AI heuristics integration
+
+## Success Metrics
+
+### User Engagement
+- Feature adoption rate (users who try the feature)
+- Search success rate (completed searches vs. started)
+- Contact import rate (percentage of discovered contacts imported)
+- User retention with AI-discovered contacts
+
+### Technical Performance
+- Search completion time (target: <30 seconds)
+- Information accuracy (confidence scores >70%)
+- Duplicate detection accuracy (<5% false positives)
+- API cost efficiency (cost per discovered contact)
+
+### Business Impact
+- Database growth rate from AI discovery
+- Contact quality improvement (verified vs. unverified)
+- User time savings (compared to manual research)
+- Feature ROI (development cost vs. value delivered)
+
+## Risk Mitigation
+
+### Technical Risks
+- **API Rate Limits**: Implement intelligent throttling and caching
+- **Data Quality**: Multi-source verification and confidence scoring
+- **Performance**: Background processing and streaming updates
+- **Cost Management**: Usage limits and cost monitoring
+
+### User Experience Risks
+- **Search Frustration**: Clear progress indicators and time estimates
+- **Information Overload**: Smart filtering and sorting options
+- **Trust Issues**: Transparent source attribution and confidence scores
+- **Learning Curve**: Intuitive UI with contextual help
+
+## Future Enhancements
+
+### Phase 2 Features
+- **Saved Searches**: Save and rerun search configurations
+- **Alert System**: Notify when new contacts match saved criteria
+- **Collaborative Discovery**: Team-based contact research
+- **Advanced Filters**: Outlet size, reach, influence metrics
+
+### Phase 3 Features
+- **AI Outreach**: Generate personalized pitch emails
+- **Relationship Mapping**: Visualize connection networks
+- **Predictive Scoring**: AI-predicted response likelihood
+- **Integration CRM**: Sync with external CRM systems
+
+## Development Timeline
+
+### Week 1: Foundation
+- Set up AI SDK and API keys
+- Create database schema updates
+- Build basic modal structure
+
+### Week 2: Core Search
+- Implement search service
+- Build query generation logic
+- Create progress tracking
+
+### Week 3: Results & Integration
+- Build results display components
+- Implement contact verification
+- Add database integration
+
+### Week 4: Polish & Testing
+- Refine UI/UX
+- Add error handling
+- Performance optimization
+- User testing and feedback
+
+### Week 5: Launch
+- Final testing and QA
+- Documentation
+- Feature launch
+- Monitor and iterate

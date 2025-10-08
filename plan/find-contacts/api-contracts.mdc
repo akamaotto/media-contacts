@@ -1,0 +1,827 @@
+# API Contracts - Find Contacts with AI
+
+## Overview
+This document defines the complete API contracts for the Find Contacts with AI feature, including request/response schemas, error handling, rate limiting, and security requirements.
+
+## Base Configuration
+- **Base URL**: `/api/ai`
+- **API Version**: `v1`
+- **Content-Type**: `application/json`
+- **Authentication**: Bearer token (NextAuth session)
+- **Rate Limiting**: Per user, per endpoint type
+
+## Type Definitions
+
+### Core Types
+
+```typescript
+// Request/Response Base Types
+interface APIResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: APIError;
+  requestId: string;
+  timestamp: string;
+}
+
+interface APIError {
+  code: string;
+  message: string;
+  details?: Record<string, any>;
+  retryable?: boolean;
+  retryAfter?: number;
+}
+
+// Search Configuration Types
+interface SearchConfig {
+  countries: string[];                    // ISO country codes
+  categories: string[];                   // Media categories
+  beats?: string[];                       // Specific beats/topics
+  maxResults: number;                     // Maximum contacts to find
+  options: SearchOptions;
+}
+
+interface SearchOptions {
+  contactTypes?: ContactType[];          // journalist, editor, freelancer
+  outletTypes?: OutletType[];            // mainstream, niche, local
+  confidenceThreshold?: number;          // 0.0 to 1.0
+  includeSocialProfiles?: boolean;
+  verifyEmails?: boolean;
+  languages?: string[];                  // Language preferences
+  dateRange?: DateRange;                 // Recent content only
+}
+
+type ContactType = 'journalist' | 'editor' | 'freelancer' | 'contributor' | 'producer';
+type OutletType = 'mainstream' | 'niche' | 'local' | 'trade' | 'academic';
+
+interface DateRange {
+  from: string;                          // ISO date string
+  to: string;                            // ISO date string
+}
+
+// Contact Information Types
+interface DiscoveredContact {
+  id: string;
+  name: string;
+  title?: string;
+  email?: string;
+  outlet?: string;
+  bio?: string;
+  socials: SocialProfiles;
+  confidence: number;                    // 0.0 to 1.0
+  sources: SourceReference[];
+  verificationStatus: VerificationStatus;
+  metadata: ContactMetadata;
+}
+
+interface SocialProfiles {
+  twitter?: string;
+  linkedin?: string;
+  website?: string;
+  mastodon?: string;
+  instagram?: string;
+}
+
+interface SourceReference {
+  url: string;
+  type: SourceType;
+  title: string;
+  retrievedAt: string;
+  confidence: number;
+}
+
+type SourceType = 'media_outlet' | 'linkedin' | 'twitter' | 'personal_website' | 'company_page' | 'other';
+type VerificationStatus = 'pending' | 'verified' | 'failed' | 'unverifiable';
+
+interface ContactMetadata {
+  extractedAt: string;
+  lastUpdated: string;
+  extractionMethod: string;
+  contentSamples: string[];
+  beats: string[];
+  languages: string[];
+  location?: string;
+}
+
+// Search Progress Types
+interface SearchProgress {
+  searchId: string;
+  status: SearchStatus;
+  progress: number;                      // 0 to 100
+  currentStage: string;
+  stages: ProgressStage[];
+  contactsFound: number;
+  contactsVerified: number;
+  estimatedRemaining: number;
+  sourcesProcessed: number;
+  errors: SearchError[];
+}
+
+type SearchStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+interface ProgressStage {
+  name: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  duration?: number;                     // seconds
+  progress: number;                      // 0 to 100
+  details?: string;
+}
+
+interface SearchError {
+  stage: string;
+  code: string;
+  message: string;
+  recoverable: boolean;
+}
+
+// Import Types
+interface ImportRequest {
+  searchId: string;
+  contactIds: string[];
+  options: ImportOptions;
+}
+
+interface ImportOptions {
+  skipDuplicates: boolean;
+  updateExisting: boolean;
+  addNotes: boolean;
+  assignToUser?: string;                 // User ID for assignment
+  tags?: string[];                       // Tags to apply
+}
+
+interface ImportResult {
+  importId: string;
+  totalRequested: number;
+  imported: number;
+  skipped: number;
+  duplicates: number;
+  errors: ImportError[];
+  importedContacts: ImportedContact[];
+  skippedContacts: SkippedContact[];
+}
+
+interface ImportError {
+  contactId: string;
+  code: string;
+  message: string;
+  recoverable: boolean;
+}
+
+interface ImportedContact {
+  id: string;                            // New media_contact ID
+  name: string;
+  email: string;
+  importStatus: 'created' | 'updated';
+}
+
+interface SkippedContact {
+  contactId: string;
+  name: string;
+  reason: SkipReason;
+  existingContactId?: string;
+}
+
+type SkipReason = 'duplicate_existing' | 'low_confidence' | 'invalid_data' | 'user_skipped';
+```
+
+## Endpoints
+
+### 1. Initiate Search
+
+**Endpoint**: `POST /api/ai/search`
+
+**Description**: Initiates a new AI-powered contact search based on specified criteria.
+
+**Request Headers**:
+```
+Content-Type: application/json
+Authorization: Bearer <session_token>
+X-Request-ID: <optional_request_id>
+```
+
+**Request Body**:
+```json
+{
+  "countries": ["US", "UK", "CA"],
+  "categories": ["Technology", "Business"],
+  "beats": ["AI", "Startups", "FinTech"],
+  "maxResults": 50,
+  "options": {
+    "contactTypes": ["journalist", "editor"],
+    "outletTypes": ["mainstream", "niche"],
+    "confidenceThreshold": 0.7,
+    "includeSocialProfiles": true,
+    "verifyEmails": true,
+    "languages": ["en"],
+    "dateRange": {
+      "from": "2024-01-01",
+      "to": "2025-01-15"
+    }
+  }
+}
+```
+
+**Response (202 Accepted)**:
+```json
+{
+  "success": true,
+  "data": {
+    "searchId": "search_1234567890abcdef",
+    "status": "pending",
+    "estimatedDuration": 25,
+    "maxResults": 50,
+    "createdAt": "2025-01-15T10:30:00Z",
+    "queuePosition": 2
+  },
+  "requestId": "req_1234567890",
+  "timestamp": "2025-01-15T10:30:00Z"
+}
+```
+
+**Error Responses**:
+
+400 Bad Request - Validation Error:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid search configuration",
+    "details": {
+      "countries": ["At least 1 country is required"],
+      "categories": ["At least 1 category is required"],
+      "maxResults": ["Must be between 1 and 100"],
+      "options": {
+        "confidenceThreshold": ["Must be between 0.0 and 1.0"]
+      }
+    },
+    "retryable": false
+  },
+  "requestId": "req_1234567890",
+  "timestamp": "2025-01-15T10:30:00Z"
+}
+```
+
+429 Too Many Requests - Rate Limit:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Too many search requests. Please try again later.",
+    "details": {
+      "limit": 5,
+      "remaining": 0,
+      "resetAt": "2025-01-15T10:31:00Z",
+      "retryAfter": 60
+    },
+    "retryable": true,
+    "retryAfter": 60
+  },
+  "requestId": "req_1234567890",
+  "timestamp": "2025-01-15T10:30:00Z"
+}
+```
+
+401 Unauthorized:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "retryable": false
+  },
+  "requestId": "req_1234567890",
+  "timestamp": "2025-01-15T10:30:00Z"
+}
+```
+
+### 2. Get Search Progress
+
+**Endpoint**: `GET /api/ai/search/{searchId}/progress`
+
+**Description**: Retrieves real-time progress updates for an ongoing search.
+
+**Path Parameters**:
+- `searchId` (string, required): Unique identifier for the search
+
+**Query Parameters**:
+- `includeDetails` (boolean, optional): Include detailed stage information (default: false)
+
+**Response (200 OK)**:
+```json
+{
+  "success": true,
+  "data": {
+    "searchId": "search_1234567890abcdef",
+    "status": "processing",
+    "progress": 65,
+    "currentStage": "Verifying contacts",
+    "stages": [
+      {
+        "name": "Generating search queries",
+        "status": "completed",
+        "duration": 3,
+        "progress": 100,
+        "details": "Generated 12 targeted search queries"
+      },
+      {
+        "name": "Searching web sources",
+        "status": "completed",
+        "duration": 12,
+        "progress": 100,
+        "details": "Processed 45 sources"
+      },
+      {
+        "name": "Extracting contact information",
+        "status": "completed",
+        "duration": 8,
+        "progress": 100,
+        "details": "Extracted 28 potential contacts"
+      },
+      {
+        "name": "Verifying contacts",
+        "status": "in_progress",
+        "duration": 4,
+        "progress": 75,
+        "details": "Verified 15 of 20 contacts"
+      },
+      {
+        "name": "Finalizing results",
+        "status": "pending",
+        "duration": null,
+        "progress": 0,
+        "details": null
+      }
+    ],
+    "contactsFound": 23,
+    "contactsVerified": 15,
+    "estimatedRemaining": 10,
+    "sourcesProcessed": 45,
+    "errors": []
+  },
+  "requestId": "req_1234567891",
+  "timestamp": "2025-01-15T10:35:00Z"
+}
+```
+
+**Error Responses**:
+
+404 Not Found:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "SEARCH_NOT_FOUND",
+    "message": "Search with ID 'search_1234567890abcdef' not found",
+    "retryable": false
+  },
+  "requestId": "req_1234567891",
+  "timestamp": "2025-01-15T10:35:00Z"
+}
+```
+
+403 Forbidden:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ACCESS_DENIED",
+    "message": "You do not have permission to access this search",
+    "retryable": false
+  },
+  "requestId": "req_1234567891",
+  "timestamp": "2025-01-15T10:35:00Z"
+}
+```
+
+### 3. Get Search Results
+
+**Endpoint**: `GET /api/ai/search/{searchId}/results`
+
+**Description**: Retrieves the final results of a completed search.
+
+**Path Parameters**:
+- `searchId` (string, required): Unique identifier for the search
+
+**Query Parameters**:
+- `limit` (integer, optional): Number of contacts to return (default: 50, max: 100)
+- `offset` (integer, optional): Number of contacts to skip (default: 0)
+- `sortBy` (string, optional): Sort field (confidence, name, outlet)
+- `sortOrder` (string, optional): Sort direction (asc, desc)
+- `minConfidence` (number, optional): Minimum confidence score (0.0 to 1.0)
+
+**Response (200 OK)**:
+```json
+{
+  "success": true,
+  "data": {
+    "searchId": "search_1234567890abcdef",
+    "status": "completed",
+    "searchDuration": 22,
+    "totalFound": 23,
+    "totalVerified": 18,
+    "contacts": [
+      {
+        "id": "contact_1",
+        "name": "Sarah Johnson",
+        "title": "Technology Editor",
+        "email": "sarah.j@technews.com",
+        "outlet": "TechNews Daily",
+        "bio": "Covering AI and emerging technologies for over 5 years. Previously worked at Wired and TechCrunch.",
+        "socials": {
+          "twitter": "@sarahtech",
+          "linkedin": "https://linkedin.com/in/sarahjohnson",
+          "website": "https://sarahjohnson.tech"
+        },
+        "confidence": 0.85,
+        "sources": [
+          {
+            "url": "https://technews.com/author/sarah",
+            "type": "media_outlet",
+            "title": "Sarah Johnson - TechNews Author Page",
+            "retrievedAt": "2025-01-15T10:35:00Z",
+            "confidence": 0.9
+          }
+        ],
+        "verificationStatus": "verified",
+        "metadata": {
+          "extractedAt": "2025-01-15T10:35:00Z",
+          "lastUpdated": "2025-01-15T10:35:00Z",
+          "extractionMethod": "ai_web_search",
+          "contentSamples": [
+            "AI Adoption in Enterprise: A 2025 Perspective",
+            "The Future of Quantum Computing in Business"
+          ],
+          "beats": ["AI", "Quantum Computing", "Enterprise Tech"],
+          "languages": ["en"],
+          "location": "San Francisco, CA"
+        }
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://technews.com",
+        "type": "media_outlet",
+        "domain": "technews.com",
+        "contactsExtracted": 3,
+        "averageConfidence": 0.82
+      }
+    ],
+    "searchConfig": {
+      "countries": ["US", "UK"],
+      "categories": ["Technology"],
+      "maxResults": 50
+    },
+    "statistics": {
+      "sourcesProcessed": 45,
+      "queriesExecuted": 12,
+      "averageConfidence": 0.78,
+      "verificationRate": 0.78,
+      "extractionMethods": {
+        "ai_web_search": 18,
+        "linkedin_scraper": 3,
+        "twitter_analysis": 2
+      }
+    }
+  },
+  "requestId": "req_1234567892",
+  "timestamp": "2025-01-15T10:40:00Z"
+}
+```
+
+### 4. Import Contacts
+
+**Endpoint**: `POST /api/ai/contacts/import`
+
+**Description**: Imports selected contacts from a search into the main database.
+
+**Request Body**:
+```json
+{
+  "searchId": "search_1234567890abcdef",
+  "contactIds": ["contact_1", "contact_3", "contact_7"],
+  "options": {
+    "skipDuplicates": true,
+    "updateExisting": false,
+    "addNotes": true,
+    "assignToUser": "user_1234567890",
+    "tags": ["ai-discovered", "technology", "q1-2025"]
+  }
+}
+```
+
+**Response (200 OK)**:
+```json
+{
+  "success": true,
+  "data": {
+    "importId": "import_1234567890abcdef",
+    "totalRequested": 3,
+    "imported": 2,
+    "skipped": 1,
+    "duplicates": 0,
+    "errors": [],
+    "importedContacts": [
+      {
+        "id": "media_contact_1",
+        "name": "Sarah Johnson",
+        "email": "sarah.j@technews.com",
+        "importStatus": "created"
+      },
+      {
+        "id": "media_contact_2",
+        "name": "Mike Chen",
+        "email": "mike.chen@bizdaily.com",
+        "importStatus": "created"
+      }
+    ],
+    "skippedContacts": [
+      {
+        "contactId": "contact_7",
+        "name": "Emma Wilson",
+        "reason": "duplicate_existing",
+        "existingContactId": "media_contact_123"
+      }
+    ]
+  },
+  "requestId": "req_1234567893",
+  "timestamp": "2025-01-15T10:45:00Z"
+}
+```
+
+### 5. Cancel Search
+
+**Endpoint**: `DELETE /api/ai/search/{searchId}`
+
+**Description**: Cancels an in-progress search or deletes search history.
+
+**Path Parameters**:
+- `searchId` (string, required): Unique identifier for the search
+
+**Response (200 OK)**:
+```json
+{
+  "success": true,
+  "data": {
+    "searchId": "search_1234567890abcdef",
+    "status": "cancelled",
+    "cancelledAt": "2025-01-15T10:50:00Z",
+    "progressAtCancellation": 65,
+    "contactsFoundAtCancellation": 23,
+    "refundInfo": {
+      "apiCreditsRefunded": 0.25,
+      "refundReason": "Partial search completion"
+    }
+  },
+  "requestId": "req_1234567894",
+  "timestamp": "2025-01-15T10:50:00Z"
+}
+```
+
+### 6. Get Search History
+
+**Endpoint**: `GET /api/ai/search/history`
+
+**Description**: Retrieves user's search history with pagination.
+
+**Query Parameters**:
+- `limit` (integer, optional): Number of searches to return (default: 20, max: 100)
+- `offset` (integer, optional): Number of searches to skip (default: 0)
+- `status` (string, optional): Filter by status
+- `dateFrom` (string, optional): Start date filter (ISO date)
+- `dateTo` (string, optional): End date filter (ISO date)
+
+**Response (200 OK)**:
+```json
+{
+  "success": true,
+  "data": {
+    "searches": [
+      {
+        "id": "search_1234567890abcdef",
+        "status": "completed",
+        "searchConfig": {
+          "countries": ["US", "UK"],
+          "categories": ["Technology"],
+          "maxResults": 50
+        },
+        "results": {
+          "totalFound": 23,
+          "imported": 18,
+          "averageConfidence": 0.78,
+          "duration": 22
+        },
+        "createdAt": "2025-01-15T10:30:00Z",
+        "completedAt": "2025-01-15T10:52:00Z"
+      }
+    ],
+    "pagination": {
+      "total": 45,
+      "limit": 20,
+      "offset": 0,
+      "hasMore": true
+    }
+  },
+  "requestId": "req_1234567895",
+  "timestamp": "2025-01-15T11:00:00Z"
+}
+```
+
+## Error Codes Reference
+
+### Client Errors (4xx)
+| Code | HTTP Status | Description | Retryable |
+|------|-------------|-------------|-----------|
+| VALIDATION_ERROR | 400 | Invalid request parameters | No |
+| MISSING_REQUIRED_FIELD | 400 | Required field is missing | No |
+| INVALID_FORMAT | 400 | Field format is invalid | No |
+| UNAUTHORIZED | 401 | Authentication required | No |
+| ACCESS_DENIED | 403 | Permission denied | No |
+| SEARCH_NOT_FOUND | 404 | Search does not exist | No |
+| CONTACT_NOT_FOUND | 404 | Contact does not exist | No |
+| RATE_LIMIT_EXCEEDED | 429 | Too many requests | Yes |
+| QUOTA_EXCEEDED | 429 | API quota exceeded | Yes |
+
+### Server Errors (5xx)
+| Code | HTTP Status | Description | Retryable |
+|------|-------------|-------------|-----------|
+| INTERNAL_ERROR | 500 | Internal server error | Yes |
+| AI_SERVICE_ERROR | 502 | AI service unavailable | Yes |
+| EXTERNAL_API_ERROR | 502 | External API error | Yes |
+| DATABASE_ERROR | 503 | Database unavailable | Yes |
+| TIMEOUT_ERROR | 504 | Request timeout | Yes |
+| SERVICE_UNAVAILABLE | 503 | Service temporarily unavailable | Yes |
+
+## Rate Limiting
+
+### Limits per User
+| Endpoint Type | Limit | Window |
+|---------------|-------|--------|
+| Search Initiation | 5 requests | 1 minute |
+| Progress Polling | 10 requests | 1 minute |
+| Results Retrieval | 20 requests | 1 minute |
+| Contact Import | 10 requests | 1 minute |
+| History Retrieval | 30 requests | 1 minute |
+
+### Rate Limit Headers
+All API responses include rate limiting headers:
+```
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 3
+X-RateLimit-Reset: 1642234567
+X-RateLimit-Retry-After: 45
+```
+
+## Security Requirements
+
+### Authentication
+- All endpoints require valid NextAuth session
+- Bearer token in Authorization header
+- Session validation on every request
+
+### Input Validation
+- Strict schema validation for all inputs
+- SQL injection protection
+- XSS prevention
+- File upload restrictions (if applicable)
+
+### Output Filtering
+- Sanitize all AI-generated content
+- Remove sensitive information from responses
+- Mask PII in logs and error messages
+
+### CORS Configuration
+```
+Access-Control-Allow-Origin: https://yourdomain.com
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Request-ID
+Access-Control-Max-Age: 86400
+```
+
+## Caching Strategy
+
+### Cacheable Endpoints
+- `GET /api/ai/search/{searchId}/results` (5 minutes)
+- `GET /api/ai/search/history` (2 minutes)
+
+### Cache Headers
+```
+Cache-Control: public, max-age=300, stale-while-revalidate=600
+ETag: "abc123"
+Last-Modified: Wed, 15 Jan 2025 10:30:00 GMT
+```
+
+## Webhook Support (Future)
+
+### Import Completion Webhook
+```json
+{
+  "eventType": "import.completed",
+  "data": {
+    "importId": "import_1234567890",
+    "searchId": "search_1234567890",
+    "status": "completed",
+    "imported": 18,
+    "failed": 2,
+    "timestamp": "2025-01-15T10:50:00Z"
+  },
+  "signature": "sha256=abc123..."
+}
+```
+
+## SDK Examples
+
+### JavaScript/TypeScript
+```typescript
+import { MediaContactsAI } from '@your-org/media-contacts-ai-sdk';
+
+const ai = new MediaContactsAI({
+  baseURL: 'https://api.yourdomain.com',
+  apiKey: process.env.API_KEY
+});
+
+// Initiate search
+const search = await ai.search.create({
+  countries: ['US', 'UK'],
+  categories: ['Technology'],
+  maxResults: 50
+});
+
+// Monitor progress
+const progress = await ai.search.getProgress(search.searchId);
+
+// Get results
+const results = await ai.search.getResults(search.searchId);
+
+// Import contacts
+const imported = await ai.contacts.import({
+  searchId: search.searchId,
+  contactIds: results.contacts.slice(0, 5).map(c => c.id)
+});
+```
+
+### Python
+```python
+from media_contacts_ai import MediaContactsAI
+
+ai = MediaContactsAI(api_key="your-api-key")
+
+# Initiate search
+search = ai.search.create(
+    countries=["US", "UK"],
+    categories=["Technology"],
+    max_results=50
+)
+
+# Monitor progress
+progress = ai.search.get_progress(search.search_id)
+
+# Get results
+results = ai.search.get_results(search.search_id)
+
+# Import contacts
+imported = ai.contacts.import(
+    search_id=search.search_id,
+    contact_ids=[c.id for c in results.contacts[:5]]
+)
+```
+
+## Testing Scenarios
+
+### Positive Test Cases
+1. **Successful Search**: Complete flow from search initiation to import
+2. **Large Search**: Search with maximum parameters (100 countries, 50 categories)
+3. **Concurrent Searches**: Multiple simultaneous searches per user
+4. **Progress Monitoring**: Real-time progress updates during long searches
+5. **Batch Import**: Import 50+ contacts in single request
+
+### Negative Test Cases
+1. **Invalid Parameters**: Malformed request bodies
+2. **Rate Limiting**: Exceeding rate limits
+3. **Unauthorized Access**: Missing or invalid authentication
+4. **Search Not Found**: Accessing non-existent searches
+5. **Duplicate Import**: Importing already existing contacts
+
+### Edge Cases
+1. **Network Timeouts**: Slow external API responses
+2. **Partial Results**: Incomplete search due to errors
+3. **Empty Results**: No contacts found
+4. **Large Payloads**: Results exceeding response size limits
+5. **Concurrent Modifications**: Modifying searches during processing
+
+---
+
+## Implementation Checklist
+
+- [ ] Implement request/response validation schemas
+- [ ] Set up rate limiting middleware
+- [ ] Configure error handling and logging
+- [ ] Implement authentication middleware
+- [ ] Set up monitoring and metrics collection
+- [ ] Create API documentation integration
+- [ ] Implement response caching where appropriate
+- [ ] Set up CORS and security headers
+- [ ] Create comprehensive test suites
+- [ ] Configure webhook infrastructure (future)

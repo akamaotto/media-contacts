@@ -1,0 +1,332 @@
+# Develop Story - AI-Powered Development Orchestrator
+
+## Purpose
+This prompt orchestrates the development of an individual story by leveraging Claude Code's tools, MCPs, and the broader development ecosystem to implement, test, and validate the story requirements.
+
+## Usage
+Run this prompt when you have a specific story file and need to develop it from start to finish, including implementation, testing, and validation.
+
+## Input Parameters
+- **story_file**: Path to the story file (e.g., `plan/{feature}/stories/epic-{number}-{name}/story-{number}-{name}.mdc`)
+- **feature_context**: Current codebase context and available tools
+- **development_mode**: Development approach (sequential, parallel, experimental)
+
+## Development Workflow
+
+### Phase 1: Analysis & Planning
+1. **Read Story File**: Parse the story requirements, acceptance criteria, and technical specifications
+2. **Analyze Current Codebase**: Understand existing patterns, dependencies, and integration points
+3. **Create Development Plan**: Break down the story into implementable steps
+4. **Identify Dependencies**: Determine what needs to be implemented first
+5. **Check Cross-Story Coordination**: Verify no conflicts with other stories in development
+
+### Phase 2: Implementation
+1. **Set Up Development Environment**: Ensure all dependencies and tools are available
+2. **Implement Core Logic**: Write the main functionality following technical requirements
+3. **Add Tests**: Create unit tests, integration tests as specified
+4. **Update Documentation**: Add necessary code documentation and comments
+5. **Handle Error Cases**: Implement comprehensive error handling and logging
+
+### Phase 3: Integration & Testing
+1. **Integrate with Existing Code**: Ensure the new code works with the existing system
+2. **Run Test Suite**: Execute all tests to ensure nothing is broken
+3. **Validate Acceptance Criteria**: Verify all acceptance criteria are met
+4. **Performance Testing**: Ensure performance requirements are met
+5. **Security Validation**: Ensure security requirements are satisfied
+
+### Phase 4: Review & Finalization
+1. **Code Review**: Perform self-code review against best practices
+2. **Security Review**: Check for security vulnerabilities
+3. **Final Validation**: Ensure story is completely done according to definition
+4. **Documentation Updates**: Update any relevant documentation
+5. **Clean Up**: Remove debugging code and optimize implementation
+
+## Available Tools & MCPs
+
+### Code Analysis Tools
+- **File System Operations**: Read, write, and navigate codebase files
+- **Code Search**: Find existing patterns, dependencies, and similar implementations
+- **Git Operations**: Check status, create branches, commit changes
+- **Database Tools**: Run migrations, check schema, test queries
+
+### Development Tools
+- **Package Management**: Install dependencies, update package.json
+- **Testing Frameworks**: Run Jest tests, create test files
+- **Build Tools**: Compile TypeScript, run builds
+- **Linting & Formatting**: ESLint, Prettier integration
+
+### External Services
+- **AI Services**: Test OpenAI, Anthropic integrations (if applicable)
+- **Database**: PostgreSQL operations, query testing
+- **API Testing**: Test endpoints, validate responses
+- **Performance Monitoring**: Check metrics and performance
+
+## Development Instructions
+
+### 1. Story Analysis
+```typescript
+// Parse the story file to extract requirements
+const storyAnalysis = {
+  objective: "Clear statement of what needs to be accomplished",
+  acceptanceCriteria: ["Specific criteria list"],
+  technicalRequirements: ["Technical specifications"],
+  dependencies: ["Prerequisites"],
+  testingRequirements: ["Test requirements"],
+  definitionOfDone: ["Completion criteria"]
+};
+```
+
+### 2. Cross-Story Coordination
+Before starting development:
+- **Check for concurrent stories** in the same epic
+- **Identify shared resources** (database tables, API endpoints, components)
+- **Coordinate database schema changes** with other stories
+- **Handle potential merge conflicts** proactively
+
+### 3. Implementation Strategy
+- **Follow existing patterns**: Use the same architecture and coding style as the existing codebase
+- **Incremental development**: Implement in small, testable chunks
+- **Test-driven development**: Write tests before or alongside implementation
+- **Error handling**: Implement comprehensive error handling and logging
+- **Documentation**: Add clear comments and documentation
+
+### 4. Quality Assurance
+- **Code coverage**: Ensure adequate test coverage
+- **Performance**: Meet performance requirements
+- **Security**: Follow security best practices
+- **Accessibility**: Ensure WCAG compliance where applicable
+- **Cross-browser**: Test on supported browsers
+
+## Implementation Patterns
+
+### Backend Development
+```typescript
+// Example service implementation pattern
+export class NewService {
+  constructor(
+    private repository: NewRepository,
+    private logger: Logger,
+    private eventBus: EventBus
+  ) {}
+
+  async execute(input: InputType): Promise<ResultType> {
+    try {
+      // Input validation
+      const validatedInput = this.validateInput(input);
+
+      // Business logic
+      const result = await this.process(validatedInput);
+
+      // Emit events
+      await this.eventBus.publish(new EventCreated(result));
+
+      return result;
+    } catch (error) {
+      this.logger.error('Service execution failed', error);
+      throw new ServiceError(error.message, error.code);
+    }
+  }
+
+  private validateInput(input: InputType): InputType {
+    // Implementation
+  }
+
+  private async process(input: InputType): Promise<ResultType> {
+    // Implementation
+  }
+}
+```
+
+### Frontend Development
+```typescript
+// Example component implementation pattern
+export function NewComponent({ prop1, prop2 }: Props) {
+  const [state, setState] = useState<StateType>(initialState);
+  const { data, loading, error } = useDataFetch(prop1);
+
+  useEffect(() => {
+    // Side effects
+  }, [prop1, prop2]);
+
+  const handleSubmit = useCallback((event: FormEvent) => {
+    // Event handling
+  }, []);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div className="new-component">
+      {/* Component JSX */}
+    </div>
+  );
+}
+```
+
+## Tool Usage Patterns
+
+### File Operations
+```typescript
+// Read existing patterns
+const existingPattern = await ReadFile('src/lib/similar/SimilarService.ts');
+
+// Create new implementation
+await WriteFile('src/lib/new/NewService.ts', implementation);
+
+// Update imports in related files
+await EditFile('src/lib/index.ts', {
+  oldText: 'export { SimilarService }',
+  newText: 'export { SimilarService, NewService }'
+});
+```
+
+### Database Operations
+```typescript
+// Run database migrations
+await Bash('npm run db:push');
+
+// Test database schema
+await mcp__postgres__query(`
+  SELECT column_name, data_type, is_nullable
+  FROM information_schema.columns
+  WHERE table_name = 'new_table'
+`);
+
+// Verify indexes
+await Bash('psql $DATABASE_URL -c "\\d new_table"');
+```
+
+### Testing Operations
+```typescript
+// Run unit tests
+await Bash('npm run test -- --testPathPattern=new-service');
+
+// Run integration tests
+await Bash('npm run test:integration');
+
+// Run E2E tests
+await Bash('npm run test:e2e');
+```
+
+### API Testing
+```typescript
+// Test API endpoints
+const response = await mcp__swagger__execute_api_request({
+  method: 'POST',
+  path: '/api/new-endpoint',
+  body: testPayload
+});
+
+// Validate response
+expect(response.status).toBe(201);
+```
+
+## Quality Checkpoints
+
+### Before Implementation
+- [ ] Story requirements are clear and complete
+- [ ] Dependencies are identified and available
+- [ ] Development environment is ready
+- [ ] Test data and scenarios are prepared
+- [ ] Cross-story conflicts are checked
+
+### During Implementation
+- [ ] Code follows existing patterns and conventions
+- [ ] Tests are written alongside implementation
+- [ ] Error handling is comprehensive
+- [ ] Performance considerations are addressed
+- [ ] Security best practices are followed
+
+### After Implementation
+- [ ] All acceptance criteria are met
+- [ ] All tests pass with adequate coverage
+- [ ] Code is properly documented
+- [ ] Integration with existing system works
+- [ ] Performance requirements are met
+- [ ] Security requirements are satisfied
+- [ ] No cross-story conflicts introduced
+
+## Error Handling & Recovery
+
+### Common Issues
+- **Dependency conflicts**: Resolve package version conflicts
+- **Database errors**: Check schema and migrations
+- **API failures**: Verify endpoints and authentication
+- **Performance issues**: Profile and optimize bottlenecks
+- **Test failures**: Debug and fix test cases
+- **Cross-story conflicts**: Coordinate with other developers
+
+### Recovery Strategies
+- **Rollback changes**: Use git to undo problematic changes
+- **Incremental fixes**: Address issues one at a time
+- **Seek guidance**: Ask for clarification on complex issues
+- **Alternative approaches**: Consider different implementation strategies
+- **Coordination**: Communicate with team on blocking issues
+
+## Output Format
+
+The AI should provide a comprehensive development report including:
+
+### Development Summary
+- Story objective and approach taken
+- Implementation decisions made and rationale
+- Challenges encountered and solutions applied
+- Files created/modified with brief descriptions
+- Cross-story coordination performed
+
+### Testing Results
+- Unit tests written and pass/fail status
+- Integration tests results
+- Manual testing performed and outcomes
+- Acceptance criteria validation results
+- Performance and security testing outcomes
+
+### Quality Metrics
+- Code coverage percentage
+- Performance benchmarks vs requirements
+- Security validation results
+- Documentation completeness
+- Code quality metrics (linting, formatting)
+
+### Final Status
+- Whether the story is complete according to definition of done
+- Any outstanding items or blockers
+- Recommendations for next steps or review
+- Impact on other stories or system components
+
+## Usage Instructions
+
+To use this prompt:
+
+1. **Provide the story file path**: Specify which story to develop
+2. **Specify development context**: Current codebase state and constraints
+3. **Follow the development workflow**: Systematically implement, test, and validate
+4. **Use available tools**: Leverage MCPs and Claude Code capabilities
+5. **Document progress**: Track development decisions and outcomes
+6. **Validate completion**: Ensure all requirements are met before marking complete
+7. **Handle cross-story coordination**: Check for conflicts and coordinate as needed
+
+## Notes for AI Implementation
+
+- Always start by thoroughly reading and understanding the story requirements
+- Use existing codebase patterns and conventions as much as possible
+- Implement incrementally with frequent testing and validation
+- Document decisions and trade-offs made during development
+- Validate acceptance criteria systematically
+- Don't hesitate to ask for clarification on ambiguous requirements
+- Consider the broader feature context when implementing individual stories
+- Ensure all changes integrate well with the existing system
+- Be mindful of other stories that might be in parallel development
+- Communicate blockers and dependencies early
+
+## Success Criteria
+
+The story development is successful when:
+- All acceptance criteria are met and validated
+- All tests pass with adequate coverage (>90% for new code)
+- Code integrates seamlessly with existing system
+- Performance and security requirements are satisfied
+- Documentation is complete and accurate
+- No cross-story conflicts or issues introduced
+- The story is ready for code review and merge
+- Definition of done is fully satisfied

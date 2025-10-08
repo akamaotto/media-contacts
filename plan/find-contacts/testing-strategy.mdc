@@ -1,0 +1,1536 @@
+# Testing Strategy & Quality Gates - Find Contacts with AI
+
+## Overview
+This comprehensive testing strategy ensures the Find Contacts with AI feature meets the highest quality standards through systematic testing across all development phases.
+
+## Testing Pyramid
+
+```
+                    /\
+                   /  \
+                  / E2E \  ← End-to-End Tests (10%)
+                 /______\
+                /        \
+               /Integration\ ← Integration Tests (20%)
+              /____________\
+             /              \
+            /    Unit Tests   \ ← Unit Tests (70%)
+           /__________________\
+```
+
+### Test Distribution
+- **Unit Tests**: 70% - Fast, isolated component testing
+- **Integration Tests**: 20% - Service and API integration testing
+- **End-to-End Tests**: 10% - Complete user workflow testing
+
+## Testing Infrastructure
+
+### Tools & Frameworks
+```typescript
+// Package.json testing dependencies
+{
+  "devDependencies": {
+    // Unit Testing
+    "@testing-library/jest-dom": "^6.1.0",
+    "@testing-library/react": "^14.1.0",
+    "@testing-library/user-event": "^14.4.0",
+    "jest": "^30.0.0",
+    "jest-environment-jsdom": "^30.0.0",
+    
+    // Integration Testing
+    "supertest": "^6.3.0",
+    "nock": "^13.3.0",
+    "mongodb-memory-server": "^9.1.0",
+    
+    // E2E Testing
+    "@playwright/test": "^1.40.0",
+    "playwright": "^1.40.0",
+    
+    // Performance Testing
+    "artillery": "^2.0.0",
+    "lighthouse": "^11.0.0",
+    
+    // Security Testing
+    "owasp-zap2docker": "^0.12.0",
+    "ssl-checker": "^2.0.0",
+    
+    // Accessibility Testing
+    "axe-core": "^4.8.0",
+    "@axe-core/playwright": "^4.8.0"
+  }
+}
+```
+
+### Test Environment Setup
+```typescript
+// jest.config.js
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
+  moduleNameMapping: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/test/**/*',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 90,
+      lines: 90,
+      statements: 90,
+    },
+  },
+  testMatch: [
+    '<rootDir>/src/**/__tests__/**/*.{ts,tsx}',
+    '<rootDir>/src/**/*.{test,spec}.{ts,tsx}',
+  ],
+};
+```
+
+## Unit Testing Strategy
+
+### Backend Unit Tests
+
+#### AI Services Testing
+```typescript
+// src/lib/ai/search/__tests__/query-generator.test.ts
+import { QueryGenerator } from '../query-generator';
+import { SearchConfig } from '../types';
+
+describe('QueryGenerator', () => {
+  let queryGenerator: QueryGenerator;
+
+  beforeEach(() => {
+    queryGenerator = new QueryGenerator();
+  });
+
+  describe('generateQueries', () => {
+    it('should generate targeted queries for US Technology journalists', () => {
+      const config: SearchConfig = {
+        countries: ['US'],
+        categories: ['Technology'],
+        maxResults: 50,
+        options: {
+          contactTypes: ['journalist'],
+          confidenceThreshold: 0.7
+        }
+      };
+
+      const queries = queryGenerator.generateQueries(config);
+
+      expect(queries).toHaveLength.greaterThan(0);
+      expect(queries[0]).toMatchObject({
+        query: expect.stringContaining('technology'),
+        source: expect.any(String),
+        params: expect.any(Object)
+      });
+    });
+
+    it('should prioritize country-specific outlets', () => {
+      const config: SearchConfig = {
+        countries: ['GB'],
+        categories: ['Business'],
+        maxResults: 25,
+        options: {}
+      };
+
+      const queries = queryGenerator.generateQueries(config);
+
+      expect(queries.some(q => q.query.includes('UK') || q.query.includes('British'))).toBe(true);
+    });
+
+    it('should limit maximum queries to prevent API overuse', () => {
+      const config: SearchConfig = {
+        countries: ['US', 'GB', 'CA', 'AU', 'DE'],
+        categories: ['Technology', 'Business', 'Health'],
+        maxResults: 100,
+        options: {}
+      };
+
+      const queries = queryGenerator.generateQueries(config);
+
+      expect(queries.length).toBeLessThanOrEqual(50); // Maximum limit
+    });
+  });
+
+  describe('queryScoring', () => {
+    it('should score queries based on relevance', () => {
+      const queries = [
+        { query: 'technology journalist US', source: 'exa' },
+        { query: 'tech writer California', source: 'openai' },
+        { query: 'AI reporter Silicon Valley', source: 'exa' }
+      ];
+
+      const scoredQueries = queryGenerator.scoreQueries(queries);
+
+      expect(scoredQueries).toBeSortedBy('score', 'desc');
+      expect(scoredQueries[0].score).toBeGreaterThan(0.5);
+    });
+  });
+});
+```
+
+#### Contact Extraction Testing
+```typescript
+// src/lib/ai/extractors/__tests__/contact-extractor.test.ts
+import { ContactExtractor } from '../contact-extractor';
+import { WebContent } from '../types';
+
+describe('ContactExtractor', () => {
+  let extractor: ContactExtractor;
+  let mockAIModel: jest.MockedObject<any>;
+
+  beforeEach(() => {
+    mockAIModel = {
+      extractContacts: jest.fn()
+    };
+    extractor = new ContactExtractor(mockAIModel);
+  });
+
+  describe('extractFromContent', () => {
+    it('should extract contact information from author page', async () => {
+      const content: WebContent = {
+        url: 'https://technews.com/author/sarah',
+        text: 'Sarah Johnson is a technology editor covering AI and startups.',
+        domain: 'technews.com',
+        type: 'author_page'
+      };
+
+      mockAIModel.extractContacts.mockResolvedValue({
+        contacts: [
+          {
+            name: 'Sarah Johnson',
+            title: 'Technology Editor',
+            email: 'sarah.j@technews.com',
+            outlet: 'TechNews',
+            beats: ['AI', 'Startups']
+          }
+        ]
+      });
+
+      const contacts = await extractor.extractFromContent(content);
+
+      expect(contacts).toHaveLength(1);
+      expect(contacts[0]).toMatchObject({
+        name: 'Sarah Johnson',
+        title: 'Technology Editor',
+        confidence: expect.any(Number)
+      });
+    });
+
+    it('should validate email formats', async () => {
+      const content: WebContent = {
+        url: 'https://example.com/author/invalid',
+        text: 'Author with invalid email: not-an-email@',
+        domain: 'example.com',
+        type: 'author_page'
+      };
+
+      mockAIModel.extractContacts.mockResolvedValue({
+        contacts: [
+          {
+            name: 'Invalid Author',
+            email: 'not-an-email@'
+          }
+        ]
+      });
+
+      const contacts = await extractor.extractFromContent(content);
+
+      expect(contacts[0].email).toBeUndefined();
+      expect(contacts[0].confidence).toBeLessThan(0.5);
+    });
+
+    it('should handle extraction failures gracefully', async () => {
+      const content: WebContent = {
+        url: 'https://example.com/malformed',
+        text: 'Malformed content with no structure',
+        domain: 'example.com',
+        type: 'author_page'
+      };
+
+      mockAIModel.extractContacts.mockRejectedValue(new Error('AI service unavailable'));
+
+      await expect(extractor.extractFromContent(content)).rejects.toThrow();
+    });
+  });
+});
+```
+
+#### API Controller Testing
+```typescript
+// src/app/api/ai/search/__tests__/route.test.ts
+import { createMocks } from 'node-mocks-http';
+import { GET, POST } from '../route';
+import { getServerSession } from 'next-auth';
+
+jest.mock('next-auth');
+jest.mock('@/lib/ai/search/contact-discovery');
+
+describe('/api/ai/search', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('POST /api/ai/search', () => {
+    it('should initiate a new search with valid configuration', async () => {
+      const mockSession = {
+        user: { id: 'user123', email: 'test@example.com' }
+      };
+      (getServerSession as jest.Mock).mockResolvedValue(mockSession);
+
+      const { req, res } = createMocks({
+        method: 'POST',
+        body: {
+          countries: ['US', 'GB'],
+          categories: ['Technology'],
+          maxResults: 50
+        }
+      });
+
+      await POST(req, res);
+
+      expect(res._getStatusCode()).toBe(202);
+      const data = JSON.parse(res._getData());
+      expect(data.success).toBe(true);
+      expect(data.data).toMatchObject({
+        searchId: expect.any(String),
+        status: 'pending',
+        estimatedDuration: expect.any(Number)
+      });
+    });
+
+    it('should return validation error for invalid input', async () => {
+      const mockSession = {
+        user: { id: 'user123', email: 'test@example.com' }
+      };
+      (getServerSession as jest.Mock).mockResolvedValue(mockSession);
+
+      const { req, res } = createMocks({
+        method: 'POST',
+        body: {
+          countries: [], // Invalid: empty array
+          categories: ['Technology'],
+          maxResults: 150 // Invalid: exceeds limit
+        }
+      });
+
+      await POST(req, res);
+
+      expect(res._getStatusCode()).toBe(400);
+      const data = JSON.parse(res._getData());
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should return 401 for unauthenticated requests', async () => {
+      (getServerSession as jest.Mock).mockResolvedValue(null);
+
+      const { req, res } = createMocks({
+        method: 'POST',
+        body: {
+          countries: ['US'],
+          categories: ['Technology'],
+          maxResults: 50
+        }
+      });
+
+      await POST(req, res);
+
+      expect(res._getStatusCode()).toBe(401);
+    });
+  });
+});
+```
+
+### Frontend Unit Tests
+
+#### Component Testing
+```typescript
+// src/components/features/ai/find-contacts/components/__tests__/search-form.test.tsx
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { SearchForm } from '../search-form';
+
+describe('SearchForm', () => {
+  const mockOnSubmit = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should render search form with all required fields', () => {
+    render(<SearchForm onSubmit={mockOnSubmit} />);
+
+    expect(screen.getByText('Discover Media Contacts')).toBeInTheDocument();
+    expect(screen.getByText('Countries')).toBeInTheDocument();
+    expect(screen.getByText('Categories')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /scan web & find contacts/i })).toBeInTheDocument();
+  });
+
+  it('should enable submit button when form is valid', async () => {
+    const user = userEvent.setup();
+    render(<SearchForm onSubmit={mockOnSubmit} />);
+
+    // Initially disabled
+    expect(screen.getByRole('button', { name: /scan web/i })).toBeDisabled();
+
+    // Fill required fields
+    await user.click(screen.getByText('Countries'));
+    await user.click(screen.getByText('🇺🇸 United States'));
+    
+    await user.click(screen.getByText('Categories'));
+    await user.click(screen.getByText('Technology'));
+
+    // Button should be enabled
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /scan web/i })).toBeEnabled();
+    });
+  });
+
+  it('should submit form with correct data', async () => {
+    const user = userEvent.setup();
+    render(<SearchForm onSubmit={mockOnSubmit} />);
+
+    // Fill form
+    await user.click(screen.getByText('Countries'));
+    await user.click(screen.getByText('🇺🇸 United States'));
+    
+    await user.click(screen.getByText('Categories'));
+    await user.click(screen.getByText('Technology'));
+
+    // Submit form
+    await user.click(screen.getByRole('button', { name: /scan web & find contacts/i }));
+
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        countries: ['US'],
+        categories: ['Technology'],
+        beats: [],
+        maxResults: 50,
+        options: expect.objectContaining({
+          confidenceThreshold: 0.7,
+          includeSocialProfiles: true,
+          verifyEmails: true
+        })
+      });
+    });
+  });
+
+  it('should show loading state during submission', async () => {
+    const user = userEvent.setup();
+    render(<SearchForm onSubmit={mockOnSubmit} loading={true} />);
+
+    expect(screen.getByText('Starting Search...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /starting search/i })).toBeDisabled();
+  });
+});
+```
+
+#### Hook Testing
+```typescript
+// src/components/features/ai/find-contacts/hooks/__tests__/use-search-progress.test.ts
+import { renderHook, act } from '@testing-library/react';
+import { useSearchProgress } from '../use-search-progress';
+import * as api from '@/lib/api';
+
+jest.mock('@/lib/api');
+
+describe('useSearchProgress', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('should initialize with loading state', () => {
+    (api.getSearchProgress as jest.Mock).mockResolvedValue({
+      success: true,
+      data: { progress: 25, status: 'processing' }
+    });
+
+    const { result } = renderHook(() => useSearchProgress('search123'));
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.progress).toBe(null);
+    expect(result.current.error).toBe(null);
+  });
+
+  it('should poll progress updates periodically', async () => {
+    const mockProgress = { progress: 25, status: 'processing' };
+    (api.getSearchProgress as jest.Mock).mockResolvedValue({
+      success: true,
+      data: mockProgress
+    });
+
+    const { result } = renderHook(() => useSearchProgress('search123'));
+
+    // Initial poll
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(result.current.progress).toEqual(mockProgress);
+    expect(api.getSearchProgress).toHaveBeenCalledTimes(1);
+  });
+
+  it('should call onComplete when search finishes', async () => {
+    const mockOnComplete = jest.fn();
+    const mockResults = { contacts: [], totalFound: 10 };
+    
+    (api.getSearchProgress as jest.Mock).mockResolvedValue({
+      success: true,
+      data: { status: 'completed', progress: 100 }
+    });
+
+    (api.getSearchResults as jest.Mock).mockResolvedValue({
+      success: true,
+      data: mockResults
+    });
+
+    renderHook(() => useSearchProgress('search123', {
+      onComplete: mockOnComplete
+    }));
+
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(mockOnComplete).toHaveBeenCalledWith(mockResults);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('should handle API errors gracefully', async () => {
+    const mockError = new Error('Network error');
+    (api.getSearchProgress as jest.Mock).mockRejectedValue(mockError);
+
+    const mockOnError = jest.fn();
+    const { result } = renderHook(() => useSearchProgress('search123', {
+      onError: mockOnError
+    }));
+
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(result.current.error).toEqual(mockError);
+    expect(mockOnError).toHaveBeenCalledWith(mockError);
+    expect(result.current.isLoading).toBe(false);
+  });
+});
+```
+
+## Integration Testing Strategy
+
+### API Integration Tests
+
+#### Search Workflow Integration
+```typescript
+// src/app/api/ai/__tests__/integration/search-workflow.test.ts
+import request from 'supertest';
+import { app } from '@/app';
+import { setupTestDatabase, cleanupTestDatabase } from '@/test/database-helpers';
+
+describe('Search Workflow Integration', () => {
+  let authToken: string;
+
+  beforeAll(async () => {
+    await setupTestDatabase();
+    authToken = await getTestUserToken();
+  });
+
+  afterAll(async () => {
+    await cleanupTestDatabase();
+  });
+
+  describe('Complete Search Workflow', () => {
+    let searchId: string;
+
+    it('should initiate and complete a search workflow', async () => {
+      // Step 1: Initiate search
+      const initiateResponse = await request(app)
+        .post('/api/ai/search')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          countries: ['US'],
+          categories: ['Technology'],
+          maxResults: 10,
+          options: {
+            confidenceThreshold: 0.7,
+            includeSocialProfiles: true
+          }
+        })
+        .expect(202);
+
+      expect(initiateResponse.body.success).toBe(true);
+      searchId = initiateResponse.body.data.searchId;
+      expect(searchId).toMatch(/^search_[a-f0-9]+$/);
+
+      // Step 2: Monitor progress
+      let progressComplete = false;
+      let attempts = 0;
+      const maxAttempts = 30;
+
+      while (!progressComplete && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const progressResponse = await request(app)
+          .get(`/api/ai/search/${searchId}/progress`)
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200);
+
+        expect(progressResponse.body.success).toBe(true);
+        const { status, progress } = progressResponse.body.data;
+
+        if (status === 'completed') {
+          progressComplete = true;
+          expect(progress).toBe(100);
+        } else if (status === 'failed') {
+          throw new Error(`Search failed: ${progressResponse.body.data.error?.message}`);
+        }
+
+        attempts++;
+      }
+
+      expect(progressComplete).toBe(true);
+
+      // Step 3: Get results
+      const resultsResponse = await request(app)
+        .get(`/api/ai/search/${searchId}/results`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(resultsResponse.body.success).toBe(true);
+      const { contacts, totalFound } = resultsResponse.body.data;
+
+      expect(Array.isArray(contacts)).toBe(true);
+      expect(totalFound).toBeGreaterThanOrEqual(0);
+      expect(contacts.length).toBeLessThanOrEqual(totalFound);
+
+      // Validate contact structure
+      if (contacts.length > 0) {
+        const contact = contacts[0];
+        expect(contact).toMatchObject({
+          id: expect.any(String),
+          name: expect.any(String),
+          confidence: expect.any(Number),
+          verificationStatus: expect.any(String)
+        });
+      }
+    });
+
+    it('should import discovered contacts', async () => {
+      // First, get results from previous search
+      const resultsResponse = await request(app)
+        .get(`/api/ai/search/${searchId}/results`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const contacts = resultsResponse.body.data.contacts;
+      if (contacts.length === 0) {
+        console.warn('No contacts found to test import');
+        return;
+      }
+
+      // Import first contact
+      const importResponse = await request(app)
+        .post('/api/ai/contacts/import')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          searchId,
+          contactIds: [contacts[0].id],
+          options: {
+            skipDuplicates: true,
+            updateExisting: false,
+            addNotes: true
+          }
+        })
+        .expect(200);
+
+      expect(importResponse.body.success).toBe(true);
+      const { imported, skipped } = importResponse.body.data;
+      expect(imported + skipped).toBe(1);
+
+      // Verify contact was added to database
+      const contactsResponse = await request(app)
+        .get('/api/media-contacts')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const importedContact = contactsResponse.body.data.find(
+        (c: any) => c.email === contacts[0].email
+      );
+      expect(importedContact).toBeDefined();
+      expect(importedContact.discovery_source).toBe('ai_search');
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle rate limiting', async () => {
+      const requests = Array(6).fill(null).map(() =>
+        request(app)
+          .post('/api/ai/search')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({
+            countries: ['US'],
+            categories: ['Technology'],
+            maxResults: 10
+          })
+      );
+
+      const responses = await Promise.allSettled(requests);
+
+      // At least one should be rate limited
+      const rateLimitedResponse = responses.find(
+        r => r.status === 'fulfilled' && r.value.status === 429
+      );
+      expect(rateLimitedResponse).toBeDefined();
+    });
+
+    it('should handle invalid search ID', async () => {
+      const response = await request(app)
+        .get('/api/ai/search/invalid-search-id/progress')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('SEARCH_NOT_FOUND');
+    });
+  });
+});
+```
+
+### Database Integration Tests
+
+#### Repository Pattern Testing
+```typescript
+// src/lib/repositories/__tests__/ai-search-repository.test.ts
+import { AISearchRepository } from '../ai-search-repository';
+import { setupTestDatabase, cleanupTestDatabase } from '@/test/database-helpers';
+
+describe('AISearchRepository', () => {
+  let repository: AISearchRepository;
+  let testUserId: string;
+
+  beforeAll(async () => {
+    await setupTestDatabase();
+    repository = new AISearchRepository();
+    testUserId = await createTestUser();
+  });
+
+  afterAll(async () => {
+    await cleanupTestDatabase();
+  });
+
+  describe('createSearch', () => {
+    it('should create a new search record', async () => {
+      const searchConfig = {
+        countries: ['US', 'GB'],
+        categories: ['Technology'],
+        maxResults: 50,
+        options: { confidenceThreshold: 0.7 }
+      };
+
+      const search = await repository.createSearch(testUserId, searchConfig);
+
+      expect(search).toMatchObject({
+        id: expect.any(String),
+        userId: testUserId,
+        searchConfig,
+        status: 'pending',
+        totalContactsFound: 0,
+        contactsImported: 0
+      });
+      expect(search.createdAt).toBeInstanceOf(Date);
+    });
+
+    it('should enforce foreign key constraints', async () => {
+      const invalidUserId = 'non-existent-user-id';
+
+      await expect(
+        repository.createSearch(invalidUserId, {})
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('updateSearchProgress', () => {
+    let searchId: string;
+
+    beforeEach(async () => {
+      const search = await repository.createSearch(testUserId, {});
+      searchId = search.id;
+    });
+
+    it('should update search progress', async () => {
+      const updateData = {
+        status: 'processing' as const,
+        totalContactsFound: 25,
+        contactsImported: 0
+      };
+
+      const updatedSearch = await repository.updateSearchProgress(searchId, updateData);
+
+      expect(updatedSearch).toMatchObject(updateData);
+      expect(updatedSearch.startedAt).toBeInstanceOf(Date);
+    });
+
+    it('should mark search as completed with duration', async () => {
+      const updateData = {
+        status: 'completed' as const,
+        totalContactsFound: 30,
+        contactsImported: 25,
+        searchDurationSeconds: 45
+      };
+
+      const updatedSearch = await repository.updateSearchProgress(searchId, updateData);
+
+      expect(updatedSearch.status).toBe('completed');
+      expect(updatedSearch.completedAt).toBeInstanceOf(Date);
+      expect(updatedSearch.searchDurationSeconds).toBe(45);
+    });
+  });
+
+  describe('getUserSearchHistory', () => {
+    beforeEach(async () => {
+      // Create test searches
+      await repository.createSearch(testUserId, {
+        countries: ['US'],
+        categories: ['Technology']
+      });
+      
+      await repository.createSearch(testUserId, {
+        countries: ['GB'],
+        categories: ['Business']
+      });
+    });
+
+    it('should return user search history with pagination', async () => {
+      const history = await repository.getUserSearchHistory(testUserId, {
+        limit: 10,
+        offset: 0
+      });
+
+      expect(history.searches).toHaveLength(2);
+      expect(history.total).toBe(2);
+      expect(history.hasMore).toBe(false);
+    });
+
+    it('should respect pagination parameters', async () => {
+      const history = await repository.getUserSearchHistory(testUserId, {
+        limit: 1,
+        offset: 0
+      });
+
+      expect(history.searches).toHaveLength(1);
+      expect(history.hasMore).toBe(true);
+    });
+  });
+});
+```
+
+## End-to-End Testing Strategy
+
+### Playwright E2E Tests
+
+#### User Journey Testing
+```typescript
+// tests/e2e/ai-contact-discovery.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('AI Contact Discovery', () => {
+  test.beforeEach(async ({ page }) => {
+    // Login
+    await page.goto('/login');
+    await page.fill('[data-testid=email]', 'test@example.com');
+    await page.fill('[data-testid=password]', 'testpassword');
+    await page.click('[data-testid=login-button]');
+    await expect(page.locator('[data-testid=dashboard]')).toBeVisible();
+  });
+
+  test('complete contact discovery workflow', async ({ page }) => {
+    // Step 1: Open AI search modal
+    await page.click('[data-testid=find-contacts-button]');
+    await expect(page.locator('[data-testid=find-contacts-modal]')).toBeVisible();
+    await expect(page.locator('h2')).toContainText('Find Contacts with AI');
+
+    // Step 2: Configure search
+    await page.click('[data-testid=countries-selector]');
+    await page.click('[data-testid=country-US]');
+    await page.click('[data-testid=country-GB]');
+    await page.keyboard.press('Escape');
+
+    await page.click('[data-testid=categories-selector]');
+    await page.click('[data-testid=category-Technology]');
+    await page.click('[data-testid=category-Business]');
+    await page.keyboard.press('Escape');
+
+    // Step 3: Start search
+    await page.click('[data-testid=start-search-button]');
+    await expect(page.locator('[data-testid=search-progress]')).toBeVisible();
+
+    // Step 4: Monitor progress
+    await expect(page.locator('[data-testid=progress-bar]')).toBeVisible();
+    await expect(page.locator('[data-testid=current-stage]')).toBeVisible();
+
+    // Wait for search completion (with timeout)
+    await expect(page.locator('[data-testid=search-results]')).toBeVisible({ timeout: 60000 });
+
+    // Step 5: Review results
+    await expect(page.locator('[data-testid=results-table]')).toBeVisible();
+    await expect(page.locator('[data-testid=contact-row]')).toHaveCount.greaterThan(0);
+
+    // Step 6: Select contacts for import
+    await page.check('[data-testid=contact-checkbox]:first-child');
+    await page.check('[data-testid=contact-checkbox]:nth-child(2)');
+
+    // Step 7: Import selected contacts
+    await page.click('[data-testid=import-selected-button]');
+    await expect(page.locator('[data-testid=import-modal]')).toBeVisible();
+
+    await page.click('[data-testid=confirm-import-button]');
+    await expect(page.locator('[data-testid=import-success]')).toBeVisible();
+
+    // Step 8: Verify imported contacts
+    await page.goto('/media-contacts');
+    await expect(page.locator('[data-testid=contacts-table]')).toBeVisible();
+    
+    // Should find newly imported contacts
+    await expect(page.locator('[data-testid=contact-row]')).toHaveCount.greaterThan(0);
+  });
+
+  test('should handle search cancellation', async ({ page }) => {
+    await page.click('[data-testid=find-contacts-button]');
+    
+    // Configure minimal search
+    await page.click('[data-testid=countries-selector]');
+    await page.click('[data-testid=country-US]');
+    await page.keyboard.press('Escape');
+
+    await page.click('[data-testid=categories-selector]');
+    await page.click('[data-testid=category-Technology]');
+    await page.keyboard.press('Escape');
+
+    await page.click('[data-testid=start-search-button]');
+
+    // Cancel search quickly
+    await page.click('[data-testid=cancel-search-button]', { timeout: 5000 });
+    await expect(page.locator('[data-testid=cancel-confirmation]')).toBeVisible();
+    
+    await page.click('[data-testid=confirm-cancel]');
+    await expect(page.locator('[data-testid=search-form]')).toBeVisible();
+  });
+
+  test('should handle search errors gracefully', async ({ page }) => {
+    // Mock API error scenario
+    await page.route('/api/ai/search', route => {
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: 'AI_SERVICE_ERROR',
+            message: 'AI service temporarily unavailable'
+          }
+        })
+      });
+    });
+
+    await page.click('[data-testid=find-contacts-button]');
+    
+    // Configure and start search
+    await page.click('[data-testid=countries-selector]');
+    await page.click('[data-testid=country-US]');
+    await page.keyboard.press('Escape');
+
+    await page.click('[data-testid=categories-selector]');
+    await page.click('[data-testid=category-Technology]');
+    await page.keyboard.press('Escape');
+
+    await page.click('[data-testid=start-search-button]');
+
+    // Should show error message
+    await expect(page.locator('[data-testid=error-message]')).toBeVisible();
+    await expect(page.locator('[data-testid=error-message]')).toContainText('AI service temporarily unavailable');
+
+    // Should allow retry
+    await page.click('[data-testid=retry-button]');
+    await expect(page.locator('[data-testid=search-form]')).toBeVisible();
+  });
+});
+```
+
+#### Mobile Responsiveness Testing
+```typescript
+// tests/e2e/mobile-responsiveness.spec.ts
+import { test, devices } from '@playwright/test';
+
+const iPhone = devices['iPhone 12'];
+const iPad = devices['iPad Pro'];
+
+test.describe('Mobile Responsiveness', () => {
+  test('should work on iPhone', async ({ page }) => {
+    await test.use({ ...iPhone });
+    await page.goto('/dashboard');
+
+    // Test mobile menu
+    await expect(page.locator('[data-testid=mobile-menu-button]')).toBeVisible();
+    await page.click('[data-testid=mobile-menu-button]');
+    await expect(page.locator('[data-testid=mobile-menu]')).toBeVisible();
+
+    // Test AI search on mobile
+    await page.click('[data-testid=find-contacts-button]');
+    await expect(page.locator('[data-testid=find-contacts-modal]')).toBeVisible();
+    
+    // Mobile modal should be full screen
+    const modal = page.locator('[data-testid=find-contacts-modal]');
+    await expect(modal).toHaveCSS('width', '100vw');
+    await expect(modal).toHaveCSS('height', '100vh');
+  });
+
+  test('should work on iPad', async ({ page }) => {
+    await test.use({ ...iPad });
+    await page.goto('/dashboard');
+
+    // Test tablet layout
+    await expect(page.locator('[data-testid=sidebar]')).toBeVisible();
+    await expect(page.locator('[data-testid=main-content]')).toBeVisible();
+
+    // Test AI search on tablet
+    await page.click('[data-testid=find-contacts-button]');
+    await expect(page.locator('[data-testid=find-contacts-modal]')).toBeVisible();
+    
+    // Tablet modal should be constrained width
+    const modal = page.locator('[data-testid=find-contacts-modal]');
+    const modalWidth = await modal.evaluate(el => getComputedStyle(el).width);
+    expect(parseInt(modalWidth)).toBeLessThan(1024);
+  });
+});
+```
+
+## Performance Testing
+
+### Load Testing with Artillery
+```yaml
+# artillery-config.yml
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+    - duration: 120
+      arrivalRate: 10
+    - duration: 60
+      arrivalRate: 20
+  payload:
+    path: "test-payloads.csv"
+    fields:
+      - "countries"
+      - "categories"
+      - "maxResults"
+
+scenarios:
+  - name: "AI Contact Discovery Load Test"
+    weight: 70
+    flow:
+      - post:
+          url: "/api/auth/signin"
+          json:
+            email: "test@example.com"
+            password: "testpassword"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - post:
+          url: "/api/ai/search"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            countries: "{{ countries }}"
+            categories: "{{ categories }}"
+            maxResults: "{{ maxResults }}"
+          capture:
+            - json: "$.data.searchId"
+              as: "searchId"
+      
+      - loop:
+          - get:
+              url: "/api/ai/search/{{ searchId }}/progress"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+          - think: 2 # Wait 2 seconds between polls
+        whileTrue: "{{ $response.body.data.status !== 'completed' }}"
+
+  - name: "Database Performance Test"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/media-contacts"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          qs:
+            pageSize: 50
+            page: 1
+```
+
+### Frontend Performance Testing
+```typescript
+// tests/performance/lighthouse.spec.ts
+import { test } from '@playwright/test';
+import { playAudit } from 'playwright-lighthouse';
+
+test.describe('Performance Tests', () => {
+  test('should meet Lighthouse performance thresholds', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    await playAudit({
+      page,
+      thresholds: {
+        performance: 80,
+        accessibility: 90,
+        'best-practices': 80,
+        seo: 80,
+      },
+      port: 9222,
+    });
+
+    // Test AI search modal performance
+    await page.click('[data-testid=find-contacts-button]');
+    await playAudit({
+      page,
+      url: '/dashboard', // Still on same page but with modal open
+      thresholds: {
+        performance: 75, // Slightly lower due to modal complexity
+        accessibility: 90,
+      },
+      port: 9222,
+    });
+  });
+
+  test('should load search results quickly', async ({ page }) => {
+    // Mock a fast search response
+    await page.route('/api/ai/search/*', route => {
+      setTimeout(() => {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              searchId: 'test-search-123',
+              status: 'completed',
+              contacts: Array.from({ length: 50 }, (_, i) => ({
+                id: `contact-${i}`,
+                name: `Contact ${i}`,
+                confidence: 0.8 + Math.random() * 0.2
+              }))
+            }
+          })
+        });
+      }, 1000); // 1 second delay
+    });
+
+    await page.goto('/dashboard');
+    const startTime = Date.now();
+
+    await page.click('[data-testid=find-contacts-button]');
+    await page.click('[data-testid=countries-selector]');
+    await page.click('[data-testid=country-US]');
+    await page.keyboard.press('Escape');
+
+    await page.click('[data-testid=categories-selector]');
+    await page.click('[data-testid=category-Technology]');
+    await page.keyboard.press('Escape');
+
+    await page.click('[data-testid=start-search-button]');
+    await expect(page.locator('[data-testid=results-table]')).toBeVisible();
+
+    const loadTime = Date.now() - startTime;
+    expect(loadTime).toBeLessThan(5000); // Should load in under 5 seconds
+  });
+});
+```
+
+## Security Testing
+
+### API Security Testing
+```typescript
+// tests/security/api-security.spec.ts
+import request from 'supertest';
+import { app } from '@/app';
+
+describe('API Security Tests', () => {
+  describe('Authentication & Authorization', () => {
+    it('should reject requests without authentication', async () => {
+      const response = await request(app)
+        .post('/api/ai/search')
+        .send({
+          countries: ['US'],
+          categories: ['Technology']
+        });
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should reject requests with invalid tokens', async () => {
+      const response = await request(app)
+        .post('/api/ai/search')
+        .set('Authorization', 'Bearer invalid-token')
+        .send({
+          countries: ['US'],
+          categories: ['Technology']
+        });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should prevent users from accessing other users searches', async () => {
+      const user1Token = await getTestUserToken('user1');
+      const user2SearchId = await createTestSearch('user2');
+
+      const response = await request(app)
+        .get(`/api/ai/search/${user2SearchId}/progress`)
+        .set('Authorization', `Bearer ${user1Token}`);
+
+      expect(response.status).toBe(403);
+    });
+  });
+
+  describe('Input Validation', () => {
+    let authToken: string;
+
+    beforeAll(async () => {
+      authToken = await getTestUserToken();
+    });
+
+    it('should sanitize and validate input parameters', async () => {
+      const maliciousPayload = {
+        countries: ['<script>alert("xss")</script>'],
+        categories: ["'; DROP TABLE users; --"],
+        maxResults: 999999999,
+        options: {
+          confidenceThreshold: -1,
+          __proto__: { isAdmin: true } // Prototype pollution attempt
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/ai/search')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(maliciousPayload);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should prevent SQL injection attempts', async () => {
+      const sqlInjectionPayload = {
+        countries: ["US'; SELECT * FROM users; --"],
+        categories: ["Technology' OR '1'='1"],
+        maxResults: 10
+      };
+
+      const response = await request(app)
+        .post('/api/ai/search')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(sqlInjectionPayload);
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('Rate Limiting', () => {
+    let authToken: string;
+
+    beforeAll(async () => {
+      authToken = await getTestUserToken();
+    });
+
+    it('should enforce rate limits', async () => {
+      const requests = Array(10).fill(null).map(() =>
+        request(app)
+          .post('/api/ai/search')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({
+            countries: ['US'],
+            categories: ['Technology'],
+            maxResults: 10
+          })
+      );
+
+      const responses = await Promise.allSettled(requests);
+      
+      // Should have some rate limited responses
+      const rateLimitedResponses = responses.filter(
+        r => r.status === 'fulfilled' && r.value.status === 429
+      );
+      
+      expect(rateLimitedResponses.length).toBeGreaterThan(0);
+      
+      rateLimitedResponses.forEach(response => {
+        if (response.status === 'fulfilled') {
+          expect(response.value.headers).toHaveProperty('x-ratelimit-remaining');
+          expect(response.value.headers).toHaveProperty('x-ratelimit-reset');
+        }
+      });
+    });
+  });
+});
+```
+
+## Accessibility Testing
+
+### Automated Accessibility Tests
+```typescript
+// tests/accessibility/a11y.spec.ts
+import { test, expect } from '@playwright/test';
+import { injectAxe, checkA11y } from 'axe-playwright';
+
+test.describe('Accessibility Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await injectAxe(page);
+    await page.goto('/login');
+    await page.fill('[data-testid=email]', 'test@example.com');
+    await page.fill('[data-testid=password]', 'testpassword');
+    await page.click('[data-testid=login-button]');
+  });
+
+  test('should meet accessibility standards on main dashboard', async ({ page }) => {
+    await expect(page.locator('[data-testid=dashboard]')).toBeVisible();
+    await checkA11y(page);
+  });
+
+  test('should be accessible during AI search workflow', async ({ page }) => {
+    // Open AI search modal
+    await page.click('[data-testid=find-contacts-button]');
+    await expect(page.locator('[data-testid=find-contacts-modal]')).toBeVisible();
+    
+    // Check modal accessibility
+    await checkA11y(page, '#find-contacts-modal', {
+      detailedReport: true,
+      detailedReportOptions: { html: true },
+      rules: {
+        // Custom rules for modal
+        'color-contrast': { enabled: true },
+        'keyboard-navigation': { enabled: true },
+        'aria-labels': { enabled: true }
+      }
+    });
+
+    // Test keyboard navigation
+    await page.keyboard.press('Tab');
+    await expect(page.locator(':focus')).toBeVisible();
+    
+    // Navigate through form fields
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('Tab');
+      const focusedElement = page.locator(':focus');
+      await expect(focusedElement).toBeVisible();
+      
+      // Check that focusable elements have appropriate attributes
+      const tagName = await focusedElement.evaluate(el => el.tagName.toLowerCase());
+      if (tagName === 'input' || tagName === 'button' || tagName === 'select') {
+        const hasAriaLabel = await focusedElement.evaluate(el => 
+          el.hasAttribute('aria-label') || el.hasAttribute('aria-labelledby') || el.hasAttribute('title')
+        );
+        expect(hasAriaLabel).toBe(true);
+      }
+    }
+  });
+
+  test('should support screen readers', async ({ page }) => {
+    await page.click('[data-testid=find-contacts-button]');
+    
+    // Check ARIA attributes
+    const modal = page.locator('[data-testid=find-contacts-modal]');
+    await expect(modal).toHaveAttribute('role', 'dialog');
+    await expect(modal).toHaveAttribute('aria-modal', 'true');
+    await expect(modal).toHaveAttribute('aria-labelledby');
+    
+    // Check form labeling
+    const countriesSelector = page.locator('[data-testid=countries-selector]');
+    await expect(countriesSelector).toHaveAttribute('aria-label');
+    
+    // Check progress announcements
+    await page.click('[data-testid=start-search-button]');
+    await expect(page.locator('[data-testid=progress-announcement]')).toBeVisible();
+    
+    // Verify live regions for dynamic content
+    const progressBar = page.locator('[data-testid=progress-bar]');
+    await expect(progressBar).toHaveAttribute('aria-live', 'polite');
+  });
+
+  test('should have sufficient color contrast', async ({ page }) => {
+    await page.click('[data-testid=find-contacts-button]');
+    
+    // Check contrast ratios for important elements
+    const elementsToCheck = [
+      '[data-testid=start-search-button]',
+      '[data-testid=confidence-badge]',
+      '[data-testid=import-selected-button]'
+    ];
+
+    for (const selector of elementsToCheck) {
+      const element = page.locator(selector);
+      if (await element.isVisible()) {
+        const styles = await element.evaluate(el => {
+          const computed = getComputedStyle(el);
+          return {
+            color: computed.color,
+            backgroundColor: computed.backgroundColor,
+            fontSize: computed.fontSize
+          };
+        });
+
+        // Log styles for manual verification if needed
+        console.log(`${selector} styles:`, styles);
+      }
+    }
+  });
+});
+```
+
+## Quality Gates
+
+### Automated Quality Checks
+
+#### Pre-commit Hooks
+```json
+// package.json
+{
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run test:coverage && npm run lint:check && npm run type-check"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write",
+      "jest --bail --findRelatedTests"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
+}
+```
+
+#### CI/CD Pipeline Quality Gates
+```yaml
+# .github/workflows/quality-gates.yml
+name: Quality Gates
+
+on: [push, pull_request]
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type checking
+        run: npm run type-check
+      
+      - name: Linting
+        run: npm run lint:check
+      
+      - name: Unit tests
+        run: npm run test:unit -- --coverage
+      
+      - name: Integration tests
+        run: npm run test:integration
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+      
+      - name: Security audit
+        run: npm audit --audit-level high
+      
+      - name: Build application
+        run: npm run build
+      
+      - name: E2E tests
+        run: npm run test:e2e
+      
+      - name: Performance tests
+        run: npm run test:performance
+      
+      - name: Accessibility tests
+        run: npm run test:a11y
+      
+      - name: Quality gate checks
+        run: |
+          # Coverage threshold
+          COVERAGE=$(npm run test:coverage:summary | grep -o '[0-9]*\.[0-9]*' | head -1)
+          if (( $(echo "$COVERAGE < 90" | bc -l) )); then
+            echo "Coverage $COVERAGE% is below 90% threshold"
+            exit 1
+          fi
+          
+          # Performance thresholds
+          PERFORMANCE=$(npm run test:performance:summary | grep -o '[0-9]*' | head -1)
+          if [ "$PERFORMANCE" -lt 80 ]; then
+            echo "Performance score $PERFORMANCE is below 80 threshold"
+            exit 1
+          fi
+          
+          echo "All quality gates passed!"
+```
+
+### Manual Quality Review Checklist
+
+#### Code Review Checklist
+- [ ] **Functionality**: Code implements requirements correctly
+- [ ] **Performance**: Code is efficient and doesn't introduce bottlenecks
+- [ ] **Security**: No security vulnerabilities or data exposure risks
+- [ ] **Testing**: Adequate test coverage for new code
+- [ ] **Documentation**: Code is well-documented and understandable
+- [ ] **Error Handling**: Appropriate error handling and user feedback
+- [ ] **Accessibility**: Meets WCAG 2.1 AA standards
+- [ ] **Browser Compatibility**: Works on all supported browsers
+- [ ] **Mobile Responsiveness**: Works well on mobile devices
+- [ ] **Code Style**: Follows project coding standards
+
+#### Feature Release Checklist
+- [ ] **Functionality**: All features work as specified
+- [ ] **Performance**: Meets performance benchmarks
+- [ ] **Security**: Security review completed and passed
+- [ ] **Testing**: All tests pass with adequate coverage
+- [ ] **Documentation**: User and developer documentation complete
+- [ ] **Accessibility**: Accessibility testing passed
+- [ ] **Cross-browser**: Compatible with all supported browsers
+- [ ] **Mobile**: Mobile responsive and functional
+- [ ] **Load Testing**: Handles expected user load
+- [ ] **Error Handling**: Graceful error handling in all scenarios
+- [ ] **User Experience**: Intuitive and user-friendly
+- [ ] **Analytics**: Analytics and monitoring in place
+- [ ] **Backup/Recovery**: Data backup and recovery procedures tested
+- [ ] **Stakeholder Approval**: All stakeholders have approved release
+
+---
+
+This comprehensive testing strategy ensures the Find Contacts with AI feature meets the highest quality standards across functionality, performance, security, and accessibility. The systematic approach to testing at all levels - from unit tests to end-to-end user journeys - provides confidence in the feature's reliability and user experience.

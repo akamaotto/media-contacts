@@ -1,0 +1,289 @@
+# Story 1.3: External AI Service Integration
+**Epic**: Epic 1: Foundation & Infrastructure
+**Estimated Time**: 3 days
+**Priority**: Critical
+**Status**: Pending
+**Assignee**: Backend Developer
+
+## Objective
+Implement robust integration with external AI services (OpenAI, Anthropic, Exa, Firecrawl) to enable web search, content extraction, and contact analysis capabilities for the AI-powered contact discovery feature.
+
+## Acceptance Criteria
+- [ ] All external AI service clients are implemented and tested
+- [ ] Unified service interface abstracts differences between providers
+- [ ] Comprehensive error handling and retry logic for all services
+- [ ] Rate limiting and quota management prevent service abuse
+- [ ] Service health monitoring and automatic failover functionality
+- [ ] Configuration management supports multiple environments
+- [ ] Security best practices protect API keys and sensitive data
+- [ ] Performance monitoring tracks service response times and success rates
+
+## Technical Requirements
+
+### External AI Services Integration
+
+#### 1. OpenAI Integration
+- **Purpose**: Content analysis, contact information extraction, data validation
+- **API Client**: Implement `OpenAIServiceClient` class
+- **Models**:
+  - GPT-4o: Primary model for complex analysis
+  - GPT-4o-mini: Fast model for simple tasks
+  - Text-embedding-3-small: Vector embeddings for similarity matching
+- **Rate Limits**: Implement proper request throttling
+- **Cost Controls**: Set usage limits and budget controls
+
+#### 2. Anthropic Integration
+- **Purpose**: Advanced text analysis, quality assessment, content validation
+- **API Client**: Implement `AnthropicServiceClient` class
+- **Models**:
+  - Claude-3.5-Sonnet: Primary analysis model
+  - Claude-3-Haiku: Fast model for quick validation
+- **Features**: Context caching for cost optimization
+- **Rate Limits**: Request throttling and token management
+
+#### 3. Exa API Integration
+- **Purpose**: Web search and source discovery
+- **API Client**: Implement `ExaServiceClient` class
+- **Capabilities**:
+  - Neural search for relevant sources
+  - Advanced filtering options
+  - Content summarization
+- **Quotas**: Manage search limits and billing
+
+#### 4. Firecrawl Integration
+- **Purpose**: Web scraping and content extraction
+- **API Client**: Implement `FirecrawlServiceClient` class
+- **Features**:
+  - JavaScript rendering for dynamic content
+  - Clean HTML extraction
+  - Rate limiting per domain
+- **Handling**: Robust error handling for failed scrapes
+
+### Unified Service Interface
+
+#### AIServiceManager Class
+```typescript
+interface AIServiceManager {
+  // Search orchestration
+  searchWeb(query: AISearchQuery): Promise<AISearchResult[]>
+
+  // Content extraction
+  extractContacts(content: string, context: ExtractionContext): Promise<ContactInfo[]>
+
+  // Content analysis
+  analyzeContent(content: string, analysisType: AnalysisType): Promise<AnalysisResult>
+
+  // Service health
+  getServiceHealth(): Promise<ServiceHealth[]>
+
+  // Fallback handling
+  withFallback<T>(operation: () => Promise<T>, fallback: () => Promise<T>): Promise<T>
+}
+```
+
+#### Configuration Management
+```typescript
+interface AIServiceConfig {
+  openai: {
+    apiKey: string
+    baseUrl?: string
+    models: ModelConfig[]
+    rateLimits: RateLimitConfig
+  }
+  anthropic: {
+    apiKey: string
+    baseUrl?: string
+    models: ModelConfig[]
+    rateLimits: RateLimitConfig
+  }
+  exa: {
+    apiKey: string
+    baseUrl?: string
+    quotas: QuotaConfig
+  }
+  firecrawl: {
+    apiKey: string
+    baseUrl?: string
+    rateLimits: RateLimitConfig
+  }
+}
+```
+
+### Error Handling and Resilience
+
+#### Error Types
+- **Network Errors**: Connection timeouts, DNS failures
+- **API Errors**: Rate limits, quota exceeded, invalid requests
+- **Authentication Errors**: Invalid API keys, expired tokens
+- **Service Errors**: Service unavailable, maintenance mode
+
+#### Retry Logic
+- **Exponential Backoff**: Smart retry with increasing delays
+- **Circuit Breaker**: Prevent cascading failures
+- **Retry Policies**: Configurable retry attempts per service
+- **Dead Letter Queue**: Handle failed requests for manual review
+
+#### Fallback Strategies
+- **Service Fallback**: Fall back to alternative providers
+- **Model Fallback**: Use smaller models for reliability
+- **Feature Fallback**: Gracefully degrade functionality
+
+### Security and Compliance
+
+#### API Key Management
+- **Environment Variables**: Secure storage of API keys
+- **Key Rotation**: Support for key rotation without downtime
+- **Access Controls**: Limit API access by service and environment
+- **Audit Logging**: Log all API usage for compliance
+
+#### Data Protection
+- **PII Redaction**: Remove sensitive information before API calls
+- **Data Encryption**: Encrypt data in transit and at rest
+- **Retention Policies**: Automatic cleanup of temporary data
+- **Compliance**: Ensure GDPR and data privacy compliance
+
+### Performance Optimization
+
+#### Caching Strategy
+- **Response Caching**: Cache API responses to reduce costs
+- **Result Caching**: Cache processed results for reuse
+- **Cache Invalidation**: Smart cache invalidation policies
+- **Cost Monitoring**: Track API costs and optimize usage
+
+#### Request Optimization
+- **Batch Processing**: Combine multiple requests where possible
+- **Connection Pooling**: Reuse connections for better performance
+- **Compression**: Compress request payloads when supported
+- **Timeout Management**: Appropriate timeouts for each service
+
+## Dependencies
+- Story 1.1: Database Schema Implementation (completed)
+- Story 1.2: API Infrastructure Setup (completed)
+- External AI service accounts and API keys
+- Service configuration in environment variables
+
+## Definition of Done
+- All AI service integrations are fully implemented and tested
+- Service health monitoring is operational
+- Error handling and retry logic are working correctly
+- Rate limiting and quota management prevent service abuse
+- Configuration management supports all environments
+- Security measures protect API keys and sensitive data
+- Performance monitoring tracks all service metrics
+- Documentation is complete with examples and troubleshooting guides
+- Integration tests cover all major service scenarios
+- Code review completed and approved
+
+## Testing Requirements
+
+### Unit Tests
+- Test all service client implementations
+- Test error handling and retry logic
+- Test configuration management
+- Test rate limiting and quota enforcement
+- Test security measures (PII redaction, encryption)
+
+### Integration Tests
+- Test end-to-end service integration
+- Test fallback mechanisms between services
+- Test service health monitoring
+- Test concurrent request handling
+- Test configuration changes and reloads
+
+### Performance Tests
+- Test service response times under load
+- Test memory usage with large datasets
+- Test rate limiting effectiveness
+- Test cache performance and hit rates
+- Test cost optimization measures
+
+### Security Tests
+- Test API key protection and rotation
+- Test PII redaction effectiveness
+- Test data encryption and decryption
+- Test access controls and permissions
+- Test audit logging completeness
+
+## Implementation Notes
+
+### Service Implementation Order
+1. **OpenAI Integration** - Primary service for content analysis
+2. **Exa API Integration** - Core search functionality
+3. **Firecrawl Integration** - Content extraction capabilities
+4. **Anthropic Integration** - Advanced analysis and validation
+
+### Best Practices
+- **Interface Segregation**: Separate interfaces for different service capabilities
+- **Dependency Injection**: Use DI container for service management
+- **Observability**: Add comprehensive logging and metrics
+- **Documentation**: Document all service integrations and configurations
+- **Testing**: Mock external services for reliable testing
+
+### Error Recovery
+- **Graceful Degradation**: Continue operation with reduced functionality
+- **User Communication**: Clear error messages for users
+- **Automatic Recovery**: Auto-retry failed operations when appropriate
+- **Manual Intervention**: Escalate persistent issues to human operators
+
+### Monitoring and Alerting
+- **Service Health**: Monitor service availability and response times
+- **Usage Metrics**: Track API usage, costs, and quotas
+- **Error Rates**: Monitor error rates and types
+- **Performance Metrics**: Track request duration and throughput
+
+## Configuration Examples
+
+### Environment Variables
+```bash
+# OpenAI Configuration
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+
+# Anthropic Configuration
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_BASE_URL=https://api.anthropic.com
+ANTHROPIC_RATE_LIMIT_REQUESTS_PER_MINUTE=50
+
+# Exa API Configuration
+EXA_API_KEY=...
+EXA_BASE_URL=https://api.exa.ai
+EXA_SEARCH_QUOTA_PER_MONTH=10000
+
+# Firecrawl Configuration
+FIRECRAWL_API_KEY=fc-...
+FIRECRAWL_BASE_URL=https://api.firecrawl.dev
+FIRECRAWL_RATE_LIMIT_REQUESTS_PER_MINUTE=100
+```
+
+### Service Configuration
+```typescript
+const aiServiceConfig: AIServiceConfig = {
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY!,
+    models: [
+      { name: 'gpt-4o', maxTokens: 128000, costPer1kTokens: 0.005 },
+      { name: 'gpt-4o-mini', maxTokens: 128000, costPer1kTokens: 0.00015 }
+    ],
+    rateLimits: {
+      requestsPerMinute: 60,
+      tokensPerMinute: 100000
+    }
+  },
+  // ... other services
+}
+```
+
+## Related Documentation
+- [Technical Specification](../technical-spec.md#ai-service-integration)
+- [API Contracts](../api-contracts.md#ai-service-endpoints)
+- [Database Schema](../database-migrations.sql)
+- [Implementation Tasks](../implementation-tasks.md#epic-1)
+- [Testing Strategy](../testing-strategy.md#integration-testing)
+
+## Rollback Plan
+- Database: No database changes to rollback
+- API: Remove AI service endpoints temporarily
+- Services: Disable AI features in feature flags
+- Configuration: Revert to previous configuration
+- Monitoring: Alert on degraded service performance

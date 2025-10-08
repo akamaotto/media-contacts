@@ -1,0 +1,119 @@
+# Story 2.1: Query Generation Service
+**Epic**: Epic 2: AI Search Service
+**Estimated Time**: 2 days
+**Priority**: High
+**Status**: Pending
+**Assignee**: Backend Developer
+
+## Objective
+Implement an intelligent query generation service that creates targeted search queries based on user-defined criteria including countries, categories, beats, and specific topics. The service should generate diverse, relevant queries that maximize the likelihood of finding high-quality media contacts.
+
+## Acceptance Criteria
+- [ ] Query generation algorithm produces relevant search queries for all input criteria
+- [ ] Generated queries include country-specific variations and localizations
+- [ ] Query diversity ensures comprehensive coverage of potential sources
+- [ ] Query scoring and ranking system identifies most promising searches
+- [ ] Deduplication prevents redundant or overlapping searches
+- [ ] Fallback query strategies handle edge cases and insufficient criteria
+- [ ] Query effectiveness improves over time through performance tracking
+- [ ] A/B testing framework enables query optimization
+- [ ] Query generation time is <1 second per batch
+- [ ] Service handles up to 100 concurrent query generation requests
+
+## Technical Requirements
+
+### Core Features
+- **Query Template Engine**: Manages country-specific, category-based, and beat-specific query templates
+- **AI-Powered Query Enhancement**: Uses AI models to expand and optimize base queries
+- **Query Scoring Algorithm**: Ranks queries by relevance, specificity, and potential success rate
+- **Deduplication System**: Identifies and removes redundant queries
+- **Performance Monitoring**: Tracks query effectiveness and search success rates
+- **Fallback Strategies**: Provides alternative query approaches for edge cases
+
+### Integration Points
+- External AI APIs (OpenAI, Anthropic) for query enhancement
+- Database for query templates and performance data
+- Search orchestration service for query execution
+- Monitoring system for performance tracking
+
+### Dependencies
+- Epic 1: Foundation & Infrastructure (Database schema, API infrastructure)
+- External AI service integration (Task 1.3)
+
+## Definition of Done
+- All acceptance criteria are met and validated
+- Query generation service is deployed to staging environment
+- Algorithm performance is validated with test datasets
+- Unit tests cover all query generation scenarios (>90% coverage)
+- Integration tests verify end-to-end functionality
+- Performance benchmarks are achieved
+- Monitoring dashboard is functional
+- Code is reviewed and approved
+- Documentation is complete
+
+## Testing Requirements
+
+### Unit Tests
+- Query template engine functionality
+- AI query enhancement algorithms
+- Query scoring and ranking logic
+- Deduplication system accuracy
+- Fallback strategy effectiveness
+- Performance under various load conditions
+
+### Integration Tests
+- External AI API integration
+- Database operations for templates and metrics
+- Search orchestration service integration
+- Error handling and recovery scenarios
+
+### Performance Tests
+- Query generation time under 1 second
+- Concurrent request handling (100+ requests)
+- Memory usage under peak load
+- Scalability with increasing query complexity
+
+### E2E Tests
+- Complete query generation workflow
+- A/B testing framework functionality
+- Performance tracking and reporting
+- User feedback integration
+
+## Implementation Notes
+
+### Development Guidelines
+- Use existing AI service integrations from Epic 1
+- Implement caching for query templates and performance data
+- Follow existing error handling patterns
+- Use TypeScript with strict typing for all components
+
+### Best Practices
+- Implement comprehensive logging for query generation pipeline
+- Use circuit breaker pattern for external AI API calls
+- Implement proper input validation and sanitization
+- Follow existing database schema patterns
+
+### Security Considerations
+- Validate all user input to prevent injection attacks
+- Secure API keys and credentials for external services
+- Implement rate limiting for query generation requests
+- Log all query generation activities for audit trails
+
+### Performance Considerations
+- Optimize query template loading and caching
+- Implement efficient deduplication algorithms
+- Use connection pooling for database operations
+- Monitor and optimize memory usage for large query batches
+
+## Related Documentation
+- [Epic 2: AI Search Service](../../epic-2-ai-search-service.mdc)
+- [Implementation Tasks](../../implementation-tasks.mdc#task-21-query-generation-service)
+- [API Infrastructure Documentation](../../../api/README.md)
+- [Database Schema Documentation](../../../database/schema.md)
+
+## Success Metrics
+- Query relevance score >85%
+- Query diversity coverage >90%
+- Deduplication accuracy >95%
+- Generation time <1 second (99th percentile)
+- Search success rate improvement >20% over baseline

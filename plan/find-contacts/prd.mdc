@@ -1,0 +1,538 @@
+# Find Contacts with AI - Product Requirements Document
+
+## 1. Executive Summary
+
+### Problem Statement
+Media professionals spend countless hours manually researching and discovering new contacts across different countries and beats. This process is time-consuming, inefficient, and often results in outdated or incomplete contact information.
+
+### Solution
+An AI-powered contact discovery feature that automatically searches the web, extracts relevant media contact information, and provides verified contacts with confidence scores based on user-defined criteria (countries, categories, beats).
+
+### Success Metrics
+- **Primary**: 25% reduction in time spent on contact research
+- **Secondary**: 15% increase in database growth rate
+- **Tertiary**: 80% user satisfaction with discovered contact quality
+
+## 2. User Personas
+
+### Primary: Media Relations Manager
+- **Role**: Manages press relationships and outreach campaigns
+- **Pain Points**: 
+  - Spending 3-4 hours daily researching new contacts
+  - Outdated contact information leading to failed outreach
+  - Difficulty finding contacts in emerging markets
+- **Goals**: 
+  - Expand media reach efficiently
+  - Maintain accurate contact database
+  - Discover influencers in new beats/regions
+
+### Secondary: PR Account Executive
+- **Role**: Executes media outreach for specific client campaigns
+- **Pain Points**:
+  - Need specialized contacts for niche industries
+  - Limited time for research before campaign deadlines
+  - Finding contacts with specific language/cultural knowledge
+- **Goals**:
+  - Quickly find relevant contacts for campaigns
+  - Access verified, up-to-date information
+  - Expand international media contacts
+
+### Tertiary: Freelance Journalist
+- **Role**: Builds network of editors and publishers
+- **Pain Points**:
+  - Finding appropriate outlets for specific topics
+  - Identifying the right contact persons
+  - Limited knowledge of international markets
+- **Goals**:
+  - Expand publishing opportunities
+  - Connect with relevant editors globally
+  - Discover new outlets in their beat
+
+## 3. Feature Requirements
+
+### 3.1 Functional Requirements
+
+#### FR-001: Search Configuration
+- **Priority**: High
+- **Description**: Users must be able to specify search criteria including countries and categories
+- **Acceptance Criteria**:
+  - Multi-select country dropdown with search functionality
+  - Multi-select category/beat dropdown
+  - Support for up to 10 countries and 5 categories per search
+  - Configuration validation (at least 1 country and 1 category required)
+
+#### FR-002: AI-Powered Search
+- **Priority**: High
+- **Description**: System must automatically search web sources for relevant contacts
+- **Acceptance Criteria**:
+  - Generate targeted search queries based on user criteria
+  - Search multiple web sources (media outlets, professional networks, etc.)
+  - Process up to 50 search results per query
+  - Complete search within 30 seconds
+
+#### FR-003: Contact Information Extraction
+- **Priority**: High
+- **Description**: Extract comprehensive contact information from discovered sources
+- **Acceptance Criteria**:
+  - Extract name, title, email, outlet, bio, and social profiles
+  - Verify email format and basic validity
+  - Cross-reference information from multiple sources
+  - Generate confidence scores for each piece of information
+
+#### FR-004: Results Display
+- **Priority**: High
+- **Description**: Present discovered contacts in an organized, actionable format
+- **Acceptance Criteria**:
+  - Table view with sortable columns (name, outlet, confidence score)
+  - Card view with contact details preview
+  - Source attribution for each discovered contact
+  - Bulk selection capabilities for import
+
+#### FR-005: Import Functionality
+- **Priority**: High
+- **Description**: Enable users to add discovered contacts to their database
+- **Acceptance Criteria**:
+  - Individual contact import with editing capability
+  - Bulk import of selected contacts
+  - Duplicate detection and merge suggestions
+  - Import confirmation with summary
+
+#### FR-006: Search Progress Tracking
+- **Priority**: Medium
+- **Description**: Provide real-time feedback during search process
+- **Acceptance Criteria**:
+  - Progress bar with completion percentage
+  - Status messages for each search phase
+  - Estimated time remaining
+  - Ability to cancel search in progress
+
+#### FR-007: Search History
+- **Priority**: Medium
+- **Description**: Allow users to review and rerun previous searches
+- **Acceptance Criteria**:
+  - Store search configurations and results
+  - Display search history with timestamps
+  - Rerun searches with updated results
+  - Save frequently used search configurations
+
+### 3.2 Non-Functional Requirements
+
+#### NFR-001: Performance
+- **Requirement**: Search completion within 30 seconds
+- **Measurement**: Time from search initiation to results display
+- **Target**: 95% of searches complete within 30 seconds
+
+#### NFR-002: Accuracy
+- **Requirement**: High accuracy of extracted contact information
+- **Measurement**: Confidence scores and user verification rates
+- **Target**: 75% of contacts have confidence score >70%
+
+#### NFR-003: Reliability
+- **Requirement**: System availability and error handling
+- **Measurement**: Uptime and error rates
+- **Target**: 99.5% uptime, <1% search failure rate
+
+#### NFR-004: Scalability
+- **Requirement**: Handle concurrent searches from multiple users
+- **Measurement**: Concurrent search capacity
+- **Target**: Support 50 concurrent searches
+
+#### NFR-005: Usability
+- **Requirement**: Intuitive and easy-to-use interface
+- **Measurement**: User task completion rates and satisfaction
+- **Target**: 90% task completion rate, 4.5/5 satisfaction score
+
+## 4. Technical Requirements
+
+### 4.1 Technology Stack
+- **Frontend**: React 19, TypeScript, Tailwind CSS, ShadCN UI
+- **Backend**: Next.js 15 API Routes, TypeScript
+- **AI Services**: Vercel AI SDK, OpenAI GPT-4, Anthropic Claude
+- **Search APIs**: Exa API, Firecrawl, OpenAI Web Search
+- **Database**: PostgreSQL with Prisma ORM
+- **Caching**: Redis for search result caching
+
+### 4.2 API Design
+
+#### Search Endpoint
+```
+POST /api/ai/search
+Content-Type: application/json
+
+Request Body:
+{
+  "countries": ["US", "UK", "CA"],
+  "categories": ["Technology", "Business"],
+  "maxResults": 50,
+  "options": {
+    "contactTypes": ["journalist", "editor"],
+    "confidenceThreshold": 0.7
+  }
+}
+
+Response:
+{
+  "searchId": "search_12345",
+  "status": "processing",
+  "estimatedDuration": 25
+}
+```
+
+#### Progress Endpoint
+```
+GET /api/ai/search/{searchId}/progress
+
+Response:
+{
+  "searchId": "search_12345",
+  "status": "processing",
+  "progress": 65,
+  "currentStage": "Verifying contacts",
+  "contactsFound": 23,
+  "estimatedRemaining": 10
+}
+```
+
+#### Results Endpoint
+```
+GET /api/ai/search/{searchId}/results
+
+Response:
+{
+  "searchId": "search_12345",
+  "status": "completed",
+  "contacts": [
+    {
+      "id": "contact_1",
+      "name": "Sarah Johnson",
+      "title": "Technology Editor",
+      "email": "sarah.j@technews.com",
+      "outlet": "TechNews Daily",
+      "bio": "Covering AI and emerging technologies...",
+      "confidence": 0.85,
+      "sources": ["https://technews.com/author/sarah"],
+      "socials": {
+        "twitter": "@sarahtech",
+        "linkedin": "https://linkedin.com/in/sarahjohnson"
+      }
+    }
+  ],
+  "totalFound": 23,
+  "searchDuration": 22
+}
+```
+
+### 4.3 Database Schema
+
+#### New Tables
+```sql
+-- AI search tracking
+CREATE TABLE ai_searches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  search_config JSONB NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'processing',
+  contacts_found INTEGER DEFAULT 0,
+  search_duration INTEGER, -- seconds
+  created_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP
+);
+
+-- Search sources tracking
+CREATE TABLE ai_search_sources (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  search_id UUID REFERENCES ai_searches(id),
+  source_url TEXT NOT NULL,
+  source_type VARCHAR(50), -- media_outlet, linkedin, twitter, etc.
+  confidence_score DECIMAL(3,2),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+#### Updated Tables
+```sql
+-- Add to media_contacts table
+ALTER TABLE media_contacts ADD COLUMN discovery_source VARCHAR(50);
+ALTER TABLE media_contacts ADD COLUMN discovery_method VARCHAR(50);
+ALTER TABLE media_contacts ADD COLUMN ai_confidence_score INTEGER;
+ALTER TABLE media_contacts ADD COLUMN discovered_at TIMESTAMP;
+ALTER TABLE media_contacts ADD COLUMN ai_search_id UUID REFERENCES ai_searches(id);
+```
+
+### 4.4 Integration Points
+
+#### Existing Systems
+- **Authentication**: Leverage existing NextAuth setup
+- **User Management**: Use existing user roles and permissions
+- **Contact Database**: Integrate with existing media_contacts table
+- **UI Components**: Use existing ShadCN component library
+
+#### External APIs
+- **Exa API**: Web search and content discovery
+- **Firecrawl**: Web scraping and content extraction  
+- **OpenAI**: Content analysis and verification
+- **Email Validation**: Email format and domain verification
+
+## 5. User Experience Design
+
+### 5.1 User Flow
+1. **Discovery**: User clicks "Find Contacts" button in header
+2. **Configuration**: Modal opens with country/category selection
+3. **Initiation**: User configures search and clicks "Search"
+4. **Processing**: Real-time progress updates shown
+5. **Review**: Results displayed with contact details
+6. **Import**: User selects and imports desired contacts
+7. **Confirmation**: Success message with import summary
+
+### 5.2 Wireframes
+
+#### Search Configuration Modal
+```
+┌─────────────────────────────────────────┐
+│ ✨ Find Contacts with AI               │
+│─────────────────────────────────────────│
+│ Discover media contacts whose profiles │
+│ match your requirements                │
+│                                        │
+│ We'll scan the web and bring you a     │
+│ curated list of media contacts based   │
+│ on your selected countries and         │
+│ categories.                            │
+│                                        │
+│ ┌─ Countries ──────────────────────┐   │
+│ │ 🇺🇸 United States            ▼   │   │
+│ │ 🇬🇧 United Kingdom                │   │
+│ │ 🇨🇦 Canada                        │   │
+│ └───────────────────────────────────┘   │
+│                                        │
+│ ┌─ Categories ──────────────────────┐   │
+│ │ Technology                   ▼   │   │
+│ │ Business                        │   │
+│ │ Health                          │   │
+│ └───────────────────────────────────┘   │
+│                                        │
+│                    [Cancel] [Search]   │
+└─────────────────────────────────────────┘
+```
+
+#### Search Progress
+```
+┌─────────────────────────────────────────┐
+│ 🔍 Finding Contacts                    │
+│─────────────────────────────────────────│
+│ ████████████░░░░░ 65%                 │
+│ Verifying contact information...      │
+│                                        │
+│ ✓ Searched 15 sources                 │
+│ ✓ Found 23 potential contacts         │
+│ ✓ Verifying emails & profiles...      │
+│ ⏳ Building final contact list        │
+│                                        │
+│ Estimated time: 10 seconds remaining   │
+│                                        │
+│                      [Cancel Search]   │
+└─────────────────────────────────────────┘
+```
+
+#### Results Display
+```
+┌─────────────────────────────────────────┐
+│ ✅ Found 23 Contacts                   │
+│─────────────────────────────────────────│
+│ ☑️ | Name              | Outlet     | Score │
+│────|-------------------|------------|--------│
+│ ☑️ | Sarah Johnson     | TechNews   | 85%    │
+│    | Technology Editor |            |        │
+│ ☐  | Mike Chen        | BizDaily   | 78%    │
+│    | Business Writer  |            |        │
+│ ☐  | Emma Wilson      | HealthTimes| 72%    │
+│    | Health Reporter  |            |        │
+│                                        │
+│ Selected: 1 of 23 contacts             │
+│                                        │
+│      [Review] [Import Selected]        │
+└─────────────────────────────────────────┘
+```
+
+### 5.3 Responsive Design
+- **Desktop**: Full-width modal with table layout
+- **Tablet**: Responsive modal with card layout  
+- **Mobile**: Full-screen modal with vertical layout
+
+## 6. Testing Strategy
+
+### 6.1 Unit Testing
+- **AI Services**: Mock API responses and test query generation
+- **Search Logic**: Test search configuration and result parsing
+- **Components**: Test UI components with various states
+- **Utilities**: Test helper functions and data processing
+
+### 6.2 Integration Testing
+- **API Endpoints**: Test search, progress, and results endpoints
+- **Database**: Test data insertion and retrieval
+- **External APIs**: Test integration with search and AI services
+- **Authentication**: Test user permissions and access control
+
+### 6.3 End-to-End Testing
+- **User Flows**: Complete search-to-import workflows
+- **Error Scenarios**: API failures, timeouts, invalid data
+- **Performance**: Load testing with concurrent searches
+- **Cross-browser**: Chrome, Firefox, Safari compatibility
+
+### 6.4 User Acceptance Testing
+- **Beta Testing**: Select users test feature with real scenarios
+- **Feedback Collection**: Surveys and interviews for usability
+- **Performance Monitoring**: Track search times and success rates
+- **Quality Assurance**: Contact accuracy and verification testing
+
+## 7. Launch Plan
+
+### 7.1 Development Phases
+
+#### Phase 1: Foundation (Week 1-2)
+- Setup development environment and dependencies
+- Create basic UI components and modal structure
+- Implement search configuration form
+- Setup API endpoints and database schema
+
+#### Phase 2: Core Functionality (Week 3-4)
+- Implement AI search service and query generation
+- Build contact extraction and verification
+- Create progress tracking system
+- Integrate with external APIs
+
+#### Phase 3: Results & Import (Week 5-6)
+- Build results display components
+- Implement contact import functionality
+- Add duplicate detection and merging
+- Create search history feature
+
+#### Phase 4: Polish & Testing (Week 7-8)
+- Refine UI/UX based on feedback
+- Comprehensive testing and bug fixes
+- Performance optimization
+- Documentation and training materials
+
+### 7.2 Beta Launch
+- **Target Group**: 10-15 power users
+- **Duration**: 2 weeks
+- **Metrics**: Usage frequency, success rate, satisfaction
+- **Feedback**: Weekly surveys and feedback sessions
+
+### 7.3 Full Launch
+- **Marketing**: In-app announcements, email newsletters
+- **Training**: Video tutorials and help documentation
+- **Support**: Dedicated support channel for feature questions
+- **Monitoring**: Real-time usage and performance tracking
+
+### 7.4 Post-Launch
+- **Iteration**: Weekly updates based on user feedback
+- **Enhancement**: Plan Phase 2 features based on usage patterns
+- **Optimization**: Improve search algorithms and accuracy
+- **Expansion**: Add new countries, categories, and search sources
+
+## 8. Risk Assessment
+
+### 8.1 Technical Risks
+
+#### High Risk
+- **API Rate Limits**: Search APIs may have usage limits
+  - **Mitigation**: Implement intelligent throttling and multiple API providers
+  - **Owner**: Engineering Team
+  - **Timeline**: Week 2
+
+- **Data Quality**: Extracted information may be inaccurate
+  - **Mitigation**: Multi-source verification and confidence scoring
+  - **Owner**: Product Team
+  - **Timeline**: Week 4
+
+#### Medium Risk
+- **Performance**: Search may be slow or timeout
+  - **Mitigation**: Background processing and streaming updates
+  - **Owner**: Engineering Team
+  - **Timeline**: Week 3
+
+- **Cost Management**: AI and search API costs may be high
+  - **Mitigation**: Usage limits and cost monitoring
+  - **Owner**: Finance Team
+  - **Timeline**: Week 5
+
+### 8.2 Business Risks
+
+#### Medium Risk
+- **User Adoption**: Users may not trust AI-discovered contacts
+  - **Mitigation**: Transparent source attribution and confidence scores
+  - **Owner**: Product Team
+  - **Timeline**: Week 6
+
+- **Compliance**: Data privacy and GDPR considerations
+  - **Mitigation**: Privacy by design and legal review
+  - **Owner**: Legal Team
+  - **Timeline**: Week 2
+
+#### Low Risk
+- **Competition**: Similar features may exist in competing products
+  - **Mitigation**: Focus on unique value proposition and user experience
+  - **Owner**: Product Team
+  - **Timeline**: Ongoing
+
+## 9. Success Measurement
+
+### 9.1 Key Performance Indicators
+
+#### User Engagement
+- **Feature Adoption**: % of users who try the feature (Target: 60%)
+- **Search Frequency**: Average searches per user per month (Target: 5)
+- **Contact Import Rate**: % of discovered contacts imported (Target: 40%)
+
+#### Business Impact
+- **Database Growth**: Monthly increase in contact database (Target: +15%)
+- **Time Savings**: User-reported time saved on research (Target: 2 hours/week)
+- **Contact Quality**: Verified contact accuracy rate (Target: 75%)
+
+#### Technical Performance
+- **Search Success**: % of completed searches (Target: 95%)
+- **Search Speed**: Average search completion time (Target: 25 seconds)
+- **System Reliability**: Uptime and error rates (Target: 99.5% uptime)
+
+### 9.2 Measurement Tools
+- **Analytics**: Google Analytics for feature usage tracking
+- **Surveys**: User satisfaction and feedback collection
+- **Monitoring**: System performance and error tracking
+- **A/B Testing**: Compare different search algorithms and UI variations
+
+### 9.3 Reporting Schedule
+- **Weekly**: Usage and performance metrics
+- **Monthly**: User satisfaction and business impact
+- **Quarterly**: Feature evaluation and roadmap planning
+- **Annually**: Overall feature success and ROI analysis
+
+## 10. Budget and Resources
+
+### 10.1 Development Resources
+- **Engineering**: 2 developers × 8 weeks = 16 developer-weeks
+- **Product**: 1 product manager × 8 weeks = 8 product-weeks
+- **Design**: 1 UI/UX designer × 4 weeks = 4 design-weeks
+- **QA**: 1 QA engineer × 4 weeks = 4 QA-weeks
+
+### 10.2 External Costs
+- **AI APIs**: OpenAI, Anthropic (Estimate: $500/month)
+- **Search APIs**: Exa, Firecrawl (Estimate: $300/month)
+- **Additional Infrastructure**: Redis upgrade, monitoring tools (Estimate: $200/month)
+
+### 10.3 Total Investment
+- **Development**: 32 person-weeks × average rate = $96,000
+- **Annual External Costs**: $12,000/year
+- **Total First-Year Cost**: $108,000
+
+### 10.4 ROI Calculation
+- **Time Savings**: 2 hours/week × 50 users × $50/hour = $5,000/week
+- **Annual Savings**: $5,000 × 52 weeks = $260,000/year
+- **ROI**: ($260,000 - $108,000) / $108,000 = 140% first-year ROI
+
+---
+
+**Document Version**: 1.0  
+**Last Updated**: 2025-10-07  
+**Next Review**: 2025-10-14  
+**Approval**: Pending Product Team Review

@@ -102,23 +102,36 @@ model languages {
 }
 
 model media_contacts {
-  id                    String      @id
+  id                    String                    @id
   name                  String
   title                 String
   bio                   String?
-  email                 String      @unique
-  email_verified_status Boolean     @default(false)
+  email                 String                    @unique
+  email_verified_status Boolean                   @default(false)
   socials               String[]
-  created_at            DateTime    @default(now())
+  created_at            DateTime                  @default(now())
   updated_at            DateTime
   authorLinks           String[]
-  beats                 beats[]     @relation("MediaContactBeats")
-  countries             countries[] @relation("MediaContactCountries")
-  outlets               outlets[]   @relation("MediaContactOutlets")
+  beats                 beats[]                   @relation("MediaContactBeats")
+  countries             countries[]               @relation("MediaContactCountries")
+  outlets               outlets[]                 @relation("MediaContactOutlets")
+  discovery_source      DiscoverySource           @default(MANUAL)
+  discovery_method      String?
+  ai_confidence_score   Int?
+  discovered_at         DateTime?
+  ai_search_id          String?
+  discovery_metadata    Json?
+  ai_search             ai_searches?              @relation(fields: [ai_search_id], references: [id], onDelete: SetNull)
+  ai_contact_duplicates_original ai_contact_duplicates[] @relation("OriginalContact")
+  ai_contact_duplicates_duplicate ai_contact_duplicates[] @relation("DuplicateContact")
 
   @@index([email_verified_status])
   @@index([name])
   @@index([updated_at])
+  @@index([discovery_source])
+  @@index([ai_confidence_score])
+  @@index([discovered_at])
+  @@index([ai_search_id])
 }
 
 model outlets {
@@ -180,6 +193,7 @@ model users {
   accounts       accounts[]
   activity_logs  activity_logs[]
   sessions       sessions[]
+  ai_searches    ai_searches[]
 }
 
 model verification_tokens {
@@ -190,7 +204,440 @@ model verification_tokens {
   @@unique([identifier, token])
 }
 
+model ai_searches {
+  id                  String         @id @default(cuid())
+  userId              String
+  status              SearchStatus   @default(PENDING)
+  configuration       Json
+  contacts_found      Int            @default(0)
+  contacts_imported   Int            @default(0)
+  duration_seconds    Int?
+  started_at          DateTime?
+  completed_at        DateTime?
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+  users               users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ai_search_sources   ai_search_sources[]
+  ai_performance_logs ai_performance_logs[]
+  media_contacts      media_contacts[]
+  ai_search_cache     ai_search_cache?
+  ai_generated_queries ai_generated_queries[]
+  ai_extraction_jobs    ai_extraction_jobs[]
+  ai_extracted_contacts ai_extracted_contacts[]
+
+  @@unique([userId, status])
+  @@index([status])
+  @@index([created_at])
+  @@index([userId])
+  @@index([started_at])
+  @@index([completed_at])
+}
+
+model ai_search_sources {
+  id                String    @id @default(cuid())
+  searchId          String
+  sourceUrl         String
+  sourceType        String
+  domain            String?
+  title             String?
+  confidenceScore   Decimal   @db.Decimal(3, 2)
+  contactCount      Int       @default(0)
+  processingTimeMs  Int?
+  created_at        DateTime  @default(now())
+  ai_searches       ai_searches @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  @@index([searchId])
+  @@index([sourceType])
+  @@index([domain])
+  @@index([confidenceScore])
+  @@index([created_at])
+}
+
+model ai_performance_logs {
+  id            String    @id @default(cuid())
+  searchId      String
+  operation     String
+  startTime     DateTime
+  endTime       DateTime?
+  durationMs    Int?
+  status        String
+  metadata      Json?
+  created_at    DateTime  @default(now())
+  ai_searches   ai_searches @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  @@index([searchId])
+  @@index([operation])
+  @@index([status])
+  @@index([startTime])
+  @@index([durationMs])
+}
+
+model ai_search_cache {
+  id                 String    @id @default(cuid())
+  queryHash          String    @unique
+  searchConfiguration Json
+  results            Json
+  contactCount       Int       @default(0)
+  averageConfidence  Decimal?  @db.Decimal(3, 2)
+  expiresAt          DateTime
+  accessCount        Int       @default(0)
+  lastAccessedAt     DateTime  @default(now())
+  created_at         DateTime  @default(now())
+  searchId           String?   @unique
+  ai_searches        ai_searches? @relation(fields: [searchId], references: [id], onDelete: SetNull)
+
+  @@index([queryHash])
+  @@index([expiresAt])
+  @@index([accessCount])
+  @@index([lastAccessedAt])
+  @@index([created_at])
+}
+
+model ai_contact_duplicates {
+  id                    String           @id @default(cuid())
+  originalContactId     String
+  duplicateContactId    String
+  similarityScore       Decimal          @db.Decimal(3, 2)
+  duplicateType         DuplicateType
+  verificationStatus    VerificationStatus @default(PENDING)
+  verifiedAt            DateTime?
+  verifiedBy            String?
+  created_at            DateTime         @default(now())
+  updated_at            DateTime         @updatedAt
+  originalContact       media_contacts   @relation("OriginalContact", fields: [originalContactId], references: [id], onDelete: Cascade)
+  duplicateContact      media_contacts   @relation("DuplicateContact", fields: [duplicateContactId], references: [id], onDelete: Cascade)
+
+  @@unique([originalContactId, duplicateContactId])
+  @@index([similarityScore])
+  @@index([duplicateType])
+  @@index([verificationStatus])
+  @@index([created_at])
+}
+
+model ai_query_templates {
+  id                String           @id @default(cuid())
+  name              String
+  template          String
+  type              QueryTemplateType
+  country           String?
+  category          String?
+  beat              String?
+  language          String?
+  variables         Json?
+  priority          Int              @default(0)
+  isActive          Boolean          @default(true)
+  usageCount        Int              @default(0)
+  successCount      Int              @default(0)
+  averageConfidence Decimal?         @db.Decimal(3, 2)
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+  ai_generated_queries ai_generated_queries[]
+
+  @@unique([name, type, country, category, beat])
+  @@index([type, isActive])
+  @@index([country, isActive])
+  @@index([category, isActive])
+  @@index([beat, isActive])
+  @@index([priority])
+  @@index([usageCount])
+  @@index([successCount])
+}
+
+model ai_generated_queries {
+  id                String                    @id @default(cuid())
+  searchId          String
+  batchId           String
+  originalQuery     String
+  generatedQuery    String
+  templateId        String?
+  queryType         QueryType
+  country           String?
+  category          String?
+  beat              String?
+  language          String?
+  score             Decimal                   @db.Decimal(3, 2)
+  diversityScore    Decimal                   @db.Decimal(3, 2)
+  relevanceScore    Decimal                   @db.Decimal(3, 2)
+  complexityScore   Decimal                   @db.Decimal(3, 2)
+  isDuplicate       Boolean                   @default(false)
+  duplicateOf       String?
+  status            QueryStatus               @default(PENDING)
+  errorMessage      String?
+  processingTimeMs  Int?
+  created_at        DateTime                  @default(now())
+  updated_at        DateTime                  @updatedAt
+  ai_searches       ai_searches               @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  ai_query_templates ai_query_templates?      @relation(fields: [templateId], references: [id])
+  ai_query_performance_logs ai_query_performance_logs[]
+
+  @@index([searchId])
+  @@index([batchId])
+  @@index([queryType])
+  @@index([score])
+  @@index([country])
+  @@index([category])
+  @@index([beat])
+  @@index([status])
+  @@index([isDuplicate])
+  @@index([created_at])
+}
+
+model ai_query_performance_logs {
+  id                String                @id @default(cuid())
+  queryId           String
+  searchId          String
+  batchId           String
+  operation         QueryOperationType
+  startTime         DateTime
+  endTime           DateTime?
+  durationMs        Int?
+  status            String
+  tokensGenerated   Int?
+  tokensProcessed   Int?
+  modelUsed         String?
+  successRate       Decimal?              @db.Decimal(3, 2)
+  relevanceScore    Decimal?              @db.Decimal(3, 2)
+  metadata          Json?
+  created_at        DateTime              @default(now())
+  ai_generated_queries ai_generated_queries @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  @@index([queryId])
+  @@index([searchId])
+  @@index([batchId])
+  @@index([operation])
+  @@index([status])
+  @@index([startTime])
+  @@index([durationMs])
+  @@index([successRate])
+}
+
+enum DiscoverySource {
+  MANUAL
+  AI_SEARCH
+  CSV_IMPORT
+  API
+  OTHER
+}
+
+enum SearchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum DuplicateType {
+  EMAIL
+  NAME_OUTLET
+  NAME_TITLE
+  OUTLET_TITLE
+  SIMILAR_BIO
+  SOCIAL_MEDIA
+}
+
+enum VerificationStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  MANUAL_REVIEW
+}
+
 enum Role {
   ADMIN
   USER
+}
+
+enum ExtractionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum EmailType {
+  PERSONAL
+  ALIAS
+  GENERIC
+  DEPARTMENT
+  UNKNOWN
+}
+
+enum EmailValidationStatus {
+  PENDING
+  VALID
+  INVALID
+  TEMPORARY
+  DISPOSABLE
+  VERIFIED
+  FAILED
+}
+
+enum ExtractionMethod {
+  AI_BASED
+  RULE_BASED
+  HYBRID
+  MANUAL
+}
+
+enum ExtractionOperationType {
+  CONTENT_FETCHING
+  CONTENT_PARSING
+  AI_EXTRACTION
+  EMAIL_VALIDATION
+  SOCIAL_DETECTION
+  CONFIDENCE_SCORING
+  DUPLICATE_DETECTION
+  QUALITY_ASSESSMENT
+  CACHING
+  VALIDATION
+}
+
+enum QueryTemplateType {
+  BASE
+  COUNTRY_SPECIFIC
+  CATEGORY_SPECIFIC
+  BEAT_SPECIFIC
+  LANGUAGE_SPECIFIC
+  COMPOSITE
+}
+
+enum QueryType {
+  BASE
+  ENHANCED
+  LOCALIZED
+  EXPANDED
+  REFINED
+  FALLBACK
+}
+
+enum QueryStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum QueryOperationType {
+  TEMPLATE_SELECTION
+  AI_ENHANCEMENT
+  SCORING
+  DEDUPLICATION
+  VALIDATION
+  PERFORMANCE_TRACKING
+}
+
+model ai_extraction_jobs {
+  id                String           @id @default(cuid())
+  searchId          String
+  sourceUrl         String
+  sourceType        String
+  status            ExtractionStatus @default(PENDING)
+  contentHash       String?
+  processingTimeMs  Int?
+  contactsFound     Int              @default(0)
+  contactsImported  Int              @default(0)
+  averageConfidence Decimal?         @db.Decimal(3, 2)
+  qualityScore      Decimal?         @db.Decimal(3, 2)
+  errorMessage      String?
+  metadata          Json?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+  ai_searches       ai_searches      @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  ai_extraction_logs ai_extraction_logs[]
+  ai_extracted_contacts ai_extracted_contacts[]
+
+  @@index([searchId])
+  @@index([sourceUrl])
+  @@index([status])
+  @@index([created_at])
+  @@index([completedAt])
+}
+
+model ai_extracted_contacts {
+  id                    String                    @id @default(cuid())
+  extractionId          String
+  searchId              String
+  sourceUrl             String
+  name                  String
+  title                 String?
+  bio                   String?
+  email                 String?
+  emailType             EmailType?
+  emailValidation       EmailValidationStatus    @default(PENDING)
+  confidenceScore       Decimal                   @db.Decimal(3, 2)
+  relevanceScore        Decimal                   @db.Decimal(3, 2)
+  qualityScore          Decimal                   @db.Decimal(3, 2)
+  extractionMethod      ExtractionMethod
+  socialProfiles        Json?
+  contactInfo           Json?
+  verificationStatus    VerificationStatus        @default(PENDING)
+  duplicateOf           String?
+  isDuplicate           Boolean                   @default(false)
+  metadata              Json?
+  processingTimeMs      Int?
+  created_at            DateTime                  @default(now())
+  updated_at            DateTime                  @updatedAt
+  ai_extraction_jobs    ai_extraction_jobs        @relation(fields: [extractionId], references: [id], onDelete: Cascade)
+  ai_searches           ai_searches               @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  contactId             String?
+
+  @@index([extractionId])
+  @@index([searchId])
+  @@index([email])
+  @@index([name])
+  @@index([confidenceScore])
+  @@index([verificationStatus])
+  @@index([isDuplicate])
+  @@index([created_at])
+}
+
+model ai_extraction_logs {
+  id                String                   @id @default(cuid())
+  extractionId      String
+  searchId          String
+  operation         ExtractionOperationType
+  startTime         DateTime
+  endTime           DateTime?
+  durationMs        Int?
+  status            String
+  contentLength     Int?
+  contactsProcessed Int?
+  tokensUsed        Int?
+  modelUsed         String?
+  successRate       Decimal?                 @db.Decimal(3, 2)
+  confidence        Decimal?                 @db.Decimal(3, 2)
+  metadata          Json?
+  created_at        DateTime                 @default(now())
+  ai_extraction_jobs    ai_extraction_jobs    @relation(fields: [extractionId], references: [id], onDelete: Cascade)
+  contactId         String?
+
+  @@index([extractionId])
+  @@index([searchId])
+  @@index([operation])
+  @@index([status])
+  @@index([startTime])
+  @@index([durationMs])
+}
+
+model ai_extraction_cache {
+  id              String   @id @default(cuid())
+  contentHash     String   @unique
+  sourceUrl       String
+  extractedData   Json
+  contactCount    Int      @default(0)
+  qualityScore    Decimal? @db.Decimal(3, 2)
+  expiresAt       DateTime
+  accessCount     Int      @default(0)
+  lastAccessedAt  DateTime @default(now())
+  created_at      DateTime @default(now())
+
+  @@index([contentHash])
+  @@index([sourceUrl])
+  @@index([expiresAt])
+  @@index([accessCount])
 }

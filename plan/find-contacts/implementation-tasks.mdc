@@ -149,6 +149,7 @@ This document breaks down the implementation of the Find Contacts with AI featur
 ---
 
 ## Epic 2: AI Search Service (Week 2-3)
+*See [Epic 2: AI Search Service](./epic-2-ai-search-service.mdc) for complete epic definition, risk assessment, and technical architecture.*
 
 ### Task 2.1: Query Generation Service
 **Priority**: High  

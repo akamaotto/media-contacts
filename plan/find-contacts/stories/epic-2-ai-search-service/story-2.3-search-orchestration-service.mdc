@@ -1,0 +1,137 @@
+# Story 2.3: Search Orchestration Service
+**Epic**: Epic 2: AI Search Service
+**Estimated Time**: 3 days
+**Priority**: High
+**Status**: Pending
+**Assignee**: Backend Developer
+
+## Objective
+Implement the main search orchestration service that coordinates all AI search components, manages the search lifecycle, and provides real-time progress tracking. The service should handle concurrent searches, manage job queues, and ensure reliable completion of all search operations.
+
+## Acceptance Criteria
+- [ ] Search orchestration handles 50+ concurrent searches efficiently
+- [ ] Progress tracking provides accurate, real-time updates (<2 second delay)
+- [ ] Search cancellation works within 5 seconds of request
+- [ ] Result aggregation combines data from multiple sources effectively
+- [ ] Caching improves repeat search performance by >60%
+- [ ] Retry mechanisms handle temporary failures gracefully
+- [ ] Timeout handling prevents infinite searches
+- [ ] Performance monitoring tracks all key search metrics
+- [ ] Error handling manages all failure scenarios appropriately
+- [ ] Search completion time is <30 seconds (95th percentile)
+
+## Technical Requirements
+
+### Core Features
+- **Search State Management**: Tracks search lifecycle from initiation to completion
+- **Job Queue System**: Manages search processing with priority and concurrency control
+- **Progress Tracking**: Provides real-time updates on search progress
+- **Result Aggregation**: Combines and deduplicates results from multiple sources
+- **Search Cancellation**: Allows users to cancel in-progress searches
+- **Timeout Management**: Prevents searches from running indefinitely
+- **Retry Mechanisms**: Implements intelligent retry logic for failed operations
+- **Search Caching**: Caches search results for improved performance
+- **Performance Monitoring**: Tracks and reports search metrics
+
+### Integration Points
+- Query generation service for creating search queries
+- Contact extraction pipeline for processing results
+- External search APIs (Exa, Firecrawl) for web searches
+- Database for search state and result storage
+- Progress tracking system for real-time updates
+- Monitoring and alerting systems
+
+### Dependencies
+- Story 2.1: Query Generation Service
+- Story 2.2: Contact Extraction Pipeline
+- Epic 1: Foundation & Infrastructure (Database schema, API infrastructure)
+
+## Definition of Done
+- All acceptance criteria are met and validated
+- Orchestration service is deployed to staging environment
+- Load testing validates concurrent search handling capability
+- Monitoring dashboard is functional and tracking metrics
+- Unit tests cover all orchestration scenarios (>90% coverage)
+- Integration tests verify end-to-end search workflows
+- Code is reviewed and approved
+- Documentation is complete
+
+## Testing Requirements
+
+### Unit Tests
+- Search state management and lifecycle transitions
+- Job queue operations and concurrency control
+- Progress tracking accuracy and real-time updates
+- Result aggregation and deduplication logic
+- Search cancellation and timeout handling
+- Retry mechanism effectiveness
+- Caching performance and consistency
+
+### Integration Tests
+- Query generation service integration
+- Contact extraction pipeline coordination
+- External search API interactions
+- Database operations for search state and results
+- Progress tracking system integration
+- Error handling across service boundaries
+
+### Performance Tests
+- Concurrent search handling (50+ searches)
+- Search completion time under 30 seconds
+- Memory and CPU usage under peak load
+- Job queue throughput and efficiency
+- Caching performance improvements
+
+### E2E Tests
+- Complete search workflow from start to finish
+- Search cancellation and restart scenarios
+- Error recovery and fallback mechanisms
+- Progress tracking and user notification workflows
+
+## Implementation Notes
+
+### Development Guidelines
+- Use existing job queue patterns from the codebase
+- Implement proper state management for search lifecycle
+- Follow established error handling and retry patterns
+- Use existing monitoring and logging frameworks
+
+### Best Practices
+- Implement comprehensive search state auditing
+- Use efficient serialization for search state storage
+- Implement proper resource cleanup for cancelled searches
+- Use circuit breaker patterns for external service calls
+
+### Security Considerations
+- Implement proper access control for search operations
+- Secure search state and result storage
+- Implement rate limiting for search initiation
+- Audit logging for all search activities
+
+### Performance Considerations
+- Optimize job queue processing for throughput
+- Implement efficient result aggregation algorithms
+- Use connection pooling for database operations
+- Optimize search state storage and retrieval
+
+## Related Documentation
+- [Epic 2: AI Search Service](../../epic-2-ai-search-service.mdc)
+- [Implementation Tasks](../../implementation-tasks.mdc#task-23-search-orchestration-service)
+- [Database Schema Documentation](../../../database/schema.md)
+- [Job Queue System Documentation](../../../services/queue/README.md)
+
+## Success Metrics
+- Concurrent search handling capacity: 50+ searches
+- Search completion time: <30 seconds (95th percentile)
+- Progress tracking accuracy: >98%
+- Search cancellation response time: <5 seconds
+- Caching effectiveness: >60% performance improvement
+- Error recovery success rate: >95%
+
+## Monitoring Requirements
+- Real-time search progress tracking
+- Search performance metrics dashboard
+- Error rate and failure pattern monitoring
+- Resource usage tracking (CPU, memory, database connections)
+- External API response time monitoring
+- Job queue health and throughput metrics

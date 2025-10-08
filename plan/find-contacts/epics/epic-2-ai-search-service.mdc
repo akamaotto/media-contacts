@@ -1,0 +1,192 @@
+# Epic 2: AI Search Service
+
+## Epic Overview
+**Objective**: Implement the core AI-powered search service that intelligently discovers media contacts from external sources based on user-defined criteria.
+
+**Business Value**: This epic enables users to dramatically expand their media contact database by leveraging AI to find relevant contacts that match their specific needs, reducing research time from hours to minutes while maintaining high data quality and relevance.
+
+**Success Metrics**:
+- Contact discovery accuracy >80%
+- Search completion time <30 seconds (95th percentile)
+- User satisfaction score >4.5/5
+- Database growth >15% from AI-discovered contacts
+
+## Epic Boundaries
+### In Scope
+- AI-powered query generation based on user criteria
+- Contact extraction and validation from web sources
+- Search orchestration and progress tracking
+- Result aggregation and confidence scoring
+- Duplicate detection and deduplication
+- Performance monitoring and optimization
+- Error handling and retry mechanisms
+- Search result caching for efficiency
+
+### Out of Scope
+- Frontend user interface components (covered in Epic 3)
+- Database schema implementation (covered in Epic 1)
+- End-to-end integration testing (covered in Epic 4)
+- User experience polish and optimization (covered in Epic 5)
+- External API billing and cost management setup
+- Advanced analytics and reporting features
+
+## Acceptance Criteria
+- [ ] Query generation service creates relevant, diverse search queries based on user criteria
+- [ ] Contact extraction pipeline accurately identifies contact information with >80% precision
+- [ ] Search orchestration handles 50+ concurrent searches efficiently
+- [ ] Confidence scoring accurately reflects data quality and relevance
+- [ ] Duplicate detection reduces false positives by >90%
+- [ ] Search results are cached effectively to improve performance and reduce costs
+- [ ] All external API integrations include proper error handling and retry logic
+- [ ] Performance monitoring tracks all key metrics in real-time
+- [ ] Search completion times meet target benchmarks
+- [ ] System gracefully handles all failure scenarios with appropriate fallbacks
+
+## Dependencies
+### Prerequisites
+- Epic 1: Foundation & Infrastructure must be complete
+- Database schema implemented with AI-related tables
+- API infrastructure with authentication and middleware
+- External AI service integrations (OpenAI, Anthropic, Exa, Firecrawl) configured
+- Cost tracking and monitoring systems in place
+
+### Blockers
+- External API service rate limits or availability issues
+- AI model performance not meeting accuracy requirements
+- Performance bottlenecks in contact extraction pipeline
+
+## Risk Assessment
+### Technical Risks
+- **AI Model Accuracy**: Contact extraction accuracy below 80%
+  - *Mitigation*: Implement multiple AI providers with fallback, continuous model fine-tuning, comprehensive testing with diverse data sources
+- **External API Dependencies**: Service outages or rate limiting affecting search functionality
+  - *Mitigation*: Implement circuit breaker pattern, multiple provider fallbacks, comprehensive retry logic, graceful degradation strategies
+- **Performance Bottlenecks**: Search completion times exceeding 30-second target
+  - *Mitigation*: Implement efficient caching, optimize algorithms, use background processing, implement result streaming
+
+### Business Risks
+- **Cost Overruns**: AI API usage costs exceeding budget
+  - *Mitigation*: Implement cost monitoring and alerts, query optimization, result caching, user quotas and limits
+- **Data Quality Issues**: Low-quality contacts affecting user satisfaction
+  - *Mitigation*: Implement confidence scoring, user feedback loops, continuous validation, quality metrics tracking
+- **User Adoption**: Users not finding the feature valuable enough to use regularly
+  - *Mitigation*: Focus on accuracy and speed, implement user feedback mechanisms, provide clear value proposition, ensure intuitive integration
+
+## Timeline and Estimation
+**Estimated Duration**: 10 days (Week 2-3)
+**Key Milestones**:
+- Day 2: Query generation service complete and tested
+- Day 6: Contact extraction pipeline operational with >80% accuracy
+- Day 9: Search orchestration service handling concurrent searches
+- Day 10: Full AI search service integrated and performance optimized
+
+**Resource Requirements**:
+- Backend Developer (100% allocation)
+- DevOps Engineer (20% allocation for monitoring setup)
+- AI/ML Engineer (30% allocation for model optimization)
+
+## Definition of Done
+- [ ] All three core services (Query Generation, Contact Extraction, Search Orchestration) are implemented and tested
+- [ ] All acceptance criteria are met with measurable evidence
+- [ ] Performance benchmarks are achieved and documented
+- [ ] Error handling and retry mechanisms are thoroughly tested
+- [ ] Monitoring and alerting are configured and functional
+- [ ] Cost tracking is implemented and tested
+- [ ] Integration with Epic 1 infrastructure is verified
+- [ ] Code coverage >90% for all services
+- [ ] Documentation is complete and up-to-date
+- [ ] Security review is completed and passed
+
+## Quality Assurance Requirements
+
+### Performance Requirements
+- Query generation: <1 second per batch
+- Contact extraction: <5 seconds per source
+- Search orchestration: <30 seconds total (95th percentile)
+- Concurrent search handling: 50+ simultaneous searches
+- Memory usage: <2GB under peak load
+
+### Security Requirements
+- API keys and credentials properly encrypted and stored
+- User data isolation and privacy protection
+- Input validation and sanitization for all user inputs
+- Rate limiting and abuse prevention
+- Audit logging for all search operations
+
+### Reliability Requirements
+- System availability: 99.5% uptime
+- Error rate: <1% of searches fail due to technical issues
+- Recovery time: <5 minutes from service disruptions
+- Data consistency: 100% accuracy in search result storage
+
+## Technical Architecture
+
+### Service Components
+1. **Query Generation Service**: Transforms user criteria into optimized search queries
+2. **Contact Extraction Pipeline**: Extracts and validates contact information from web sources
+3. **Search Orchestration Service**: Coordinates search execution and manages search lifecycle
+
+### Data Flow
+```
+User Criteria → Query Generation → External Search APIs → Contact Extraction → Validation & Scoring → Result Storage → User Notification
+```
+
+### Integration Points
+- External AI APIs (OpenAI, Anthropic, Exa, Firecrawl)
+- Database layer for search storage and caching
+- Monitoring and logging systems
+- Cost tracking and billing systems
+
+## Testing Strategy
+
+### Unit Testing
+- Query generation algorithms and templates
+- Contact extraction accuracy and validation
+- Search orchestration logic and state management
+- Error handling and retry mechanisms
+
+### Integration Testing
+- External API integration and fallback scenarios
+- Database operations and caching
+- Performance under various load conditions
+- End-to-end search workflows
+
+### Performance Testing
+- Load testing with 50+ concurrent searches
+- Stress testing with extreme search volumes
+- Memory and CPU usage monitoring
+- Response time benchmarking
+
+## Monitoring and Observability
+
+### Key Metrics
+- Search completion times and success rates
+- Contact extraction accuracy metrics
+- External API response times and error rates
+- Cost tracking and budget utilization
+- System performance and resource usage
+
+### Alerting
+- Search completion time exceeding 30 seconds
+- Contact extraction accuracy dropping below 80%
+- External API error rates above 5%
+- Cost anomalies and budget overruns
+- System resource usage thresholds
+
+## Success Validation
+
+### Technical Validation
+- Performance benchmarks met through load testing
+- Accuracy targets achieved through validation datasets
+- Error scenarios tested and handled appropriately
+- Monitoring and alerting systems functional
+
+### Business Validation
+- User feedback collected during testing phase
+- Cost efficiency validated through pilot testing
+- Data quality confirmed through expert review
+- Integration with existing workflows verified
+
+---
+
+This epic establishes the core AI search capabilities that will power the Find Contacts with AI feature, providing users with intelligent, efficient, and accurate contact discovery while maintaining high standards for performance, security, and data quality.

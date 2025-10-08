@@ -18,6 +18,8 @@ For each story in the epic, create:
 {feature_path}/stories/epic-{number}-{name}/story-{number}-{name}.mdc
 ```
 
+**Important**: Stories must be stored in `plan/{feature-name}/stories/{epic-name}/` directory structure to maintain consistency with the epic planning organization.
+
 ## What Each Story Should Contain
 
 ### Story Header
@@ -43,12 +45,13 @@ For each story in the epic, create:
 
 When you receive an epic breakdown request:
 
-1. **Read the Implementation Tasks Document**: Locate the epic in the specified implementation tasks file
-2. **Identify All Stories**: Extract each task/subtask within the epic
-3. **Create Story Directory**: `{feature_path}/stories/epic-{number}-{name}/`
-4. **Generate Story Files**: Create one `.mdc` file per story with comprehensive details
-5. **Cross-Reference**: Link to relevant technical specs, API contracts, and component specs
-6. **Include Context**: Reference the broader feature documentation where relevant
+1. **Use Correct Directory Structure**: Always create stories in `plan/{feature-name}/stories/{epic-name}/` directory
+2. **Read the Implementation Tasks Document**: Locate the epic in the specified implementation tasks file
+3. **Identify All Stories**: Extract each task/subtask within the epic
+4. **Create Story Directory**: `{feature_path}/stories/epic-{number}-{name}/`
+5. **Generate Story Files**: Create one `.mdc` file per story with comprehensive details
+6. **Cross-Reference**: Link to relevant technical specs, API contracts, and component specs
+7. **Include Context**: Reference the broader feature documentation where relevant
 
 ## Generic Story Structure Template
 
@@ -119,9 +122,11 @@ When you receive an epic breakdown request:
 {Performance requirements and optimization strategies}
 
 ## Related Documentation
-- [Technical Specification](../technical-spec.md#{relevant-section})
-- [API Contracts](../api-contracts.md#{relevant-section})
-- [Component Specifications](../component-specifications.md#{relevant-section})
+- [Epic Definition](../epics/epic-{epic_number}-{epic_name}.mdc)
+- [Technical Specification](../epics/technical-spec.md#{relevant-section})
+- [API Contracts](../epics/api-contracts.md#{relevant-section})
+- [Component Specifications](../epics/component-specifications.md#{relevant-section})
+- [Implementation Tasks](../implementation-tasks.mdc#{epic-section})
 ```
 
 ## Epic Templates (Examples)
@@ -164,9 +169,10 @@ To use this prompt:
 2. **Identify the epic**: Find the epic section with the specified number and name
 3. **Extract all tasks**: Get all tasks/subtasks within that epic
 4. **Create stories**: Generate a detailed story file for each task
-5. **Organize by structure**: Create the directory structure and file naming
-6. **Cross-reference**: Link to relevant documentation
-7. **Validate completeness**: Ensure each story has all required sections
+5. **Use Correct Directory Structure**: Create stories in `plan/{feature-name}/stories/{epic-name}/`
+6. **Organize by structure**: Create the directory structure and file naming
+7. **Cross-reference**: Link to relevant documentation
+8. **Validate completeness**: Ensure each story has all required sections
 
 ## Quality Checklist
 

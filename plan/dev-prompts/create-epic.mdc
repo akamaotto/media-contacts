@@ -19,14 +19,17 @@ Run this prompt when you have business requirements, feature ideas, or high-leve
 For each epic created:
 ```
 {feature_path}/
-├── epic-{number}-{name}.mdc          # Epic definition document
+├── epics/                            # Epic definitions directory
+│   ├── epic-{number}-{name}.mdc      # Epic definition document
+│   ├── technical-spec.md             # Technical specifications (if needed)
+│   ├── api-contracts.mdc             # API contracts (if applicable)
+│   ├── component-specifications.mdc  # UI/UX specifications (if applicable)
+│   ├── database-migrations.sql       # Database changes (if applicable)
+│   ├── testing-strategy.mdc          # Testing approach and requirements
+│   └── deployment-monitoring.mdc     # Deployment and monitoring strategy
 ├── implementation-tasks.mdc          # Detailed breakdown of all epics and tasks
-├── technical-spec.md                 # Technical specifications (if needed)
-├── api-contracts.mdc                 # API contracts (if applicable)
-├── component-specifications.mdc      # UI/UX specifications (if applicable)
-├── database-migrations.sql           # Database changes (if applicable)
-├── testing-strategy.mdc              # Testing approach and requirements
-└── deployment-monitoring.mdc         # Deployment and monitoring strategy
+└── stories/                          # User stories directory (optional)
+    └── epic-{number}-{name}/         # Stories for each epic (optional)
 ```
 
 ## Epic Definition Template
@@ -151,10 +154,11 @@ For each epic created:
 4. **Risk Assessment**: Identify and plan for potential risks
 
 ### Phase 4: Documentation Creation
-1. **Generate Epic Documents**: Create detailed epic definitions
-2. **Create Implementation Tasks**: Break down epics into actionable stories
-3. **Technical Specifications**: Add technical details as needed
-4. **Review and Refine**: Validate epic structure and completeness
+1. **Create Epic Directory**: Ensure epics are created in `plan/{feature-name}/epics/`
+2. **Generate Epic Documents**: Create detailed epic definitions in the epics directory
+3. **Create Implementation Tasks**: Break down epics into actionable stories
+4. **Technical Specifications**: Add technical details as needed
+5. **Review and Refine**: Validate epic structure and completeness
 
 ## Common Epic Patterns
 
@@ -237,13 +241,14 @@ Epic 3: Integration & Testing
 
 When creating epics:
 
-1. **Start with Requirements**: Thoroughly analyze the business requirements
-2. **Consider User Experience**: Map out how users will interact with the feature
-3. **Think Incrementally**: Plan for incremental delivery of value
-4. **Identify Dependencies**: Understand what needs to exist before starting
-5. **Assess Risks**: Identify potential technical and business risks
-6. **Plan for Testing**: Consider testing and quality assurance needs
-7. **Define Success**: Establish clear criteria for epic completion
+1. **Use Correct Directory Structure**: Always create epics in `plan/{feature-name}/epics/` directory
+2. **Start with Requirements**: Thoroughly analyze the business requirements
+3. **Consider User Experience**: Map out how users will interact with the feature
+4. **Think Incrementally**: Plan for incremental delivery of value
+5. **Identify Dependencies**: Understand what needs to exist before starting
+6. **Assess Risks**: Identify potential technical and business risks
+7. **Plan for Testing**: Consider testing and quality assurance needs
+8. **Define Success**: Establish clear criteria for epic completion
 
 ## Usage Instructions
 

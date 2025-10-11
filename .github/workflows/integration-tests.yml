@@ -1,0 +1,426 @@
+name: AI Search Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run integration tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '18'
+  POSTGRES_VERSION: '15'
+  REDIS_VERSION: '7'
+
+jobs:
+  setup-test-environment:
+    name: Setup Test Environment
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: test
+          POSTGRES_DB: media_contacts_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup environment variables
+      run: |
+        cat << EOF > .env.test
+        NODE_ENV=test
+        DATABASE_URL=postgresql://test:test@localhost:5432/media_contacts_test
+        TEST_DATABASE_URL=postgresql://test:test@localhost:5432/media_contacts_test
+        REDIS_URL=redis://localhost:6379/1
+        NEXTAUTH_SECRET=test-nextauth-secret-for-ci
+        NEXTAUTH_URL=http://localhost:3000
+        OPENAI_API_KEY=sk-test-openai-key-for-ci
+        ANTHROPIC_API_KEY=sk-ant-test-anthropic-key-for-ci
+        EXA_API_KEY=test-exa-key-for-ci
+        FIRECRAWL_API_KEY=test-firecrawl-key-for-ci
+        LOG_LEVEL=error
+        AI_LOG_LEVEL=error
+        EOF
+
+    - name: Generate Prisma client
+      run: npx prisma generate
+
+    - name: Setup test database
+      run: |
+        npx prisma db push --skip-generate
+        npx prisma db seed
+
+    - name: Cache test dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.npm
+          .next/cache
+        key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+
+    - name: Store environment setup
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-environment
+        path: |
+          .env.test
+          node_modules
+          .next
+        retention-days: 1
+
+  run-api-integration-tests:
+    name: API Integration Tests
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download test environment
+      uses: actions/download-artifact@v3
+      with:
+        name: test-environment
+
+    - name: Run API integration tests
+      run: |
+        npm run test:integration:api
+      env:
+        NODE_ENV: test
+
+    - name: Upload API test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: api-test-results
+        path: |
+          coverage/integration/
+          reports/integration/
+        retention-days: 7
+
+  run-database-integration-tests:
+    name: Database Integration Tests
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: test
+          POSTGRES_DB: media_contacts_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download test environment
+      uses: actions/download-artifact@v3
+      with:
+        name: test-environment
+
+    - name: Run database integration tests
+      run: |
+        npm run test:integration:database
+      env:
+        NODE_ENV: test
+
+    - name: Upload database test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: database-test-results
+        path: |
+          coverage/integration/
+          reports/integration/
+        retention-days: 7
+
+  run-external-services-integration-tests:
+    name: External Services Integration Tests
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download test environment
+      uses: actions/download-artifact@v3
+      with:
+        name: test-environment
+
+    - name: Run external services integration tests
+      run: |
+        npm run test:integration:external
+      env:
+        NODE_ENV: test
+
+    - name: Upload external services test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: external-services-test-results
+        path: |
+          coverage/integration/
+          reports/integration/
+        retention-days: 7
+
+  run-realtime-integration-tests:
+    name: Real-time Integration Tests
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download test environment
+      uses: actions/download-artifact@v3
+      with:
+        name: test-environment
+
+    - name: Run real-time integration tests
+      run: |
+        npm run test:integration:realtime
+      env:
+        NODE_ENV: test
+
+    - name: Upload real-time test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: realtime-test-results
+        path: |
+          coverage/integration/
+          reports/integration/
+        retention-days: 7
+
+  run-all-integration-tests:
+    name: All Integration Tests
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: test
+          POSTGRES_DB: media_contacts_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download test environment
+      uses: actions/download-artifact@v3
+      with:
+        name: test-environment
+
+    - name: Run all integration tests
+      run: |
+        node src/__tests__/integration/scripts/run-integration-tests.js
+      env:
+        NODE_ENV: test
+
+    - name: Generate coverage badge
+      if: github.ref == 'refs/heads/main'
+      run: |
+        # Generate coverage badge if coverage data exists
+        if [ -f "coverage/integration/coverage-summary.json" ]; then
+          npx coverage-badge-creator -i coverage/integration/coverage-summary.json -o coverage/integration/badge.svg
+        fi
+
+    - name: Upload all test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: all-integration-test-results
+        path: |
+          coverage/integration/
+          reports/integration/
+        retention-days: 7
+
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = './reports/integration';
+          
+          // Find the latest report file
+          if (fs.existsSync(path)) {
+            const files = fs.readdirSync(path);
+            const reportFiles = files.filter(file => file.endsWith('.json'));
+            
+            if (reportFiles.length > 0) {
+              const latestReport = reportFiles.sort().pop();
+              const reportData = JSON.parse(fs.readFileSync(`${path}/${latestReport}`, 'utf8'));
+              
+              const { results, coverage } = reportData;
+              
+              let comment = `## 🧪 Integration Test Results\n\n`;
+              comment += `**Total Tests:** ${results.total}\n`;
+              comment += `**Passed:** ${results.passed} ✅\n`;
+              comment += `**Failed:** ${results.failed} ❌\n`;
+              comment += `**Success Rate:** ${results.successRate}%\n\n`;
+              
+              if (coverage) {
+                comment += `## 📊 Coverage Results\n\n`;
+                comment += `**Statements:** ${coverage.statements.percentage}%\n`;
+                comment += `**Branches:** ${coverage.branches.percentage}%\n`;
+                comment += `**Functions:** ${coverage.functions.percentage}%\n`;
+                comment += `**Lines:** ${coverage.lines.percentage}%\n\n`;
+              }
+              
+              if (results.failed > 0) {
+                comment += `⚠️ **Some tests failed. Please check the logs for details.**\n`;
+              } else if (coverage && coverage.statements.percentage < 80) {
+                comment += `⚠️ **Coverage is below the 80% threshold.**\n`;
+              } else {
+                comment += `✅ **All tests passed and coverage meets requirements!**\n`;
+              }
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+          }
+
+  publish-test-results:
+    name: Publish Test Results
+    runs-on: ubuntu-latest
+    needs: [run-api-integration-tests, run-database-integration-tests, run-external-services-integration-tests, run-realtime-integration-tests]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all test results
+      uses: actions/download-artifact@v3
+      with:
+        path: test-results
+
+    - name: Merge coverage reports
+      run: |
+        # Install coverage merging tool
+        npm install -g nyc
+        
+        # Create directories for merged reports
+        mkdir -p merged-coverage
+        
+        # Find all coverage reports
+        find test-results -name "coverage-final.json" -type f > coverage-files.txt
+        
+        # Merge coverage reports if any exist
+        if [ -s coverage-files.txt ]; then
+          npx nyc merge $(cat coverage-files.txt) merged-coverage/coverage.json
+          npx nyc report --reporter=html --reporter=text --reporter=lcov --dir=merged-coverage
+        fi
+
+    - name: Publish coverage to Codecov
+      if: github.ref == 'refs/heads/main'
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./merged-coverage
+        flags: integration-tests
+        name: integration-tests-coverage
+        fail_ci_if_error: false
+
+    - name: Archive test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: merged-test-results
+        path: |
+          test-results
+          merged-coverage
+        retention-days: 30

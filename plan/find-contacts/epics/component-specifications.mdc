@@ -1,0 +1,482 @@
+# UI Component Technical Specifications
+
+## Purpose
+This document provides detailed technical specifications for all UI components in Epic 3: Frontend Components. It serves as a reference for developers implementing the AI-powered contact discovery interface.
+
+## Component Architecture
+
+### File Structure
+```
+src/components/features/find-contacts/
+├── FindContactsModal/
+│   ├── index.tsx                 # Main modal component
+│   ├── SearchForm/
+│   │   ├── index.tsx            # Search form container
+│   │   ├── FormFields.tsx       # Form field components
+│   │   ├── Validation.tsx       # Validation display
+│   │   └── hooks.ts             # Form logic hooks
+│   ├── CountrySelector/
+│   │   ├── index.tsx            # Country picker component
+│   │   ├── CountryList.tsx      # Virtualized country list
+│   │   ├── CountrySearch.tsx    # Search functionality
+│   │   └── CountryGroup.tsx     # Grouping logic
+│   ├── CategorySelector/
+│   │   ├── index.tsx            # Category picker component
+│   │   ├── CategoryTree.tsx     # Hierarchical tree view
+│   │   ├── CategoryFilter.tsx   # Filter functionality
+│   │   └── hooks.ts             # Category selection logic
+│   └── BeatSelector/
+│       ├── index.tsx            # Beat selector component
+│       ├── BeatSuggestions.tsx  # Autocomplete suggestions
+│       └── BeatTags.tsx         # Selected beats display
+├── SearchProgress/
+│   ├── index.tsx                 # Progress container
+│   ├── ProgressStage/
+│   │   ├── index.tsx            # Individual stage display
+│   │   ├── StageIcon.tsx        # Stage status icons
+│   │   └── StageMetrics.tsx     # Stage performance metrics
+│   ├── ProgressStats/
+│   │   ├── index.tsx            # Statistics panel
+│   │   ├── MetricCard.tsx       # Individual metric display
+│   │   └── PerformanceChart.tsx # Performance visualization
+│   ├── ProgressBar/
+│   │   ├── index.tsx            # Main progress bar
+│   │   ├── StageIndicator.tsx   # Stage position indicators
+│   │   └── TimeEstimate.tsx     # ETA display
+│   └── hooks/
+│       ├── useWebSocket.ts      # WebSocket connection logic
+│       ├── useProgress.ts       # Progress state management
+│       └── useTimeEstimation.ts # Time calculation logic
+└── ResultsDisplay/
+    ├── ResultsTable/
+    │   ├── index.tsx            # Virtualized table container
+    │   ├── TableHeader.tsx      # Sortable header
+    │   ├── TableRow.tsx         # Individual contact row
+    │   ├── TableColumn.tsx      # Column definition
+    │   └── hooks/
+    │       ├── useVirtualization.ts # Virtual scrolling logic
+    │       ├── useSorting.ts     # Sorting functionality
+    │       └── useFiltering.ts   # Filtering functionality
+    ├── ContactCard/
+    │   ├── index.tsx            # Card view component
+    │   ├── ContactAvatar.tsx    # Contact avatar/image
+    │   ├── ContactInfo.tsx      # Contact information display
+    │   └── ContactActions.tsx   # Quick action buttons
+    ├── ContactPreview/
+    │   ├── index.tsx            # Preview modal
+    │   ├── PreviewHeader.tsx    # Contact header
+    │   ├── PreviewDetails.tsx   # Detailed contact info
+    │   ├── PreviewActions.tsx   # Action buttons
+    │   └── PreviewNavigation.tsx # Previous/Next navigation
+    ├── BulkActions/
+    │   ├── index.tsx            # Bulk action toolbar
+    │   ├── SelectionCounter.tsx # Selection count display
+    │   ├── ActionButtons.tsx    # Import/export buttons
+    │   └── SelectionControls.tsx # Select all/clear controls
+    └── ConfidenceBadge/
+        ├── index.tsx            # Confidence indicator
+        ├── ConfidenceTooltip.tsx # Detailed confidence info
+        └── ConfidenceColor.tsx   # Color coding logic
+```
+
+## Component Specifications
+
+### 1. FindContactsModal
+
+#### Props Interface
+```typescript
+interface FindContactsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: SearchFormData) => Promise<void>;
+  initialData?: Partial<SearchFormData>;
+  loading?: boolean;
+  error?: string | null;
+}
+```
+
+#### State Management
+```typescript
+interface ModalState {
+  currentStep: 'query' | 'filters' | 'options' | 'review';
+  formData: SearchFormData;
+  validation: ValidationState;
+  isSubmitting: boolean;
+  submitError: string | null;
+}
+```
+
+#### Performance Requirements
+- Modal open animation: <100ms
+- Form interaction response: <50ms
+- Memory usage: <10MB
+- Accessibility: WCAG 2.1 AA compliant
+
+#### Key Features
+- Multi-step form with progress indicator
+- Real-time validation with debounced feedback
+- Auto-save functionality to prevent data loss
+- Keyboard navigation support (Tab, Shift+Tab, Enter, Escape)
+- Touch-friendly interface for mobile devices
+
+### 2. SearchForm
+
+#### Form Data Structure
+```typescript
+interface SearchFormData {
+  query: string;
+  countries: string[];
+  categories: string[];
+  beats: string[];
+  languages: string[];
+  sources: string[];
+  options: {
+    maxResults: number;
+    confidenceThreshold: number;
+    includeUnverified: boolean;
+    dateRange?: {
+      start: Date;
+      end: Date;
+    };
+  };
+}
+```
+
+#### Validation Schema
+```typescript
+interface ValidationState {
+  query: {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  };
+  countries: {
+    isValid: boolean;
+    minRequired: number;
+    maxAllowed: number;
+  };
+  categories: {
+    isValid: boolean;
+    minRequired: number;
+    allowedCategories: string[];
+  };
+  // ... other validation rules
+}
+```
+
+#### Form Features
+- Progressive validation based on form completion
+- Cross-field validation (country-specific categories)
+- Real-time suggestions and auto-completion
+- Form state persistence across sessions
+- Undo/redo functionality for form changes
+
+### 3. CountrySelector
+
+#### Data Structure
+```typescript
+interface Country {
+  code: string;
+  name: string;
+  region: string;
+  subregion: string;
+  flag: string; // emoji or image URL
+  dialingCode: string;
+}
+
+interface CountryGroup {
+  region: string;
+  countries: Country[];
+}
+```
+
+#### Performance Optimizations
+- Virtual scrolling for 200+ countries
+- Debounced search with 300ms delay
+- Indexed search for instant results
+- Lazy loading of country flags
+- Memoized search results
+
+#### Features
+- Search by country name, code, or region
+- Group by region with collapsible sections
+- Multi-select with checkbox support
+- Recently used countries quick access
+- Keyboard navigation for accessibility
+
+### 4. SearchProgress
+
+#### Progress Data Structure
+```typescript
+interface SearchProgress {
+  searchId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  overallProgress: number;
+  currentStage: string;
+  stages: ProgressStage[];
+  startTime: Date;
+  estimatedCompletion?: Date;
+  metrics: ProgressMetrics;
+  error?: SearchError;
+}
+
+interface ProgressStage {
+  id: string;
+  name: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress: number;
+  startTime?: Date;
+  endTime?: Date;
+  duration?: number;
+  metrics: StageMetrics;
+  details?: StageDetails;
+}
+```
+
+#### WebSocket Integration
+```typescript
+interface WebSocketMessage {
+  type: 'progress_update' | 'stage_complete' | 'search_complete' | 'error';
+  searchId: string;
+  data: any;
+  timestamp: Date;
+}
+
+interface WebSocketManager {
+  connect: (searchId: string) => Promise<void>;
+  disconnect: () => void;
+  sendMessage: (message: any) => void;
+  onMessage: (callback: (message: WebSocketMessage) => void) => void;
+  reconnect: () => Promise<void>;
+}
+```
+
+#### Real-time Features
+- Automatic reconnection with exponential backoff
+- Message queuing during disconnections
+- Connection status indicators
+- Fallback to polling for unsupported environments
+- Optimistic updates for perceived performance
+
+### 5. ResultsTable
+
+#### Table Configuration
+```typescript
+interface TableConfig {
+  columns: TableColumn[];
+  sorting: SortingState;
+  filtering: FilteringState;
+  pagination: PaginationState;
+  selection: SelectionState;
+  virtualization: VirtualizationConfig;
+}
+
+interface TableColumn {
+  id: string;
+  label: string;
+  width: number;
+  minWidth: number;
+  maxWidth?: number;
+  sortable: boolean;
+  filterable: boolean;
+  resizable: boolean;
+  visible: boolean;
+  render: (value: any, row: Contact) => React.ReactNode;
+  accessor: (row: Contact) => any;
+}
+```
+
+#### Virtual Scrolling Implementation
+```typescript
+interface VirtualizationConfig {
+  itemHeight: number;
+  overscan: number;
+  scrollToIndex?: number;
+  containerHeight: number;
+  estimatedTotalSize: number;
+}
+
+interface VirtualizedListProps {
+  items: Contact[];
+  itemRenderer: (item: Contact, index: number) => React.ReactNode;
+  config: VirtualizationConfig;
+  onScroll?: (scrollInfo: ScrollInfo) => void;
+}
+```
+
+#### Performance Features
+- React Virtual for handling 1000+ contacts
+- Memoized sorting and filtering algorithms
+- Efficient data structures for O(1) lookups
+- Background processing for expensive operations
+- Lazy loading of contact details and images
+
+## State Management
+
+### Global State Structure
+```typescript
+interface FindContactsState {
+  modal: {
+    isOpen: boolean;
+    currentStep: string;
+    formData: SearchFormData;
+  };
+  search: {
+    activeSearches: Record<string, SearchProgress>;
+    searchHistory: SearchHistory[];
+  };
+  results: {
+    currentResults: Contact[];
+    selectedContacts: Set<string>;
+    filters: FilterState;
+    sorting: SortingState;
+    view: 'table' | 'cards';
+  };
+  preferences: {
+    tableConfig: TableConfig;
+    recentSearches: SearchFormData[];
+    defaultFilters: FilterState;
+  };
+}
+```
+
+### State Management Library
+- **Zustand** for global state management
+- **React Query** for server state and caching
+- **React Hook Form** for form state management
+- **Local State** for component-specific state
+
+### Caching Strategy
+- **Query Cache**: Search results cached for 1 hour
+- **Form Cache**: Form data persisted in sessionStorage
+- **Preferences Cache**: User preferences in localStorage
+- **Image Cache**: Contact avatars cached with service worker
+
+## Accessibility Requirements
+
+### WCAG 2.1 AA Compliance
+- **Keyboard Navigation**: All interactive elements reachable via keyboard
+- **Screen Reader Support**: Proper ARIA labels and semantic HTML
+- **Color Contrast**: Minimum 4.5:1 contrast ratio for text
+- **Focus Management**: Visible focus indicators and logical tab order
+- **Touch Targets**: Minimum 44px touch targets on mobile
+
+### ARIA Implementation
+```typescript
+interface ARIAProps {
+  'aria-label': string;
+  'aria-describedby'?: string;
+  'aria-expanded'?: boolean;
+  'aria-selected'?: boolean;
+  'aria-invalid'?: boolean;
+  'aria-live'?: 'polite' | 'assertive';
+  role?: string;
+}
+```
+
+### Screen Reader Support
+- Progress announcements for search status
+- Table headers with proper scope attributes
+- Form field descriptions and error announcements
+- Modal focus trapping and management
+- Link and button purpose clarity
+
+## Performance Metrics
+
+### Target Performance
+- **Initial Load**: <200ms for 1000 contacts
+- **Sorting**: <100ms for any column
+- **Filtering**: <150ms for complex filters
+- **Search**: <100ms within results
+- **Modal Open**: <100ms
+- **Form Validation**: <50ms response time
+
+### Memory Usage
+- **Base Table**: <20MB
+- **Per 1000 Contacts**: <10MB additional
+- **Virtual Scrolling**: <5MB overhead
+- **Peak Usage**: <80MB with 5000 contacts
+
+### Bundle Size Optimization
+- **Code Splitting**: Lazy load non-critical components
+- **Tree Shaking**: Remove unused code and dependencies
+- **Image Optimization**: Compress and optimize contact images
+- **Font Optimization**: Subset fonts and use font-display
+
+## Integration Requirements
+
+### API Integration
+```typescript
+interface APIEndpoints {
+  search: '/api/ai/search/orchestration';
+  queryGeneration: '/api/ai/query-generation';
+  contactExtraction: '/api/ai/contact-extraction';
+  progress: '/api/ai/search/progress';
+  import: '/api/contacts/import';
+}
+```
+
+### WebSocket Integration
+- Connection management with automatic reconnection
+- Message handling and parsing
+- Error handling and fallback strategies
+- Connection status indicators
+
+### Design System Integration
+- **ShadCN UI**: Base component library
+- **Tailwind CSS**: Utility-first styling
+- **Lucide React**: Icon library
+- **Framer Motion**: Animation library
+- **React Hook Form**: Form management
+
+## Testing Strategy
+
+### Unit Testing
+- Component rendering and behavior
+- Form validation logic
+- State management and hooks
+- Utility functions and helpers
+- Accessibility features
+
+### Integration Testing
+- API integration and data flow
+- WebSocket communication
+- Form submission workflows
+- Error handling and recovery
+- Cross-component interactions
+
+### E2E Testing
+- Complete user workflows
+- Mobile and desktop experiences
+- Accessibility testing with screen readers
+- Performance testing with large datasets
+- Cross-browser compatibility
+
+### Performance Testing
+- Bundle size analysis
+- Runtime performance profiling
+- Memory usage monitoring
+- Network performance optimization
+- Mobile device performance testing
+
+## Deployment Considerations
+
+### Environment Configuration
+- Development, staging, and production environments
+- Feature flags for gradual rollout
+- Analytics and error tracking integration
+- Performance monitoring setup
+
+### Browser Support
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+- Mobile Safari iOS 14+
+- Chrome Mobile Android 10+
+
+### Progressive Enhancement
+- Core functionality works without JavaScript
+- Enhanced experience with modern browsers
+- Graceful degradation for older browsers
+- Fallback solutions for unsupported features

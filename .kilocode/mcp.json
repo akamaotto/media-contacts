@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "git": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-git",
+        "--repository",
+        "/Users/akamaotto/code/media-contacts"
+      ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://neondb_owner:npg_tnEDGMPV37WB@ep-tight-pine-a2baeagw-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+      ]
+    }
+  }
+}

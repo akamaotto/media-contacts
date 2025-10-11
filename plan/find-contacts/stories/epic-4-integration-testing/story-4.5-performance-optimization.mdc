@@ -1,0 +1,244 @@
+# Story 4.5: Performance Optimization
+**Epic**: Epic 4: Integration & Testing
+**Estimated Time**: 2 days
+**Priority**: Medium
+**Status**: Pending
+**Assignee**: Full Stack Developer + Backend Developer
+**GitHub Issue**: # (to be created)
+**Labels**: epic-4, story, priority-medium, find-contacts, performance
+
+## GitHub CLI Issue Creation
+```bash
+gh issue create \
+  --title "Story 4.5: Performance Optimization" \
+  --body "$(cat <<'EOF'
+## Epic
+Epic 4: Integration & Testing
+
+## Objective
+Optimize performance across frontend, backend, and database layers to ensure the AI search feature meets all performance benchmarks and provides a smooth user experience.
+
+## Acceptance Criteria
+- [ ] Database queries run in <100ms (95th percentile)
+- [ ] API responses are served in <200ms (95th percentile)
+- [ ] Frontend bundle size is <500KB gzipped
+- [ ] Page load time is <2 seconds on 3G networks
+- [ ] Search completion time is <30 seconds (95th percentile)
+- [ ] System handles 50+ concurrent users without degradation
+- [ ] Memory usage stays within acceptable limits
+- [ ] CPU usage remains below 80% under load
+- [ ] Performance monitoring and alerting are functional
+- [ ] Core Web Vitals scores are green (LCP, FID, CLS)
+
+## Technical Requirements
+- Optimize database queries with proper indexing and query optimization
+- Implement API response caching and compression strategies
+- Optimize frontend bundle size with code splitting and tree shaking
+- Implement lazy loading for components and images
+- Add CDN configuration for static assets
+- Optimize AI service integration with caching and request optimization
+- Implement performance monitoring and alerting systems
+
+## Definition of Done
+- All acceptance criteria are met and validated
+- Performance benchmarks are established and monitored
+- Load testing validates system under target load
+- Performance monitoring is functional in production
+- Performance optimization is documented
+- Future performance issues can be quickly identified
+
+## Story File
+[View Full Story Details](plan/find-contacts/stories/epic-4-integration-testing/story-4.5-performance-optimization.mdc)
+
+---
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)" \
+  --label "epic-4" \
+  --label "story" \
+  --label "priority-medium" \
+  --label "find-contacts" \
+  --label "performance" \
+  --label "backend" \
+  --label "frontend"
+```
+
+## Objective
+Optimize performance across frontend, backend, and database layers to ensure the AI search feature meets all performance benchmarks and provides a smooth user experience. This story focuses on identifying and resolving performance bottlenecks across the entire system.
+
+## Acceptance Criteria
+- [ ] Database queries run in <100ms (95th percentile)
+- [ ] API responses are served in <200ms (95th percentile)
+- [ ] Frontend bundle size is <500KB gzipped
+- [ ] Page load time is <2 seconds on 3G networks
+- [ ] Search completion time is <30 seconds (95th percentile)
+- [ ] System handles 50+ concurrent users without degradation
+- [ ] Memory usage stays within acceptable limits
+- [ ] CPU usage remains below 80% under load
+- [ ] Performance monitoring and alerting are functional
+- [ ] Core Web Vitals scores are green (LCP, FID, CLS)
+
+## Technical Requirements
+
+### Core Features
+- Optimize database queries with proper indexing and query optimization
+- Implement API response caching and compression strategies
+- Optimize frontend bundle size with code splitting and tree shaking
+- Implement lazy loading for components and images
+- Add CDN configuration for static assets
+- Optimize AI service integration with caching and request optimization
+
+### Performance Targets
+- **Database**: Query response times under 100ms
+- **API**: Response times under 200ms for non-search endpoints
+- **Frontend**: Bundle size under 500KB gzipped
+- **Search**: Complete search workflow under 30 seconds
+- **Concurrency**: Support 50+ simultaneous users
+- **Memory**: Stable memory usage without leaks
+
+### Dependencies
+- Story 4.1: End-to-End Integration (complete system for testing)
+- Story 4.4: E2E Testing (performance baseline established)
+- Epic 1-3: All components implemented for optimization
+
+## Definition of Done
+- All acceptance criteria are met and validated
+- Performance benchmarks are established and monitored
+- Load testing validates system under target load
+- Performance monitoring is functional in production
+- Performance optimization is documented
+- Future performance issues can be quickly identified
+
+## Performance Optimization Areas
+
+### Database Optimization
+- **Query Optimization**: Analyze and optimize slow queries
+- **Index Strategy**: Create and optimize database indexes
+- **Connection Pooling**: Implement efficient database connection management
+- **Query Caching**: Cache frequent query results
+- **Database Monitoring**: Set up performance monitoring
+
+### Backend API Optimization
+- **Response Caching**: Implement Redis-based API caching
+- **Compression**: Enable gzip compression for API responses
+- **Async Processing**: Use background processing for long-running operations
+- **Rate Limiting**: Implement efficient rate limiting
+- **Memory Management**: Optimize memory usage in AI services
+
+### Frontend Optimization
+- **Bundle Optimization**: Code splitting and tree shaking
+- **Image Optimization**: Lazy loading and compression
+- **Component Optimization**: Memoization and virtual scrolling
+- **State Management**: Efficient state updates and subscriptions
+- **Network Optimization**: Request batching and caching
+
+### AI Service Integration Optimization
+- **Request Batching**: Combine multiple AI service requests
+- **Response Caching**: Cache AI service responses
+- **Fallback Strategies**: Efficient fallback mechanisms
+- **Cost Optimization**: Minimize unnecessary API calls
+- **Timeout Management**: Proper timeout and retry logic
+
+## Implementation Notes
+
+### Development Guidelines
+- Use performance profiling tools to identify bottlenecks
+- Implement performance testing in CI/CD pipeline
+- Monitor performance metrics in development and production
+- Use performance budgets to prevent regressions
+- Document performance optimization decisions
+
+### Performance Monitoring Strategy
+```javascript
+// Example performance monitoring setup
+const performanceMonitor = {
+  // Database query performance
+  trackQuery: (query, duration) => {
+    if (duration > 100) {
+      console.warn(`Slow query detected: ${duration}ms`, query);
+    }
+  },
+
+  // API response performance
+  trackApiResponse: (endpoint, duration) => {
+    if (duration > 200) {
+      console.warn(`Slow API response: ${duration}ms for ${endpoint}`);
+    }
+  },
+
+  // Search performance
+  trackSearch: (searchId, duration) => {
+    if (duration > 30000) {
+      console.warn(`Slow search: ${duration}ms for ${searchId}`);
+    }
+  }
+};
+```
+
+### Database Optimization Examples
+```sql
+-- Add indexes for common query patterns
+CREATE INDEX idx_ai_searches_user_created ON ai_searches(user_id, created_at);
+CREATE INDEX idx_media_contacts_country_category ON media_contacts(country_id, category_id);
+
+-- Optimize search queries
+EXPLAIN ANALYZE
+SELECT * FROM media_contacts
+WHERE country_id = $1 AND category_id = $2
+ORDER BY created_at DESC
+LIMIT 100;
+```
+
+### Frontend Optimization Examples
+```javascript
+// Implement virtual scrolling for large result sets
+import { FixedSizeList as List } from 'react-window';
+
+const Row = ({ index, style }) => (
+  <div style={style}>
+    <ContactCard contact={contacts[index]} />
+  </div>
+);
+
+const VirtualizedResults = () => (
+  <List
+    height={600}
+    itemCount={contacts.length}
+    itemSize={80}
+  >
+    {Row}
+  </List>
+);
+
+// Implement memoization for expensive components
+const ContactCard = React.memo(({ contact }) => {
+  return (
+    <div className="contact-card">
+      {/* Contact details */}
+    </div>
+  );
+});
+```
+
+### Load Testing Strategy
+- **Concurrent Users**: Test with 50+ simultaneous users
+- **Search Load**: Test multiple concurrent searches
+- **Database Load**: Test database under concurrent queries
+- **Memory Stress**: Test for memory leaks under extended use
+- **Network Conditions**: Test under various network speeds
+
+### Performance Monitoring Tools
+- **Database**: Query performance monitoring tools
+- **Backend**: APM solutions (DataDog, New Relic)
+- **Frontend**: Web Vitals monitoring
+- **Infrastructure**: Server monitoring and alerting
+- **User Experience**: Real User Monitoring (RUM)
+
+## Related Documentation
+- [Epic Definition](../epics/epic-4-integration-testing.mdc)
+- [Implementation Tasks - Task 4.3](../implementation-tasks.mdc#task-43-performance-optimization)
+- [Performance Monitoring Guide](../../../docs/performance/monitoring.md)
+- [Database Optimization Guide](../../../docs/performance/database.md)
+- [Frontend Performance Guide](../../../docs/performance/frontend.md)
+- [Load Testing Guide](../../../docs/performance/load-testing.md)
+- [Web Vitals Documentation](https://web.dev/vitals/)

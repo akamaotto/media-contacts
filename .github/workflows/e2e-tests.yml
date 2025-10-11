@@ -1,0 +1,542 @@
+name: E2E Tests - AI Search User Workflows
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run E2E tests daily at 4 AM UTC (2 hours after integration tests)
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to run tests on'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - chromium
+          - firefox
+          - webkit
+      device:
+        description: 'Device type to test'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - desktop
+          - mobile
+          - tablet
+      test_type:
+        description: 'Type of tests to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - user-workflows
+          - cross-browser
+          - responsive
+          - visual
+          - performance
+          - accessibility
+
+env:
+  NODE_VERSION: '18'
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
+
+jobs:
+  # Setup job - Install dependencies and browsers
+  setup-e2e-tests:
+    name: Setup E2E Test Environment
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - name: Setup environment variables
+      run: |
+        cat << EOF > .env.test
+        NODE_ENV=test
+        BASE_URL=http://localhost:3000
+        NEXTAUTH_SECRET=test-nextauth-secret-for-ci
+        NEXTAUTH_URL=http://localhost:3000
+        OPENAI_API_KEY=sk-test-openai-key-for-ci
+        ANTHROPIC_API_KEY=sk-ant-test-anthropic-key-for-ci
+        EXA_API_KEY=test-exa-key-for-ci
+        FIRECRAWL_API_KEY=test-firecrawl-key-for-ci
+        LOG_LEVEL=error
+        AI_LOG_LEVEL=error
+        CI=true
+        DEBUG=false
+        EOF
+
+    - name: Generate Prisma client
+      run: npx prisma generate
+
+    - name: Setup test database
+      run: |
+        docker-compose -f docker-compose.test.yml up -d
+        sleep 10
+        npx prisma db push --skip-generate
+        npx prisma db seed
+
+    - name: Build application
+      run: npm run build
+
+    - name: Start application
+      run: |
+        npm run start &
+        sleep 30
+
+    - name: Wait for application to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+
+    - name: Store setup artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: e2e-setup
+        path: |
+          .env.test
+          node_modules
+          .next
+          ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+        retention-days: 1
+
+  # User Workflow Tests
+  run-user-workflow-tests:
+    name: User Workflow Tests
+    runs-on: ubuntu-latest
+    needs: setup-e2e-tests
+    if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'user-workflows' || github.event.inputs.test_type == ''
+    
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        shard: [1, 2, 3]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download setup artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-setup
+
+    - name: Start application
+      run: |
+        npm run start &
+        sleep 30
+
+    - name: Wait for application to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+
+    - name: Run user workflow tests
+      run: |
+        npx playwright test tests/e2e/user-workflows/ \
+          --project=${{ matrix.browser }} \
+          --shard=${{ matrix.shard }}/3
+      env:
+        NODE_ENV: test
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: user-workflow-results-${{ matrix.browser }}-${{ matrix.shard }}
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 7
+
+  # Cross-Browser Tests
+  run-cross-browser-tests:
+    name: Cross-Browser Tests
+    runs-on: ubuntu-latest
+    needs: setup-e2e-tests
+    if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'cross-browser' || github.event.inputs.test_type == ''
+    
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download setup artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-setup
+
+    - name: Start application
+      run: |
+        npm run start &
+        sleep 30
+
+    - name: Wait for application to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+
+    - name: Run cross-browser tests
+      run: |
+        npx playwright test tests/e2e/cross-browser/ \
+          --project=${{ matrix.browser }}
+      env:
+        NODE_ENV: test
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: cross-browser-results-${{ matrix.browser }}
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 7
+
+  # Responsive Design Tests
+  run-responsive-tests:
+    name: Responsive Design Tests
+    runs-on: ubuntu-latest
+    needs: setup-e2e-tests
+    if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'responsive' || github.event.inputs.test_type == ''
+    
+    strategy:
+      matrix:
+        device: [desktop, mobile, tablet]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download setup artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-setup
+
+    - name: Start application
+      run: |
+        npm run start &
+        sleep 30
+
+    - name: Wait for application to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+
+    - name: Run responsive design tests
+      run: |
+        npx playwright test tests/e2e/responsive/ \
+          --grep="${{ matrix.device }}"
+      env:
+        NODE_ENV: test
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: responsive-results-${{ matrix.device }}
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 7
+
+  # Visual Regression Tests
+  run-visual-tests:
+    name: Visual Regression Tests
+    runs-on: ubuntu-latest
+    needs: setup-e2e-tests
+    if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'visual' || github.event.inputs.test_type == ''
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download setup artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-setup
+
+    - name: Start application
+      run: |
+        npm run start &
+        sleep 30
+
+    - name: Wait for application to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+
+    - name: Run visual regression tests
+      run: |
+        npx playwright test tests/e2e/visual/ \
+          --update-snapshots=${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'missing' || 'missing' }}
+      env:
+        NODE_ENV: test
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: visual-results
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 7
+
+  # Performance Tests
+  run-performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: setup-e2e-tests
+    if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'performance' || github.event.inputs.test_type == ''
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download setup artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-setup
+
+    - name: Start application
+      run: |
+        npm run start &
+        sleep 30
+
+    - name: Wait for application to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+
+    - name: Run performance tests
+      run: |
+        npx playwright test tests/e2e/performance/
+      env:
+        NODE_ENV: test
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-results
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 7
+
+  # Accessibility Tests
+  run-accessibility-tests:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+    needs: setup-e2e-tests
+    if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'accessibility' || github.event.inputs.test_type == ''
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Download setup artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-setup
+
+    - name: Start application
+      run: |
+        npm run start &
+        sleep 30
+
+    - name: Wait for application to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+
+    - name: Run accessibility tests
+      run: |
+        npx playwright test tests/e2e/accessibility/
+      env:
+        NODE_ENV: test
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: accessibility-results
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 7
+
+  # Report Generation
+  generate-test-reports:
+    name: Generate Test Reports
+    runs-on: ubuntu-latest
+    needs: [
+      run-user-workflow-tests,
+      run-cross-browser-tests,
+      run-responsive-tests,
+      run-visual-tests,
+      run-performance-tests,
+      run-accessibility-tests,
+    ]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all test results
+      uses: actions/download-artifact@v3
+      with:
+        path: test-results
+
+    - name: Merge test reports
+      run: |
+        # Install merge tool
+        npm install -g @playwright/test.merge-reports
+        
+        # Create directories for merged reports
+        mkdir -p merged-test-results
+        
+        # Find all test results
+        find test-results -name "results.json" -type f > test-result-files.txt
+        
+        # Merge test reports if any exist
+        if [ -s test-result-files.txt ]; then
+          npx playwright merge-reports --reporter=html --reporter=json --output-dir=merged-test-results $(cat test-result-files.txt)
+        fi
+
+    - name: Generate summary report
+      run: |
+        cat << EOF > test-summary.md
+        # E2E Test Results Summary
+        
+        ## Test Execution Details
+        - **Trigger**: ${{ github.event_name }}
+        - **Branch**: ${{ github.ref_name }}
+        - **Commit**: ${{ github.sha }}
+        - **Timestamp**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        ## Test Categories
+        EOF
+        
+        # Add test category results
+        for category in user-workflow cross-browser responsive visual performance accessibility; do
+          if [ -d "test-results/${category}-results" ]; then
+            echo "- **${category}**: ✅ Completed" >> test-summary.md
+          else
+            echo "- **${category}**: ⏭️ Skipped" >> test-summary.md
+          fi
+        done
+        
+        echo "" >> test-summary.md
+        echo "## Performance Metrics" >> test-summary.md
+        
+        # Extract performance metrics if available
+        if [ -f "test-results/performance-results/performance-metrics.json" ]; then
+          cat test-results/performance-results/performance-metrics.json >> test-summary.md
+        fi
+
+    - name: Upload merged reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: merged-e2e-reports
+        path: |
+          merged-test-results/
+          test-summary.md
+        retention-days: 30
+
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read test summary
+          let summary = '';
+          if (fs.existsSync('test-summary.md')) {
+            summary = fs.readFileSync('test-summary.md', 'utf8');
+          }
+          
+          // Create PR comment
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 🧪 E2E Test Results\n\n${summary}\n\n📊 [View detailed reports](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`
+          });
+
+  # Cleanup
+  cleanup-e2e-tests:
+    name: Cleanup E2E Test Environment
+    runs-on: ubuntu-latest
+    needs: generate-test-reports
+    if: always()
+    
+    steps:
+    - name: Cleanup Docker containers
+      run: |
+        docker-compose -f docker-compose.test.yml down -v
+        docker system prune -f
+
+    - name: Cleanup test artifacts
+      run: |
+        rm -rf test-results/
+        rm -rf merged-test-results/
+        rm -f test-summary.md

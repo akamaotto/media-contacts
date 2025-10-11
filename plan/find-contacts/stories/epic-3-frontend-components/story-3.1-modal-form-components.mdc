@@ -1,0 +1,216 @@
+# Story 3.1: Modal and Form Components
+**Epic**: Epic 3: Frontend Components
+**Estimated Time**: 3 days
+**Priority**: High
+**Status**: Pending
+**Assignee**: Frontend Developer
+
+## Objective
+Implement the main modal interface and search configuration forms with proper validation, responsive design, and excellent user experience. This component serves as the primary entry point for users to configure and initiate AI-powered contact searches.
+
+## Acceptance Criteria
+- [ ] Modal opens/closes smoothly with proper animations and backdrop
+- [ ] Form validation provides clear, helpful error messages in real-time
+- [ ] Country selector handles 200+ countries efficiently with search and grouping
+- [ ] Category selector supports hierarchical organization with multi-select capability
+- [ ] Beat selector allows specific topic selection with autocomplete
+- [ ] Advanced options form is intuitive and discoverable without overwhelming users
+- [ ] Responsive design works seamlessly on mobile, tablet, and desktop
+- [ ] Accessibility features enable screen reader usage and keyboard navigation
+- [ ] Loading states provide clear feedback during form submission
+- [ ] Error handling gracefully manages all failure scenarios with recovery options
+- [ ] Form submission is prevented until all validations pass
+- [ ] Modal can be dismissed via escape key, backdrop click, or close button
+
+## Technical Requirements
+
+### Core Components
+- **FindContactsModal**: Main modal container with backdrop and animations
+- **SearchForm**: Central form component with validation and state management
+- **CountrySelector**: Multi-select country picker with search, grouping, and flags
+- **CategorySelector**: Hierarchical category selector with expand/collapse functionality
+- **BeatSelector**: Topic selector with autocomplete and suggestions
+- **SearchOptionsForm**: Advanced settings form with collapsible sections
+
+### Form Validation
+- Real-time validation with debounce for performance
+- Custom validation messages for each field type
+- Cross-field validation (e.g., country-specific category filtering)
+- Progressive validation - validate as user completes each section
+- Validation summaries and error highlighting
+
+### User Experience Features
+- Smooth modal transitions with proper timing curves
+- Form field focus management and auto-scroll to errors
+- Loading states with skeleton screens during submission
+- Auto-save form state to prevent data loss
+- Keyboard shortcuts for power users
+- Tooltips and contextual help for complex fields
+
+### Responsive Design
+- Mobile-first approach with breakpoints at 640px, 768px, 1024px, 1280px
+- Touch-friendly interface elements on mobile (44px minimum touch targets)
+- Simplified interface on smaller screens
+- Optimized layouts for different orientations
+
+### Integration Points
+- Epic 2 Query Generation API for form validation
+- Existing authentication and user context
+- Current design system (ShadCN UI components)
+- Analytics tracking for form interactions
+
+### Dependencies
+- Epic 1: Foundation & Infrastructure (API infrastructure)
+- Epic 2: AI Search Service (Query generation validation)
+- Design system components and theming
+
+## Definition of Done
+- All components are integrated into main application
+- Cross-browser compatibility verified (Chrome, Firefox, Safari, Edge)
+- Accessibility testing passes WCAG 2.1 AA standards
+- Unit tests cover all component states and interactions (>90% coverage)
+- Integration tests verify form submission workflow
+- Performance benchmarks met (modal open <100ms, form interactions <50ms)
+- Visual regression tests prevent UI breaks
+- Documentation complete with usage examples
+
+## Testing Requirements
+
+### Unit Tests
+- Modal open/close functionality and animations
+- Form validation logic for all field types
+- Country selector search and filtering performance
+- Category selector hierarchical behavior
+- Beat selector autocomplete functionality
+- Advanced options form expand/collapse behavior
+- Responsive design breakpoints
+- Accessibility features (keyboard navigation, screen readers)
+
+### Integration Tests
+- Form submission to Epic 2 APIs
+- Cross-field validation scenarios
+- Error handling and recovery flows
+- Modal interaction with page backdrop
+- Form state persistence across modal sessions
+
+### E2E Tests
+- Complete form filling and submission workflow
+- Mobile vs desktop experience differences
+- Accessibility testing with screen readers
+- Performance testing with large datasets
+- Error scenario handling
+
+### Performance Tests
+- Modal open/close performance
+- Country selector search performance (200+ countries)
+- Form validation responsiveness
+- Memory usage during extended sessions
+- Mobile device performance optimization
+
+### Accessibility Tests
+- Screen reader compatibility (NVDA, JAWS, VoiceOver)
+- Keyboard navigation completeness
+- Color contrast and visual accessibility
+- Touch target size compliance
+- Focus management and trap behavior
+
+## Implementation Notes
+
+### Development Guidelines
+- Use existing design system components and patterns
+- Implement proper TypeScript types for all props and state
+- Follow React best practices for component composition
+- Use React Hook Form for efficient form handling
+- Implement proper error boundaries for component isolation
+
+### Best Practices
+- Implement optimistic updates where appropriate
+- Use proper ARIA attributes and semantic HTML
+- Implement proper loading and error states
+- Follow consistent naming conventions
+- Use CSS-in-JS or Tailwind for styling consistency
+
+### Security Considerations
+- Sanitize all user inputs
+- Implement proper CSRF protection
+- Validate form data on both client and server
+- Secure API communication with authentication
+- Log form interactions for audit trails
+
+### Performance Considerations
+- Implement virtual scrolling for large country lists
+- Use memoization for expensive computations
+- Implement proper debouncing for search inputs
+- Lazy load non-critical components
+- Optimize bundle size through code splitting
+
+## Component Specifications
+
+### FindContactsModal
+```typescript
+interface FindContactsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialData?: SearchFormData;
+  onSubmit: (data: SearchFormData) => Promise<void>;
+}
+```
+
+### SearchForm
+```typescript
+interface SearchFormData {
+  query: string;
+  countries: string[];
+  categories: string[];
+  beats: string[];
+  options: SearchOptions;
+}
+
+interface SearchFormProps {
+  onSubmit: (data: SearchFormData) => void;
+  initialValues?: Partial<SearchFormData>;
+  loading?: boolean;
+}
+```
+
+### CountrySelector
+```typescript
+interface CountrySelectorProps {
+  value: string[];
+  onChange: (countries: string[]) => void;
+  maxSelection?: number;
+  disabled?: boolean;
+}
+```
+
+### CategorySelector
+```typescript
+interface CategorySelectorProps {
+  value: string[];
+  onChange: (categories: string[]) => void;
+  categories: CategoryHierarchy[];
+  maxDepth?: number;
+}
+```
+
+## Related Documentation
+- [Epic 3: Frontend Components](../../epic-3-frontend-components.mdc)
+- [Implementation Tasks](../../implementation-tasks.mdc#task-31-modal-and-form-components)
+- [Design System Documentation](../../../components/ui/README.md)
+- [API Documentation](../../../api/README.md)
+
+## Success Metrics
+- Modal open time: <100ms (95th percentile)
+- Form validation response: <50ms
+- Country selector search: <200ms for 200+ countries
+- User form completion rate: >85%
+- Form abandonment rate: <15%
+- Accessibility compliance: 100% WCAG 2.1 AA
+- Cross-browser compatibility: 100% on supported browsers
+
+## Risk Mitigation
+- **Complex form validation**: Implement progressive validation to avoid overwhelming users
+- **Large country lists**: Use virtualization and efficient search algorithms
+- **Mobile keyboard issues**: Implement appropriate input types and keyboard handling
+- **Modal accessibility**: Ensure proper focus management and screen reader support
+- **Performance on mobile**: Optimize for touch interactions and slower connections

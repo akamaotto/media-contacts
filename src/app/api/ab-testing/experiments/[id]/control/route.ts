@@ -146,7 +146,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 // POST /api/ab-testing/experiments/[id]/control/stop - Stop an experiment
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function STOP(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 }
 
 // POST /api/ab-testing/experiments/[id]/control/rollback - Rollback an experiment
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function ROLLBACK(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -226,7 +226,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // POST /api/ab-testing/experiments/[id]/control/record-conversion - Record a conversion
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function RESUME(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {

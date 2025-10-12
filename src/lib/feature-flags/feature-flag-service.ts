@@ -1024,7 +1024,7 @@ export async function isFeatureEnabled(
   return featureFlagService.isFlagEnabled(flagName, context);
 }
 
-export function getFeatureFlag(flagId: string): FeatureFlag | undefined {
+export function getFeatureFlagSync(flagId: string): FeatureFlag | undefined {
   return featureFlagService.getFlag(flagId);
 }
 
@@ -1037,7 +1037,7 @@ export async function updateFeatureFlag(
 }
 
 // Export utility functions
-export async function isFeatureEnabled(
+export async function isFeatureEnabledServer(
   flagName: string,
   context: FlagEvaluationContext
 ): Promise<boolean> {
@@ -1052,7 +1052,7 @@ export async function getAllFeatureFlags(): Promise<FeatureFlag[]> {
   return featureFlagService.getAllFlags();
 }
 
-export async function updateFeatureFlag(
+export async function updateFeatureFlagWithAudit(
   flagId: string,
   updates: Partial<FeatureFlag>,
   updatedBy: string,
